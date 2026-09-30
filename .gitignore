@@ -1,0 +1,8 @@
+# Skills dos agentes (instaladas localmente pelo Reversa)
+.agents/
+.claude/
+
+# Reversa: configurações pessoais
+.reversa/config.user.toml
+.reversa/reversa-config.json
+_reversa_sdd/_pricing/

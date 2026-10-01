@@ -268,5 +268,15 @@
     ".reversa/plan.md",
     ".reversa/version",
     ".reversa/_config/manifest.yaml"
-  ]
+  ],
+  "newproject_progress": {
+    "mode": "guiado",
+    "stage": "researcher",
+    "started_at": "2026-09-30T13:13:58-03:00",
+    "last_checkpoint_at": "2026-09-30T13:37:17-03:00",
+    "completed_stages": [
+      "ideator"
+    ],
+    "brief": "gostaria de utilizar o whispper para, no whatsapp-web, transcrever áudios. Odeio ter de ouvi-los. Pessoas prolixas são as que mais mandam áudio, picados ainda por cim. Minha ideia seria criar uma exte"
+  }
 }

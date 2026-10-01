@@ -1,0 +1,16 @@
+{
+  "schema-version": 1,
+  "feature-dir": "_reversa_forward/005-compatibilidade-instalacao",
+  "feature-id": "005",
+  "short-name": "compatibilidade-instalacao",
+  "started-at": "2026-10-01T12:24:25.000000+00:00",
+  "current-stage": "done",
+  "stages-completed": [
+    "requirements",
+    "plan",
+    "to-do",
+    "coding",
+    "sync"
+  ],
+  "paused-features": []
+}

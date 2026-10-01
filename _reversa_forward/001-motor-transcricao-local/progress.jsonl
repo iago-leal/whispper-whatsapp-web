@@ -1,0 +1,55 @@
+{"ts": "2026-09-30T18:41:57Z", "action": "T001", "status": "done", "files": [".gitignore"]}
+{"ts": "2026-09-30T18:42:33Z", "action": "T002", "status": "done", "files": ["amostras/gerar.sh"]}
+{"ts": "2026-09-30T18:43:39Z", "action": "T003", "status": "done", "files": ["amostras/sinteticas/"]}
+{"ts": "2026-09-30T18:43:39Z", "action": "T004", "status": "done", "files": ["contratos/protocolo-1.json"]}
+{"ts": "2026-09-30T18:43:54Z", "action": "T005", "status": "done", "files": ["auxiliar/whispper_motor/__init__.py", "auxiliar/pyproject.toml", "auxiliar/tests/conftest.py"]}
+{"ts": "2026-09-30T18:44:27Z", "action": "T006", "status": "done", "files": ["extension/package.json", "extension/tsconfig.json", "extension/tsconfig.test.json", "extension/package-lock.json"]}
+{"ts": "2026-09-30T18:44:43Z", "action": "T007", "status": "done", "files": ["extension/manifest.json"]}
+{"ts": "2026-09-30T18:48:40Z", "action": "T008", "status": "done", "files": ["auxiliar/tests/test_audio.py"]}
+{"ts": "2026-09-30T18:48:40Z", "action": "T009", "status": "done", "files": ["auxiliar/tests/test_configuracao.py", "auxiliar/tests/test_modelos.py"]}
+{"ts": "2026-09-30T18:49:20Z", "action": "T010", "status": "done", "files": ["auxiliar/tests/test_real.py"]}
+{"ts": "2026-09-30T18:49:20Z", "action": "T011", "status": "done", "files": ["auxiliar/tests/test_protocolo.py"]}
+{"ts": "2026-09-30T18:49:20Z", "action": "T012", "status": "done", "files": ["auxiliar/tests/test_registro.py"]}
+{"ts": "2026-09-30T18:50:32Z", "action": "T013", "status": "done", "files": ["auxiliar/tests/test_servidor_fluxo.py", "auxiliar/tests/suporte/falsos.py"]}
+{"ts": "2026-09-30T18:50:32Z", "action": "T014", "status": "done", "files": ["auxiliar/tests/test_servidor_falhas.py"]}
+{"ts": "2026-09-30T18:51:36Z", "action": "T015", "status": "done", "files": ["auxiliar/tests/test_host_processo.py", "auxiliar/tests/suporte/host_simulado.py", "auxiliar/tests/suporte/trabalhador_simulado.py"]}
+{"ts": "2026-09-30T18:51:59Z", "action": "T016", "status": "done", "files": ["auxiliar/tests/test_instalacao.py", "auxiliar/tests/suporte/cache.py"]}
+{"ts": "2026-09-30T18:53:25Z", "action": "T017", "status": "done", "files": ["extension/test/contrato-motor.ts"]}
+{"ts": "2026-09-30T18:53:25Z", "action": "T018", "status": "done", "files": ["extension/test/protocolo.test.ts"]}
+{"ts": "2026-09-30T18:54:10Z", "action": "T019", "status": "done", "files": ["extension/test/adaptador-verificar.test.ts", "extension/test/suporte/canal-simulado.ts", "extension/test/suporte/relogio-falso.ts"]}
+{"ts": "2026-09-30T18:54:10Z", "action": "T020", "status": "done", "files": ["extension/test/adaptador-transcrever.test.ts"]}
+{"ts": "2026-09-30T18:57:13Z", "action": "T021", "status": "done", "files": ["auxiliar/whispper_motor/audio.py"]}
+{"ts": "2026-09-30T18:57:13Z", "action": "T022", "status": "done", "files": ["auxiliar/whispper_motor/configuracao.py", "auxiliar/whispper_motor/modelos.py"]}
+{"ts": "2026-09-30T19:01:49Z", "action": "T023", "status": "done", "files": ["auxiliar/whispper_motor/trabalhador.py", "auxiliar/whispper_motor/audio.py"]}
+{"ts": "2026-09-30T19:07:40Z", "action": "T024", "status": "done", "files": ["auxiliar/ferramentas/prova_de_conceito.py", "auxiliar/ferramentas/__init__.py"]}
+{"ts": "2026-09-30T20:04:07Z", "action": "T026", "status": "done", "files": ["auxiliar/whispper_motor/protocolo.py"]}
+{"ts": "2026-09-30T20:04:07Z", "action": "T027", "status": "done", "files": ["auxiliar/whispper_motor/registro.py"]}
+{"ts": "2026-09-30T20:04:07Z", "action": "T028", "status": "done", "files": ["auxiliar/whispper_motor/servidor.py"]}
+{"ts": "2026-09-30T20:04:07Z", "action": "T029", "status": "done", "files": ["auxiliar/whispper_motor/servidor.py"]}
+{"ts": "2026-09-30T20:04:07Z", "action": "T030", "status": "done", "files": ["auxiliar/whispper_motor/__main__.py"]}
+{"ts": "2026-09-30T20:04:07Z", "action": "T031", "status": "done", "files": ["extension/src/dominio/motor-de-transcricao.ts"]}
+{"ts": "2026-09-30T20:04:07Z", "action": "T032", "status": "done", "files": ["extension/src/adaptadores/motor-simulado.ts", "extension/test/motor-simulado.test.ts"]}
+{"ts": "2026-09-30T20:04:07Z", "action": "T033", "status": "done", "files": ["extension/src/adaptadores/motor-local/protocolo.ts"]}
+{"ts": "2026-09-30T20:04:07Z", "action": "T034", "status": "done", "files": ["extension/src/adaptadores/motor-local/canal-nativo.ts", "extension/src/adaptadores/motor-local/adaptador-motor-local.ts"]}
+{"ts": "2026-09-30T20:04:07Z", "action": "T035", "status": "done", "files": ["extension/src/adaptadores/motor-local/adaptador-motor-local.ts"]}
+{"ts": "2026-09-30T20:04:07Z", "action": "T036", "status": "done", "files": ["auxiliar/whispper_motor/instalacao.py"]}
+{"ts": "2026-09-30T20:04:07Z", "action": "T037", "status": "done", "files": ["auxiliar/motor.sh"]}
+{"ts": "2026-09-30T20:04:07Z", "action": "T038", "status": "done", "files": ["extension/src/adaptadores/motor-local/canal-chrome.ts", "extension/test/canal-chrome.test.ts", "extension/test/suporte/chrome-falso.ts"]}
+{"ts": "2026-09-30T20:04:07Z", "action": "T039", "status": "done", "files": ["extension/src/background.ts", "extension/package.json", "extension/test/background.test.ts"]}
+{"ts": "2026-09-30T20:04:07Z", "action": "T040", "status": "done", "files": ["extension/test/suporte/canal-node.ts", "extension/test/integracao-motor-real.test.ts"]}
+{"ts": "2026-09-30T20:04:07Z", "action": "T041", "status": "done", "files": ["extension/test/extensao-intrusa/manifest.json", "extension/test/extensao-intrusa/background.js"]}
+{"ts": "2026-09-30T20:04:07Z", "action": "T042", "status": "done", "files": ["auxiliar/whispper_motor/trabalhador.py", "extension/test/integracao-motor-real.test.ts"]}
+{"ts": "2026-09-30T20:55:38Z", "action": "T044", "status": "done", "files": ["auxiliar/README.md"]}
+{"ts": "2026-09-30T20:55:38Z", "action": "T045", "status": "done", "files": ["extension/README.md"]}
+{"ts": "2026-09-30T20:56:44Z", "action": "T021", "status": "corrected", "files": ["auxiliar/whispper_motor/audio.py", "auxiliar/tests/test_audio.py"]}
+{"ts": "2026-09-30T20:56:44Z", "action": "T022", "status": "corrected", "files": ["auxiliar/whispper_motor/configuracao.py", "auxiliar/tests/test_configuracao.py"]}
+{"ts": "2026-09-30T20:56:44Z", "action": "T023", "status": "corrected", "files": ["auxiliar/whispper_motor/trabalhador.py", "auxiliar/tests/test_trabalhador.py", "auxiliar/tests/suporte/principal_simulado.py", "auxiliar/tests/suporte/trabalhador_simulado.py", "auxiliar/tests/suporte/modelo_sintetico.py"]}
+{"ts": "2026-09-30T20:56:44Z", "action": "T024", "status": "corrected", "files": ["auxiliar/ferramentas/prova_de_conceito.py"]}
+{"ts": "2026-09-30T20:56:44Z", "action": "T026", "status": "corrected", "files": ["auxiliar/whispper_motor/protocolo.py", "auxiliar/tests/test_protocolo.py"]}
+{"ts": "2026-09-30T20:56:44Z", "action": "T027", "status": "corrected", "files": ["auxiliar/whispper_motor/registro.py", "auxiliar/tests/test_registro.py", "auxiliar/tests/suporte/falsos.py"]}
+{"ts": "2026-09-30T20:56:44Z", "action": "T029", "status": "corrected", "files": ["auxiliar/whispper_motor/servidor.py", "auxiliar/tests/test_servidor_falhas.py"]}
+{"ts": "2026-09-30T20:56:44Z", "action": "T030", "status": "corrected", "files": ["auxiliar/whispper_motor/__main__.py", "auxiliar/tests/test_host_processo.py"]}
+{"ts": "2026-09-30T20:56:44Z", "action": "T036", "status": "corrected", "files": ["auxiliar/whispper_motor/instalacao.py", "auxiliar/tests/test_instalacao.py"]}
+{"ts": "2026-09-30T20:56:44Z", "action": "T044", "status": "corrected", "files": ["auxiliar/README.md", "_reversa_forward/001-motor-transcricao-local/onboarding.md"]}
+{"ts": "2026-10-01T12:04:21Z", "action": "T025", "status": "done", "files": ["_reversa_forward/001-motor-transcricao-local/poc-latencia.md"]}
+{"ts": "2026-10-01T12:04:21Z", "action": "T043", "status": "done", "files": ["_reversa_forward/001-motor-transcricao-local/verificacao-manual.md"]}

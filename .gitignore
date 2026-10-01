@@ -6,3 +6,14 @@
 .reversa/config.user.toml
 .reversa/reversa-config.json
 _reversa_sdd/_pricing/
+
+# Extensão: dependências e build
+node_modules/
+extension/dist/
+
+# Aplicativo auxiliar
+__pycache__/
+.pytest_cache/
+
+# Mensagens de voz reais da prova de conceito: dados pessoais, nunca versionar
+amostras/reais/

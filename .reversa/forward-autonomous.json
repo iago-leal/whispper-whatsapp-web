@@ -1,0 +1,49 @@
+{
+  "schema-version": 1,
+  "started-at": "2026-10-01T12:01:17.745019+00:00",
+  "status": "done",
+  "answers": {
+    "target": "sync",
+    "doubts": "file",
+    "optional-stages": false,
+    "on-failure": "stop"
+  },
+  "queue": [
+    {
+      "item": "001-motor-transcricao-local",
+      "feature-dir": "_reversa_forward/001-motor-transcricao-local",
+      "status": "done",
+      "last-stage": "sync",
+      "note": "Concluída e convergida na extração em _reversa_sdd/addenda/001-motor-transcricao-local.md"
+    },
+    {
+      "item": "002-integracao-whatsapp-web",
+      "feature-dir": "_reversa_forward/002-integracao-whatsapp-web",
+      "status": "done",
+      "last-stage": "sync",
+      "note": "Concluída e convergida na extração em _reversa_sdd/addenda/002-integracao-whatsapp-web.md"
+    },
+    {
+      "item": "003-janela-flutuante",
+      "feature-dir": "_reversa_forward/003-janela-flutuante",
+      "status": "done",
+      "last-stage": "sync",
+      "note": "Concluída e convergida na extração em _reversa_sdd/addenda/003-janela-flutuante.md"
+    },
+    {
+      "item": "004-nucleo-transcricao",
+      "feature-dir": "_reversa_forward/004-nucleo-transcricao",
+      "status": "done",
+      "last-stage": "sync",
+      "note": "Concluída e convergida na extração em _reversa_sdd/addenda/004-nucleo-transcricao.md"
+    },
+    {
+      "item": "005-compatibilidade-instalacao",
+      "feature-dir": "_reversa_forward/005-compatibilidade-instalacao",
+      "status": "done",
+      "last-stage": "sync",
+      "note": "Concluída e convergida na extração em _reversa_sdd/addenda/005-compatibilidade-instalacao.md"
+    }
+  ],
+  "warnings": []
+}

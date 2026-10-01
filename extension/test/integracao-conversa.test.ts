@@ -83,6 +83,11 @@ async function montarExtensao(destino: string): Promise<void> {
     entryPoints: [join(EXTENSAO, "src", "content", "index.ts")],
     bundle: true, format: "iife", outfile: join(destino, "dist", "content", "index.js"), logLevel: "warning",
   });
+  // O script do mundo da página que o manifesto declara (BUG-20261001-2MOY): sem ele, o Chrome recusa a extensão.
+  await build({
+    entryPoints: [join(EXTENSAO, "src", "pagina", "ponte-audio.ts")],
+    bundle: true, format: "iife", outfile: join(destino, "dist", "pagina", "ponte-audio.js"), logLevel: "warning",
+  });
   await build({
     entryPoints: [join(EXTENSAO, "src", "background.ts")],
     bundle: true, format: "esm", outfile: join(destino, "dist", "background.js"), logLevel: "warning",

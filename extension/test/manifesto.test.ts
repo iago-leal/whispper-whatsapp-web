@@ -57,3 +57,21 @@ test("todo arquivo do manifesto e toda página aberta pela extensão existem no 
     assert.deepEqual(recursosAusentes(pagina), [], pagina);
   }
 });
+
+// O áudio de uma mensagem de voz só é alcançável pelo carregador de módulos da própria página, que o
+// mundo isolado do script de conteúdo não enxerga (BUG-20261001-2MOY).
+test("o script do mundo da página entra só no WhatsApp Web, antes da página, e sai do build num arquivo único (RNF-05, BUG-20261001-2MOY)", () => {
+  const daPagina = manifesto.content_scripts.filter((c: { world?: string }) => c.world === "MAIN");
+  assert.equal(daPagina.length, 1, "nenhum script declarado no mundo da página");
+  const [script] = daPagina;
+  assert.deepEqual(script.matches, ["https://web.whatsapp.com/*"]);
+  assert.equal(script.run_at, "document_start");
+  // "world" no manifesto só é aceito a partir do Chrome 111.
+  assert.ok(Number(manifesto.minimum_chrome_version) >= 111, `minimum_chrome_version ${manifesto.minimum_chrome_version}`);
+  // O mundo da página não carrega módulos: cada script sai do build empacotado num único IIFE.
+  const escapar = (texto: string) => texto.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+  for (const js of script.js as string[]) {
+    const fonte = `src/${js.slice("dist/".length, -".js".length)}.ts`;
+    assert.match(build, new RegExp(`esbuild ${escapar(fonte)} --bundle --format=iife --outfile=${escapar(js)}(?= |$)`));
+  }
+});

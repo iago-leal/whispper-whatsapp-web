@@ -6,7 +6,7 @@ import type {
   CoordenadasAncora,
   StatusSaudeFonte
 } from '../dominio/fonte-de-audio.ts';
-import { extrairAudioDeElemento } from '../content/extrator-audio.ts';
+import { extrairAudio } from '../content/extrator-audio.ts';
 import { RastreadorDeAncoras } from '../content/rastreador-ancora.ts';
 import { avaliarSaudeDasEstruturas } from '../content/monitor-degradacao.ts';
 import type { MensagemDetectada } from '../content/detector-mensagens.ts';
@@ -32,11 +32,10 @@ export class AdaptadorWhatsAppWeb implements FonteDeAudio {
   }
 
   async obterAudio(idAudio: string): Promise<DadosDoAudio> {
-    const mensagem = this.mensagens.get(idAudio);
-    if (!mensagem) {
+    if (!this.mensagens.has(idAudio)) {
       throw new Error(`AUDIO_INDISPONIVEL: mensagem ${idAudio} não encontrada no contexto ativo`);
     }
-    return extrairAudioDeElemento(mensagem.elementoBalao, idAudio);
+    return extrairAudio(idAudio);
   }
 
   solicitarTranscricaoManual(idAudio: string): void {

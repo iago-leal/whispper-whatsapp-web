@@ -1,7 +1,8 @@
 import type { ExibicaoDeTranscricao, EstadoExibicao } from '../dominio/exibicao-de-transcricao.ts';
 import type { CoordenadasAncora } from '../dominio/fonte-de-audio.ts';
 import { calcularPosicoesJanelas } from './posicionador-colisoes.ts';
-import { criarElementoJanela, atualizarConteudoJanela, aplicarDestaqueJanela } from './janela-elemento.ts';
+import { criarElementoJanela, atualizarConteudoJanela, aplicarDestaqueJanela, liberarContadorJanela } from './janela-elemento.ts';
+import { CronometroDeEspera } from './cronometro-espera.ts';
 
 interface RegistroJanela {
   idAudio: string;
@@ -19,7 +20,10 @@ export class GerenciadorDeJanelas implements ExibicaoDeTranscricao {
   private ouvintesFechar: Array<(idAudio: string) => void> = [];
   private ouvintesReexecutar: Array<(idAudio: string) => void> = [];
 
-  constructor() {
+  private readonly cronometro: CronometroDeEspera;
+
+  constructor(cronometro: CronometroDeEspera = new CronometroDeEspera()) {
+    this.cronometro = cronometro;
     this.garantirContainer();
   }
 
@@ -43,13 +47,15 @@ export class GerenciadorDeJanelas implements ExibicaoDeTranscricao {
       return;
     }
 
+    // O estado inicial "Na fila" vale só até o núcleo informar o estado do pedido, no mesmo clique
+
     // Limite de até 20 janelas: descarta a mais antiga se exceder
     if (this.janelas.size >= LIMITE_MAXIMO_JANELAS) {
       const primeiraChave = this.janelas.keys().next().value;
       if (primeiraChave) this.fechar(primeiraChave);
     }
 
-    const estadoInicial: EstadoExibicao = { tipo: 'fila', posicaoNaFila: 1 };
+    const estadoInicial: EstadoExibicao = { tipo: 'fila', posicaoNaFila: 1, inicioEsperaEm: this.cronometro.agora() };
     let el: HTMLElement | null = null;
 
     if (typeof document !== 'undefined') {
@@ -65,7 +71,7 @@ export class GerenciadorDeJanelas implements ExibicaoDeTranscricao {
         aoReexecutar: (id) => {
           for (const cb of this.ouvintesReexecutar) cb(id);
         }
-      });
+      }, this.cronometro);
       container?.appendChild(el);
     }
 
@@ -91,7 +97,7 @@ export class GerenciadorDeJanelas implements ExibicaoDeTranscricao {
         aoReexecutar: (id) => {
           for (const cb of this.ouvintesReexecutar) cb(id);
         }
-      });
+      }, this.cronometro);
     }
     this.recalcularPosicoes();
   }
@@ -115,6 +121,7 @@ export class GerenciadorDeJanelas implements ExibicaoDeTranscricao {
     const reg = this.janelas.get(idAudio);
     if (!reg) return;
 
+    if (reg.elemento) liberarContadorJanela(reg.elemento, this.cronometro);
     if (reg.elemento && reg.elemento.parentNode) {
       reg.elemento.parentNode.removeChild(reg.elemento);
     }

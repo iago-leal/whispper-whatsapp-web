@@ -12,7 +12,8 @@ import type {
   EventoPedidoTranscricao,
   EventoReproducao,
   CoordenadasAncora,
-  StatusSaudeFonte
+  StatusSaudeFonte,
+  EstadoPedidoIcone
 } from '../src/dominio/fonte-de-audio.ts';
 import type {
   MotorDeTranscricao,
@@ -30,6 +31,8 @@ class FakeFonteDeAudio implements FonteDeAudio {
   private cbReproduzir: ((ev: EventoReproducao) => void)[] = [];
   private cbRemover: ((id: string) => void)[] = [];
   private audios = new Map<string, DadosDoAudio>();
+  icones = new Map<string, EstadoPedidoIcone>();
+  historicoIcone: Array<[string, EstadoPedidoIcone]> = [];
 
   cadastrarAudio(idAudio: string, duracaoSeg = 5, bytes = new Uint8Array([1, 2, 3])) {
     this.audios.set(idAudio, {
@@ -80,6 +83,11 @@ class FakeFonteDeAudio implements FonteDeAudio {
   verificarSaude(): StatusSaudeFonte {
     return { status: 'ativa', versaoEstruturas: '2026.09' };
   }
+
+  refletirEstadoPedido(idAudio: string, estado: EstadoPedidoIcone): void {
+    this.icones.set(idAudio, estado);
+    this.historicoIcone.push([idAudio, estado]);
+  }
 }
 
 class FakeMotorDeTranscricao implements MotorDeTranscricao {
@@ -98,6 +106,10 @@ class FakeMotorDeTranscricao implements MotorDeTranscricao {
   };
   chamadasTranscrever: Array<{ audio: Uint8Array; tipoDeMidia: string }> = [];
   atrasoTranscreverMs = 0;
+  // Respostas por chamada, na ordem; esgotadas, vale a respostaPadrao.
+  respostas: ResultadoDaTranscricao[] = [];
+  // Executado dentro de transcrever, para avançar um relógio falso.
+  aoTranscrever?: () => void;
 
   async verificar(): Promise<EstadoDoMotor> {
     return this.estadoAtual;
@@ -108,13 +120,15 @@ class FakeMotorDeTranscricao implements MotorDeTranscricao {
     if (this.atrasoTranscreverMs > 0) {
       await new Promise((r) => setTimeout(r, this.atrasoTranscreverMs));
     }
-    return this.respostaPadrao;
+    this.aoTranscrever?.();
+    return this.respostas.shift() ?? this.respostaPadrao;
   }
 }
 
 class FakeExibicaoDeTranscricao implements ExibicaoDeTranscricao {
   janelasAbertas = new Set<string>();
   estados = new Map<string, EstadoExibicao>();
+  historico: Array<[string, EstadoExibicao]> = [];
   destaques: string[] = [];
   cbFechar: ((id: string) => void)[] = [];
   cbReexecutar: ((id: string) => void)[] = [];
@@ -125,6 +139,7 @@ class FakeExibicaoDeTranscricao implements ExibicaoDeTranscricao {
 
   definirEstado(idAudio: string, estado: EstadoExibicao): void {
     this.estados.set(idAudio, estado);
+    this.historico.push([idAudio, estado]);
   }
 
   destacar(idAudio: string): void {
@@ -181,10 +196,12 @@ describe('Núcleo de Transcrição — Domínio e Hexagonal', () => {
     assert.equal(exibicao.janelasAbertas.has('audio-3'), true);
 
     const estadoA2 = exibicao.estados.get('audio-2');
-    assert.deepEqual(estadoA2, { tipo: 'fila', posicaoNaFila: 1 });
+    assert.equal(estadoA2?.tipo, 'fila');
+    assert.equal(estadoA2?.tipo === 'fila' && estadoA2.posicaoNaFila, 1);
 
     const estadoA3 = exibicao.estados.get('audio-3');
-    assert.deepEqual(estadoA3, { tipo: 'fila', posicaoNaFila: 2 });
+    assert.equal(estadoA3?.tipo, 'fila');
+    assert.equal(estadoA3?.tipo === 'fila' && estadoA3.posicaoNaFila, 2);
 
     // Aguarda o término da fila inteira
     await new Promise((r) => setTimeout(r, 100));
@@ -412,5 +429,262 @@ describe('Núcleo de Transcrição — Domínio e Hexagonal', () => {
     assert.equal(metricasAposZerar.lidosETocados, 0);
     assert.equal(metricasAposZerar.taxaAdocaoPercentual, null);
     assert.equal(metricasAposZerar.taxaQualidadePercentual, null);
+  });
+});
+
+// Feature 006: indicador de espera com cronômetro. O relógio é falso e só anda quando o teste manda,
+// inclusive dentro do motor, para que os tempos do pedido saiam exatos.
+describe('Núcleo de Transcrição — cronômetro de espera (feature 006)', () => {
+  const resposta = (duracaoAudioSeg: number): ResultadoDaTranscricao => ({
+    ok: true,
+    texto: 'Texto.',
+    idioma: 'pt',
+    duracaoAudioSeg,
+    processamentoMs: 100
+  });
+  const assentar = () => new Promise((r) => setTimeout(r, 20));
+
+  async function montar() {
+    const relogio = { t: 1_000 };
+    const fonte = new FakeFonteDeAudio();
+    const motor = new FakeMotorDeTranscricao();
+    const exibicao = new FakeExibicaoDeTranscricao();
+    const armazenamento = new ArmazenamentoMemoria();
+    const nucleo = new NucleoDeTranscricao(fonte, motor, exibicao, armazenamento, { agora: () => relogio.t });
+    await nucleo.inicializar();
+    return { relogio, fonte, motor, exibicao, armazenamento, nucleo };
+  }
+
+  it('RN-01 e RN-03: o mesmo instante do clique vale na fila e na transcrição', async () => {
+    const { relogio, fonte, motor, exibicao } = await montar();
+    motor.atrasoTranscreverMs = 10;
+    fonte.cadastrarAudio('a');
+    fonte.cadastrarAudio('b');
+
+    fonte.simularClique('a');
+    relogio.t = 1_500;
+    fonte.simularClique('b');
+
+    assert.deepEqual(exibicao.estados.get('a'), { tipo: 'transcrevendo', inicioEsperaEm: 1_000 });
+    assert.deepEqual(exibicao.estados.get('b'), { tipo: 'fila', posicaoNaFila: 1, inicioEsperaEm: 1_500 });
+
+    await assentar();
+    const transicoesDeB = exibicao.historico.filter(([id]) => id === 'b').map(([, e]) => e);
+    assert.deepEqual(transicoesDeB.find((e) => e.tipo === 'transcrevendo'), { tipo: 'transcrevendo', inicioEsperaEm: 1_500 });
+    for (const e of transicoesDeB) {
+      if (e.tipo === 'fila' || e.tipo === 'transcrevendo') assert.equal(e.inicioEsperaEm, 1_500);
+    }
+  });
+
+  it('RF-01 e RF-05: o ícone entra em espera no clique e passa a concluído no fim', async () => {
+    const { fonte, motor } = await montar();
+    motor.atrasoTranscreverMs = 10;
+    fonte.cadastrarAudio('a');
+
+    fonte.simularClique('a');
+    assert.deepEqual(fonte.icones.get('a'), { tipo: 'espera', inicioEsperaEm: 1_000 });
+
+    await assentar();
+    assert.deepEqual(fonte.icones.get('a'), { tipo: 'concluido' });
+  });
+
+  it('RF-05 e RF-06: a conclusão leva os tempos, com a parte da fila separada', async () => {
+    const { relogio, fonte, motor, exibicao } = await montar();
+    const duracoes = [4_400, 9_700];
+    motor.aoTranscrever = () => (relogio.t += duracoes.shift() ?? 0);
+    motor.respostas = [resposta(5), resposta(13)];
+    fonte.cadastrarAudio('a');
+    fonte.cadastrarAudio('b');
+
+    fonte.simularClique('a');
+    fonte.simularClique('b');
+    await assentar();
+
+    assert.deepEqual(exibicao.estados.get('a'), {
+      tipo: 'concluido',
+      texto: 'Texto.',
+      idioma: 'pt',
+      tempos: { esperaTotalMs: 4_400, esperaFilaMs: 0, duracaoAudioSeg: 5 }
+    });
+    const b = exibicao.estados.get('b');
+    assert.equal(b?.tipo, 'concluido');
+    assert.deepEqual(b?.tipo === 'concluido' && b.tempos, { esperaTotalMs: 14_100, esperaFilaMs: 4_400, duracaoAudioSeg: 13 });
+  });
+
+  it('D-08: sem duração do motor, vale a da página', async () => {
+    const { fonte, motor, exibicao } = await montar();
+    motor.respostas = [resposta(0)];
+    fonte.cadastrarAudio('a', 21);
+
+    fonte.simularClique('a');
+    await assentar();
+
+    const a = exibicao.estados.get('a');
+    assert.equal(a?.tipo === 'concluido' && a.tempos?.duracaoAudioSeg, 21);
+  });
+
+  it('RF-07: o erro para a contagem, informa o tempo até a falha e põe o ícone em erro', async () => {
+    const { relogio, fonte, motor, exibicao } = await montar();
+    motor.aoTranscrever = () => (relogio.t += 61_000);
+    motor.respostaPadrao = { ok: false, codigo: 'FALHA_NA_TRANSCRICAO', motivo: 'simulado' };
+    fonte.cadastrarAudio('a');
+
+    fonte.simularClique('a');
+    await assentar();
+
+    const a = exibicao.estados.get('a');
+    assert.equal(a?.tipo, 'erro');
+    assert.equal(a?.tipo === 'erro' && a.falhouAposMs, 61_000);
+    assert.deepEqual(fonte.icones.get('a'), { tipo: 'erro' });
+  });
+
+  it('RF-19 com RF-07: motor indisponível põe em erro o ícone de todos os pedidos', async () => {
+    const { fonte, motor } = await montar();
+    motor.estadoAtual = { estado: 'indisponivel', codigo: 'MOTOR_INDISPONIVEL', motivo: 'fora' };
+    fonte.cadastrarAudio('a');
+    fonte.cadastrarAudio('b');
+
+    fonte.simularClique('a');
+    fonte.simularClique('b');
+    await assentar();
+
+    assert.deepEqual(fonte.icones.get('a'), { tipo: 'erro' });
+    assert.deepEqual(fonte.icones.get('b'), { tipo: 'erro' });
+  });
+
+  it('RF-09: a reabertura pelo cache traz os tempos originais e o ícone concluído, sem nova contagem', async () => {
+    const { relogio, fonte, motor, exibicao } = await montar();
+    motor.aoTranscrever = () => (relogio.t += 9_700);
+    motor.respostas = [resposta(13)];
+    fonte.cadastrarAudio('a');
+
+    fonte.simularClique('a');
+    await assentar();
+    exibicao.simularFecharPeloUsuario('a');
+    relogio.t = 90_000;
+    fonte.historicoIcone = [];
+    fonte.simularClique('a');
+
+    const a = exibicao.estados.get('a');
+    assert.deepEqual(a?.tipo === 'concluido' && a.tempos, { esperaTotalMs: 9_700, esperaFilaMs: 0, duracaoAudioSeg: 13 });
+    assert.deepEqual(fonte.historicoIcone, [['a', { tipo: 'concluido' }]]);
+    assert.equal(motor.chamadasTranscrever.length, 1);
+  });
+
+  it('RF-10: novo clique num pedido em espera não reinicia a contagem', async () => {
+    const { relogio, fonte, motor, exibicao } = await montar();
+    motor.atrasoTranscreverMs = 30;
+    fonte.cadastrarAudio('a');
+
+    fonte.simularClique('a');
+    relogio.t = 7_000;
+    fonte.simularClique('a');
+
+    assert.deepEqual(fonte.icones.get('a'), { tipo: 'espera', inicioEsperaEm: 1_000 });
+    assert.deepEqual(exibicao.estados.get('a'), { tipo: 'transcrevendo', inicioEsperaEm: 1_000 });
+    assert.deepEqual(exibicao.destaques, ['a']);
+    await new Promise((r) => setTimeout(r, 40));
+  });
+
+  it('RF-11 e D-13: "Tentar de novo" começa contagem nova e preserva a direção do pedido', async () => {
+    const { relogio, fonte, motor, exibicao, nucleo } = await montar();
+    motor.respostaPadrao = { ok: false, codigo: 'FALHA_NA_TRANSCRICAO', motivo: 'simulado' };
+    fonte.cadastrarAudio('a');
+
+    fonte.simularClique('a', 'enviado');
+    await assentar();
+    assert.deepEqual(fonte.icones.get('a'), { tipo: 'erro' });
+
+    motor.respostaPadrao = resposta(13);
+    relogio.t = 70_000;
+    exibicao.simularReexecutar('a');
+    assert.deepEqual(fonte.icones.get('a'), { tipo: 'espera', inicioEsperaEm: 70_000 });
+    assert.equal(nucleo.fila.buscar('a')?.direcao, 'enviado');
+
+    await assentar();
+    const metricas = await nucleo.contadores.obterMetricas();
+    assert.equal(metricas.esperaMediaSegPorMinuto, null, 'áudio próprio fica fora do acumulado');
+  });
+
+  it('RF-12: com a janela fechada na transcrição, o ícone segue em espera e conclui', async () => {
+    const { fonte, motor, exibicao } = await montar();
+    motor.atrasoTranscreverMs = 20;
+    fonte.cadastrarAudio('a');
+
+    fonte.simularClique('a');
+    exibicao.simularFecharPeloUsuario('a');
+    assert.deepEqual(fonte.icones.get('a'), { tipo: 'espera', inicioEsperaEm: 1_000 });
+
+    await new Promise((r) => setTimeout(r, 40));
+    assert.deepEqual(fonte.icones.get('a'), { tipo: 'concluido' });
+    assert.equal(exibicao.janelasAbertas.has('a'), false);
+  });
+
+  it('D-12: novo clique num pedido em andamento cuja janela foi fechada reabre a janela com o mesmo cronômetro', async () => {
+    const { relogio, fonte, motor, exibicao } = await montar();
+    motor.atrasoTranscreverMs = 20;
+    fonte.cadastrarAudio('a');
+
+    fonte.simularClique('a');
+    exibicao.simularFecharPeloUsuario('a');
+    relogio.t = 4_000;
+    fonte.simularClique('a');
+
+    assert.equal(exibicao.janelasAbertas.has('a'), true);
+    assert.deepEqual(exibicao.estados.get('a'), { tipo: 'transcrevendo', inicioEsperaEm: 1_000 });
+
+    await new Promise((r) => setTimeout(r, 40));
+    assert.equal(exibicao.estados.get('a')?.tipo, 'concluido');
+  });
+
+  it('D-15: fechar a janela de um pedido na fila devolve o ícone ao estado ocioso', async () => {
+    const { fonte, motor, exibicao, nucleo } = await montar();
+    motor.atrasoTranscreverMs = 20;
+    fonte.cadastrarAudio('a');
+    fonte.cadastrarAudio('b');
+
+    fonte.simularClique('a');
+    fonte.simularClique('b');
+    exibicao.simularFecharPeloUsuario('b');
+
+    assert.equal(nucleo.fila.buscar('b'), undefined);
+    assert.deepEqual(fonte.icones.get('b'), { tipo: 'ocioso' });
+    await new Promise((r) => setTimeout(r, 40));
+  });
+
+  it('RN-07 e RF-14: o acumulado soma só recebidos concluídos, sem a fila', async () => {
+    const { relogio, fonte, motor, nucleo } = await montar();
+    const duracoes = [4_300, 9_700, 5_000];
+    motor.aoTranscrever = () => (relogio.t += duracoes.shift() ?? 0);
+    motor.respostas = [resposta(13), resposta(47), resposta(30)];
+    fonte.cadastrarAudio('a');
+    fonte.cadastrarAudio('b');
+    fonte.cadastrarAudio('proprio');
+
+    fonte.simularClique('a');
+    fonte.simularClique('b'); // espera 4,3 s na fila, que não entra
+    fonte.simularClique('proprio', 'enviado');
+    await assentar();
+
+    const metricas = await nucleo.contadores.obterMetricas();
+    assert.equal(metricas.esperaMediaSegPorMinuto, 14);
+  });
+
+  it('RN-07: erro e reabertura pelo cache não entram no acumulado', async () => {
+    const { relogio, fonte, motor, exibicao, nucleo } = await montar();
+    motor.aoTranscrever = () => (relogio.t += 6_000);
+    motor.respostas = [resposta(60), { ok: false, codigo: 'FALHA_NA_TRANSCRICAO', motivo: 'simulado' }];
+    fonte.cadastrarAudio('a');
+    fonte.cadastrarAudio('falha');
+
+    fonte.simularClique('a');
+    fonte.simularClique('falha');
+    await assentar();
+    exibicao.simularFecharPeloUsuario('a');
+    fonte.simularClique('a');
+    await assentar();
+
+    const metricas = await nucleo.contadores.obterMetricas();
+    assert.equal(metricas.esperaMediaSegPorMinuto, 6);
   });
 });

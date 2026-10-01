@@ -6,12 +6,15 @@
  * são descartados imediatamente ao fechar ou recarregar a aba (RNF-05).
  */
 
+import type { TemposDoPedido } from './exibicao-de-transcricao.ts';
+
 export interface ItemTranscricaoEmMemoria {
   idAudio: string;
   texto: string;
   idioma?: string;
   duracaoAudioSeg?: number;
   concluidoEm: number;
+  tempos?: TemposDoPedido; // da transcrição original, reexibidos na reabertura (RN-04)
 }
 
 export class CacheSessao {

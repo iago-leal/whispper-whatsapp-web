@@ -12,8 +12,13 @@ export interface ItemFila {
   direcao: 'recebido' | 'enviado';
   estado: EstadoItemFila;
   criadoEm: number;
+  // Instantes no relógio injetado: clique, saída da fila e fim (conclusão ou erro).
+  inicioEsperaEm: number;
+  inicioTranscricaoEm?: number;
+  fimEm?: number;
   janelaAberta: boolean;
   duracaoEstimadaSeg?: number;
+  duracaoAudioSeg?: number; // informada na conclusão
   texto?: string;
   idioma?: string;
   erro?: CodigoErroPedido;
@@ -27,10 +32,14 @@ export interface ObservadoresFila {
     sucesso: boolean;
     texto?: string;
     idioma?: string;
+    duracaoAudioSeg?: number;
     erro?: CodigoErroPedido;
     motivoErro?: string;
   }>;
 }
+
+// Relógio monotônico: segue avançando com a aba oculta e não recua com o relógio do sistema.
+const relogioPadrao = (): number => globalThis.performance?.now() ?? Date.now();
 
 export class FilaDeTranscricao {
   private itens: ItemFila[] = [];
@@ -39,9 +48,11 @@ export class FilaDeTranscricao {
   private geracaoProcessamento = 0;
 
   private readonly observadores: ObservadoresFila;
+  private readonly agora: () => number;
 
-  constructor(observadores: ObservadoresFila = {}) {
+  constructor(observadores: ObservadoresFila = {}, agora: () => number = relogioPadrao) {
     this.observadores = observadores;
+    this.agora = agora;
   }
 
   /**
@@ -58,6 +69,7 @@ export class FilaDeTranscricao {
       direcao,
       estado: 'na_fila',
       criadoEm: Date.now(),
+      inicioEsperaEm: this.agora(),
       janelaAberta: true,
       duracaoEstimadaSeg
     };
@@ -70,9 +82,9 @@ export class FilaDeTranscricao {
   }
 
   /**
-   * Recoloca um pedido em erro no fim da fila (RF-09).
+   * Recoloca um pedido em erro no fim da fila (RF-09), com contagem de espera nova (RN-05).
    */
-  repetir(idAudio: string): boolean {
+  repetir(idAudio: string, direcao: 'recebido' | 'enviado' = 'recebido'): boolean {
     // Se estiver ativo ou na fila, não faz nada
     if (this.itemAtivo?.idAudio === idAudio || this.itens.some((i) => i.idAudio === idAudio)) {
       return false;
@@ -80,9 +92,10 @@ export class FilaDeTranscricao {
 
     const item: ItemFila = {
       idAudio,
-      direcao: 'recebido',
+      direcao,
       estado: 'na_fila',
       criadoEm: Date.now(),
+      inicioEsperaEm: this.agora(),
       janelaAberta: true
     };
 
@@ -109,6 +122,15 @@ export class FilaDeTranscricao {
       this.itens.splice(index, 1);
       this.atualizarPosicoes();
     }
+  }
+
+  /**
+   * Registra que a janela de um pedido em andamento foi reaberta por novo clique: a conclusão volta
+   * a ser exibida nela.
+   */
+  notificarJanelaReaberta(idAudio: string): void {
+    const item = this.buscar(idAudio);
+    if (item) item.janelaAberta = true;
   }
 
   /**
@@ -139,6 +161,7 @@ export class FilaDeTranscricao {
     this.itens = [];
 
     for (const item of filaPendente) {
+      item.fimEm = this.agora();
       item.estado = 'erro';
       item.erro = 'MOTOR_INDISPONIVEL';
       item.motivoErro = motivo;
@@ -183,6 +206,7 @@ export class FilaDeTranscricao {
     this.geracaoProcessamento += 1;
 
     const item = this.itemAtivo;
+    item.fimEm = this.agora();
     item.estado = 'erro';
     item.erro = erro;
     item.motivoErro = motivo;
@@ -213,6 +237,7 @@ export class FilaDeTranscricao {
 
     const proximo = this.itens.shift()!;
     this.itemAtivo = proximo;
+    proximo.inicioTranscricaoEm = this.agora();
     proximo.estado = 'transcrevendo';
     this.notificarMudanca(proximo);
     this.atualizarPosicoes();
@@ -237,11 +262,13 @@ export class FilaDeTranscricao {
           }
           this.limparTimeout();
           this.itemAtivo = null;
+          proximo.fimEm = this.agora();
 
           if (resultado.sucesso) {
             proximo.estado = 'concluido';
             proximo.texto = resultado.texto ?? '';
             proximo.idioma = resultado.idioma;
+            proximo.duracaoAudioSeg = resultado.duracaoAudioSeg;
           } else {
             proximo.estado = 'erro';
             proximo.erro = resultado.erro ?? 'FALHA_NA_TRANSCRICAO';
@@ -255,6 +282,7 @@ export class FilaDeTranscricao {
           if (this.geracaoProcessamento !== geracaoAtual) return;
           this.limparTimeout();
           this.itemAtivo = null;
+          proximo.fimEm = this.agora();
           proximo.estado = 'erro';
           proximo.erro = 'FALHA_NA_TRANSCRICAO';
           proximo.motivoErro = err instanceof Error ? err.message : String(err);

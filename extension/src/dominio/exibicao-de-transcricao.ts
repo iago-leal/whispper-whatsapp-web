@@ -5,11 +5,24 @@
  * as janelas flutuantes que exibem os textos transcritos.
  */
 
+/**
+ * Tempos de um pedido concluído, medidos do clique ao texto.
+ */
+export interface TemposDoPedido {
+  esperaTotalMs: number;
+  esperaFilaMs: number;
+  duracaoAudioSeg?: number; // ausente quando nem o motor nem a página informaram
+}
+
+/**
+ * Os estados de espera levam o instante do clique, no relógio compartilhado com a exibição:
+ * o núcleo notifica uma vez por transição, e a exibição faz o tempo andar.
+ */
 export type EstadoExibicao =
-  | { tipo: 'fila'; posicaoNaFila: number }
-  | { tipo: 'transcrevendo'; segundosDecorridos: number }
-  | { tipo: 'concluido'; texto: string; idioma?: string }
-  | { tipo: 'erro'; mensagem: string; motivo: string };
+  | { tipo: 'fila'; posicaoNaFila: number; inicioEsperaEm: number }
+  | { tipo: 'transcrevendo'; inicioEsperaEm: number }
+  | { tipo: 'concluido'; texto: string; idioma?: string; tempos?: TemposDoPedido }
+  | { tipo: 'erro'; mensagem: string; motivo: string; falhouAposMs?: number };
 
 export interface ExibicaoDeTranscricao {
   /**

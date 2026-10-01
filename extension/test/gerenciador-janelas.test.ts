@@ -10,7 +10,7 @@ test('GerenciadorDeJanelas abre janela e atualiza estados corretamente', () => {
 
   gerenciador.definirEstado('audio-teste-1', {
     tipo: 'transcrevendo',
-    segundosDecorridos: 4
+    inicioEsperaEm: 0
   });
   const estadoAtual = gerenciador.obterEstado('audio-teste-1');
   assert.equal(estadoAtual?.tipo, 'transcrevendo');
@@ -18,12 +18,14 @@ test('GerenciadorDeJanelas abre janela e atualiza estados corretamente', () => {
   gerenciador.definirEstado('audio-teste-1', {
     tipo: 'concluido',
     texto: 'Mensagem de voz transcrita com perfeição.',
-    idioma: 'pt'
+    idioma: 'pt',
+    tempos: { esperaTotalMs: 9_700, esperaFilaMs: 0, duracaoAudioSeg: 13 }
   });
   const estadoConcluido = gerenciador.obterEstado('audio-teste-1');
   assert.equal(estadoConcluido?.tipo, 'concluido');
   if (estadoConcluido?.tipo === 'concluido') {
     assert.equal(estadoConcluido.texto, 'Mensagem de voz transcrita com perfeição.');
+    assert.equal(estadoConcluido.tempos?.esperaTotalMs, 9_700);
   }
 
   gerenciador.fechar('audio-teste-1');

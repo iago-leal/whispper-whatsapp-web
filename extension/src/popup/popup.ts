@@ -1,6 +1,7 @@
 import { ArmazenamentoChrome } from '../adaptadores/armazenamento-chrome.ts';
 import { GerenciadorContadores } from '../dominio/contadores.ts';
 import type { EstadoDoMotor } from '../dominio/motor-de-transcricao.ts';
+import { formatarEsperaMedia } from '../dominio/tempo-de-espera.ts';
 
 const armazenamento = new ArmazenamentoChrome();
 const gerenciador = new GerenciadorContadores(armazenamento);
@@ -14,6 +15,7 @@ async function carregarDados(): Promise<void> {
   const elAdocao = document.getElementById('metric-adocao');
   const elQualidade = document.getElementById('metric-qualidade');
   const elInicio = document.getElementById('data-inicio');
+  const elEsperaMedia = document.getElementById('metric-espera-media');
 
   // Consulta motor no background
   if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
@@ -73,6 +75,9 @@ async function carregarDados(): Promise<void> {
     elQualidade.textContent =
       metricas.taxaQualidadePercentual !== null ? `${metricas.taxaQualidadePercentual}%` : 'Sem dados ainda';
   }
+
+  // RF-14 da feature 006: espera média por minuto de áudio desde a data de início
+  if (elEsperaMedia) elEsperaMedia.textContent = formatarEsperaMedia(metricas.esperaMediaSegPorMinuto);
 
   if (elInicio) {
     try {

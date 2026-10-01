@@ -137,3 +137,53 @@ html[class*="dark"] .whispper-btn-acao {
 body.dark .whispper-btn-acao:hover {
   background-color: #2a3942;
 }
+
+/* Espera com contador, resumo da conclusão e anúncios só para leitor de tela (feature 006) */
+.whispper-janela-espera {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.whispper-janela-indicador {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #00a884;
+  animation: whispper-pulsar 1.2s infinite ease-in-out;
+}
+
+.whispper-janela-contador {
+  font-variant-numeric: tabular-nums;
+}
+
+.whispper-janela-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  margin-right: 8px;
+}
+
+.whispper-janela-resumo {
+  opacity: 0.8;
+}
+
+.whispper-so-leitor {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .whispper-janela-indicador {
+    animation: none;
+  }
+}

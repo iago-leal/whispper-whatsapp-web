@@ -35,6 +35,16 @@ export type StatusSaudeFonte =
   | { status: 'ativa'; versaoEstruturas: string }
   | { status: 'degradada'; estruturasAusentes: string[]; versaoEstruturas: string };
 
+/**
+ * Estado do pedido refletido no ícone da mensagem (RF-16 da integração). Em espera, o ícone conta
+ * o tempo a partir do instante do clique, no relógio compartilhado com o núcleo.
+ */
+export type EstadoPedidoIcone =
+  | { tipo: 'ocioso' }
+  | { tipo: 'espera'; inicioEsperaEm: number }
+  | { tipo: 'concluido' }
+  | { tipo: 'erro' };
+
 export interface FonteDeAudio {
   /**
    * Obtém os bytes do áudio decifrado da mensagem de voz.
@@ -66,4 +76,10 @@ export interface FonteDeAudio {
    * Retorna o estado de saúde do adaptador na página.
    */
   verificarSaude(): StatusSaudeFonte;
+
+  /**
+   * Reflete no ícone da mensagem o estado do pedido, com ou sem janela aberta.
+   * O adaptador guarda o último estado por áudio e o reaplica ao ícone recriado pela página.
+   */
+  refletirEstadoPedido(idAudio: string, estado: EstadoPedidoIcone): void;
 }

@@ -5,10 +5,12 @@ import { ArmazenamentoChrome } from '../adaptadores/armazenamento-chrome.ts';
 import { NucleoDeTranscricao } from '../dominio/nucleo.ts';
 import { CONFIGURACAO_ESTRUTURAS } from './configuracao-estruturas.ts';
 import { observarMensagensDeAudio, injetarBotaoNaMensagem, type MensagemDetectada } from './detector-mensagens.ts';
-import { atualizarEstadoBotao } from './botao-transcricao.ts';
+import { CronometroDeEspera } from './cronometro-espera.ts';
 
-export const adaptador = new AdaptadorWhatsAppWeb();
-export const janelas = new GerenciadorDeJanelas();
+// Um só cronômetro conta o tempo nos ícones e nas janelas, no mesmo relógio do núcleo (feature 006)
+export const cronometro = new CronometroDeEspera();
+export const adaptador = new AdaptadorWhatsAppWeb(cronometro);
+export const janelas = new GerenciadorDeJanelas(cronometro);
 export const motor = new MotorClienteContent();
 export const armazenamento = new ArmazenamentoChrome();
 
@@ -33,6 +35,8 @@ function aoDetectarMensagem(mensagem: MensagemDetectada): void {
   const botao = injetarBotaoNaMensagem(mensagem, (idAudio) => {
     adaptador.solicitarTranscricaoManual(idAudio);
   });
+  // O botão recriado pela página herda o estado do pedido em curso (RF-16 da integração)
+  if (botao) adaptador.registrarBotao(mensagem.idAudio, botao);
 }
 
 // O WhatsApp Web carrega sem conversa aberta e recria o painel a cada conversa escolhida: a observação

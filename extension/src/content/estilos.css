@@ -28,8 +28,12 @@
 }
 
 .whispper-btn-transcrever.whispper-animando {
-  animation: whispper-pulsar 1.2s infinite ease-in-out;
   color: var(--teal, #00a884);
+}
+
+/* Só o símbolo pulsa: o contador ao lado fica parado e legível */
+.whispper-btn-transcrever.whispper-animando .whispper-icone {
+  animation: whispper-pulsar 1.2s infinite ease-in-out;
 }
 
 .whispper-btn-transcrever.whispper-concluido {
@@ -44,4 +48,43 @@
   0% { transform: scale(1); opacity: 0.8; }
   50% { transform: scale(1.15); opacity: 1; }
   100% { transform: scale(1); opacity: 0.8; }
+}
+
+/* Contador de espera ao lado do ícone (feature 006): fora do fluxo, para não deslocar o balão, e em
+   "7 s", para não se confundir com a duração "0:13" do WhatsApp */
+.whispper-btn-transcrever {
+  position: relative;
+}
+
+.whispper-contador {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 2px;
+  padding: 0 4px;
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: #008069;
+  background-color: #ffffff;
+  pointer-events: none;
+}
+
+.whispper-contador:empty {
+  display: none;
+}
+
+body.dark .whispper-contador,
+html[class*="dark"] .whispper-contador {
+  color: #00a884;
+  background-color: #202c33;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .whispper-btn-transcrever.whispper-animando .whispper-icone {
+    animation: none;
+  }
 }

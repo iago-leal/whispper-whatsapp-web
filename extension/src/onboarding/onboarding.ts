@@ -6,7 +6,7 @@ import type { EstadoDoMotor, ResultadoDaTranscricao } from '../dominio/motor-de-
 
 const CHAVE_STORAGE_ONBOARDING = 'whispper_onboarding';
 
-class ControladorOnboarding {
+export class ControladorOnboarding {
   private etapaAtual = 1;
   private verificador = new VerificadorCompatibilidade();
   private intervaloPolling: ReturnType<typeof setInterval> | null = null;
@@ -122,8 +122,11 @@ class ControladorOnboarding {
     if (resultado.instaladorSugerido) {
       if (elNome) elNome.textContent = resultado.instaladorSugerido.nome;
       if (elLink) {
-        elLink.href = `#download-${resultado.instaladorSugerido.arquivo}`;
-        elLink.setAttribute('download', resultado.instaladorSugerido.arquivo);
+        // O instalador vai embutido na extensão (auxiliar/ferramentas/gerar_pkg.sh), enquanto a
+        // hospedagem fica em aberto (OQ-03). Um href de fragmento salvaria a própria página.
+        const { arquivo } = resultado.instaladorSugerido;
+        elLink.href = chrome.runtime.getURL(`dist/instaladores/${arquivo}`);
+        elLink.download = arquivo;
       }
     }
   }

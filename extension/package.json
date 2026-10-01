@@ -8,9 +8,10 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json && esbuild src/content/index.ts --bundle --format=iife --outfile=dist/content/index.js && mkdir -p dist/diagnostico dist/content dist/popup dist/onboarding && cp ../amostras/sinteticas/fala-pt.ogg dist/diagnostico/ && cp src/content/estilos.css dist/content/ && cp src/content/janela-flutuante.css dist/content/ && cp popup/index.html dist/popup/ && cp popup/popup.css dist/popup/ && cp onboarding/index.html dist/onboarding/ && cp onboarding/onboarding.css dist/onboarding/",
+    "build": "tsc -p tsconfig.json && esbuild src/content/index.ts --bundle --format=iife --outfile=dist/content/index.js && mkdir -p dist/diagnostico dist/content dist/popup dist/onboarding && cp ../amostras/sinteticas/fala-pt.ogg dist/diagnostico/ && cp src/content/estilos.css dist/content/ && cp src/content/janela-flutuante.css dist/content/ && cp popup/index.html dist/popup/ && cp popup/popup.css dist/popup/ && cp onboarding/index.html dist/onboarding/ && cp onboarding/onboarding.css dist/onboarding/ && npm run build:instalador",
     "typecheck": "tsc -p tsconfig.test.json",
-    "test": "node --test \"test/**/*.test.ts\""
+    "test": "node --test \"test/**/*.test.ts\"",
+    "build:instalador": "test $(uname) != Darwin || bash ../auxiliar/ferramentas/gerar_pkg.sh"
   },
   "devDependencies": {
     "@types/chrome": "^0.3.4",

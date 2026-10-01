@@ -1,0 +1,11 @@
+# Gate 1, 2026-10-01 14:12: extension/test/manifesto.test.ts aplicado sobre 0fcc93a, manifesto ainda com "popup/index.html"
+# cd extension && node --test test/manifesto.test.ts
+✖ o popup declarado no manifesto carrega um script que a extensão contém (BUG-20261001-RMLU) (1.928458ms)
+✖ todo arquivo do manifesto e toda página aberta pela extensão existem no pacote (0.486875ms)
+ℹ pass 0
+ℹ fail 2
+✖ failing tests:
+✖ o popup declarado no manifesto carrega um script que a extensão contém (BUG-20261001-RMLU) (1.928458ms)
+    actual: [ 'popup/popup.js' ],
+✖ todo arquivo do manifesto e toda página aberta pela extensão existem no pacote (0.486875ms)
+    actual: [ 'popup/popup.js' ],

@@ -1,0 +1,26 @@
+# Gate 2, 2026-10-01 14:15: CHG-001 aplicado ("default_popup": "dist/popup/index.html")
+# node --test test/manifesto.test.ts
+✔ o popup declarado no manifesto carrega um script que a extensão contém (BUG-20261001-RMLU) (1.841292ms)
+✔ todo arquivo do manifesto e toda página aberta pela extensão existem no pacote (1.931166ms)
+ℹ pass 2
+ℹ fail 0
+
+# npm test
+﹣ instalação guiada de ponta a ponta no macOS (0.423167ms) # instala o aplicativo auxiliar na sua conta; rode com WHISPPER_E2E=1
+﹣ contrato MotorDeTranscricao: adaptador do motor local com o host real (0.418333ms) # exige o modelo real; rode com MOTOR_REAL=1
+ℹ tests 88
+ℹ pass 86
+ℹ fail 0
+ℹ skipped 2
+
+# npm run typecheck
+exit 0
+
+# node evidence/repro-rmlu.ts (Chrome for Testing, popup do manifesto)
+default_popup: dist/popup/index.html
+motor-status: Indisponível: aplicativo auxiliar não instalado
+integracao-status: Aguardando WhatsApp Web
+recursos: []
+abas novas após o clique: [
+  'chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/dist/onboarding/index.html'
+]

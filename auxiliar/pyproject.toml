@@ -1,0 +1,13 @@
+[project]
+name = "whispper-motor"
+version = "1.0.0"
+description = "Motor de transcrição local do whispper-whatsapp-web (aplicativo auxiliar do Chrome)"
+requires-python = ">=3.11"
+dependencies = ["mlx-whisper"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+    "real: exige o modelo Whisper real no cache local; rode com MOTOR_REAL=1",
+]

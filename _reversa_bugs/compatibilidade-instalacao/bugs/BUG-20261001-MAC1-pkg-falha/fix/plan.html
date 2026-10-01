@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plano de Correção · BUG-20261001-MAC1</title>
+  <style>
+    body { background-color: #121212; color: #e0e0e0; font-family: sans-serif; padding: 20px; line-height: 1.55; max-width: 1100px; margin: 0 auto; }
+    a { color: #bb86fc; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    h1 { margin-bottom: 4px; }
+    h2 { margin-top: 32px; border-bottom: 1px solid #333; padding-bottom: 4px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; margin-bottom: 20px; }
+    th, td { border: 1px solid #333; padding: 8px 10px; text-align: left; vertical-align: top; }
+    th { background-color: #1e1e1e; }
+    code { background: #1e1e1e; padding: 1px 5px; border-radius: 4px; font-size: 0.92em; }
+    .card { background-color: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+    .meta { color: #9e9e9e; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.85em; background: #333; }
+    .critical { background: #cf6679; color: #121212; }
+    .confirmed { background: #03dac6; color: #121212; }
+    .media { background: #ffb74d; color: #121212; }
+    .grafo { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin: 14px 0; }
+    .no { border: 1px solid #555; border-radius: 8px; padding: 10px 14px; background: #1e1e1e; }
+    .no.centro { border: 2px solid #bb86fc; }
+    .aresta { color: #9e9e9e; font-size: 0.9em; text-align: center; }
+    ol li, ul li { margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Plano de Correção</h1>
+  <p class="meta">
+    Bug <strong>#1</strong> · <a href="../bug.md">BUG-20261001-MAC1</a> · contexto <code>compatibilidade-instalacao</code> · 2026-10-01 ·
+    <span class="badge critical">critical</span> <span class="badge">P0</span>
+  </p>
+
+  <h2>Defeito e causa raiz</h2>
+  <div class="card">
+    <p><strong>Defeito:</strong> o instalador baixado pela página de boas-vindas não abre no macOS: o Gatekeeper o bloqueia e, forçada a abertura, o Instalador falha com <code>com.apple.installer.pagecontroller erro -1</code>.</p>
+    <p><strong>Causa raiz</strong> <span class="badge confirmed">confirmed</span>: <code>configurarDownload</code> grava no botão <code>href="#download-whispper-macos-apple-silicon.pkg"</code> com o atributo <code>download</code>. Um link para fragmento da própria página faz o Chrome salvar o documento atual com o nome pedido; o "pacote" é o HTML de <code>onboarding/index.html</code>. Nenhum artefato do repositório gera um <code>.pkg</code> real servido pela extensão.</p>
+    <p><strong>Evidências</strong> (<a href="../evidence/reproduction.md">cápsula de reprodução</a>):</p>
+    <ul>
+      <li>Os quatro <code>.pkg</code> em <code>~/Downloads</code> têm o SHA-256 de <code>extension/onboarding/index.html</code> (<code>69248b35…</code>); <code>file</code> os identifica como HTML (<a href="../evidence/pkg-baixado-e-html.txt">pkg-baixado-e-html.txt</a>).</li>
+      <li>O gerador não versionado da sessão anterior instala com "sucesso" aparente, mas o <code>postinstall</code> falha ao ler <code>~/extension/manifest.json</code> e o host nunca é registrado (<a href="../evidence/install-log-20261001-1053.txt">install-log-20261001-1053.txt</a>).</li>
+      <li>Protótipo sem payload, domínio só do usuário: instala sem <code>sudo</code>, com o <code>postinstall</code> rodando como uid 501 e os arquivos embarcados disponíveis.</li>
+    </ul>
+  </div>
+
+  <h2>Estratégia escolhida</h2>
+  <div class="card">
+    <p><strong>Correção direta</strong>, com o instalador <strong>embutido na extensão</strong> (decisão do usuário em 2026-10-01). O debate anterior já tinha fixado o <code>pkgbuild</code> num domínio só do usuário; a parte que apontava o link para o GitHub caiu com o <a href="../../BUG-20261001-404B-link-quebrado/bug.md">BUG-20261001-404B</a>, e os três defeitos do gerador antigo vieram de evidência nova.</p>
+    <ol>
+      <li>Pacote sem payload: o motor (<code>motor.sh</code> + <code>whispper_motor/*.py</code>) e o <code>extension/manifest.json</code> vão na pasta de scripts, no mesmo layout do repositório, para que <code>instalacao.py</code> encontre a <code>key</code> em <code>parents[2]/extension/manifest.json</code>.</li>
+      <li><code>postinstall</code> herda o PATH do shell de login do usuário (onde estão o Python com mlx-whisper e o ffmpeg), grava log em <code>~/Library/Logs/whispper-motor-instalacao.log</code> e devolve o código real de saída do <code>motor.sh instalar</code>.</li>
+      <li>O <code>.pkg</code> é gerado em <code>extension/dist/instaladores/</code> e o botão aponta para <code>chrome.runtime.getURL('dist/instaladores/&lt;arquivo&gt;')</code> com <code>download</code>.</li>
+    </ol>
+  </div>
+
+  <h2>Correction Change Set proposto</h2>
+  <table>
+    <thead><tr><th>CHG</th><th>Tipo</th><th>Artefato</th><th>Propósito</th></tr></thead>
+    <tbody>
+      <tr><td>CHG-001</td><td>code</td><td><code>auxiliar/ferramentas/gerar_pkg.sh</code></td><td>Reescrita do gerador não versionado: pacote sem payload, só domínio do usuário, arm64, sem testes, caches nem <code>._*</code>; destino padrão <code>extension/dist/instaladores/</code>.</td></tr>
+      <tr><td>CHG-002</td><td>code</td><td><code>auxiliar/ferramentas/postinstall.sh</code> (novo)</td><td>Roda <code>motor.sh instalar</code> com o PATH de login, grava log e falha de verdade quando a instalação falha.</td></tr>
+      <tr><td>CHG-003</td><td>code</td><td><code>extension/src/onboarding/onboarding.ts</code></td><td><code>configurarDownload</code> aponta para o <code>.pkg</code> embutido; remove o desvio provisório do 404B (<code>javascript:void(0)</code> + <code>alert</code>).</td></tr>
+      <tr><td>CHG-004</td><td>configuration</td><td><code>extension/package.json</code></td><td>Script <code>instalador:macos</code>, separado do <code>build</code> para não quebrar build fora do macOS.</td></tr>
+      <tr><td>CHG-005</td><td>other (deleção)</td><td><code>whispper-macos-apple-silicon.pkg</code> (raiz, 19 MB) e <code>auxiliar/tests/test_pkg.sh</code></td><td>Artefatos não versionados da tentativa anterior, superados por CHG-001 e pelos testes pytest. Só com sua confirmação explícita.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Testes planejados</h2>
+  <table>
+    <thead><tr><th>Tipo</th><th>Arquivo · teste</th><th>O que prova</th></tr></thead>
+    <tbody>
+      <tr><td>Reprodução</td><td><code>extension/test/onboarding-instalador.test.ts</code></td><td>O botão aponta para <code>chrome-extension://…/dist/instaladores/whispper-macos-apple-silicon.pkg</code> com <code>download</code>, sem fragmento nem interceptação. Falha hoje (<code>javascript:void(0)</code>) e falharia no commit base (<code>#download-…</code>).</td></tr>
+      <tr><td>Reprodução</td><td><code>auxiliar/tests/test_instalador_pkg.py</code> · <code>test_gerador_produz_pacote_xar</code></td><td>O artefato entregue é um pacote xar, não HTML.</td></tr>
+      <tr><td>Regressão</td><td><code>test_instala_so_na_pasta_do_usuario</code></td><td><code>installer -dominfo</code> só oferece <code>CurrentUserHomeDirectory</code> (RF-07: sem senha de administrador).</td></tr>
+      <tr><td>Regressão</td><td><code>test_scripts_levam_motor_e_key_sem_lixo</code></td><td>O pacote leva <code>motor.sh</code>, <code>whispper_motor</code> e o <code>manifest.json</code> com <code>key</code>, e nada de testes, caches ou <code>._*</code>.</td></tr>
+      <tr><td>Regressão</td><td><code>test_postinstall_registra_o_host_para_a_extensao</code></td><td>O <code>postinstall</code> do pacote, com HOME isolado e PATH mínimo do Instalador, grava o manifesto do host com a origem <code>chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/</code>.</td></tr>
+      <tr><td>Regressão</td><td><code>test_postinstall_falha_quando_a_instalacao_falha</code></td><td>Sem Python válido, o <code>postinstall</code> sai com código diferente de zero e deixa o motivo no log: o Instalador não declara sucesso falso.</td></tr>
+      <tr><td>Aceite (manual)</td><td>Fluxo ponta a ponta, feito por você</td><td>Critério de fechamento: baixar pela extensão, instalar e ver a página avançar até a transcrição de teste.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Riscos</h2>
+  <div class="card">
+    <p><strong>change_risk</strong> <span class="badge media">média</span></p>
+    <ul>
+      <li>Artefato novo de distribuição e comportamento do Instalador do macOS em domínio de usuário.</li>
+      <li>Altera o link da página de boas-vindas, o mesmo ponto do 404B.</li>
+      <li>Reversível: sem dados persistidos nem contrato externo; a instalação só grava na pasta do usuário.</li>
+    </ul>
+    <p><strong>Fora desta correção</strong> (Agent Notes):</p>
+    <ul>
+      <li>Assinatura e notarização (RNF-03): dependem do Programa de desenvolvedor da Apple (OQ-03). O alerta do Gatekeeper continua e exige "Abrir Mesmo Assim" em Ajustes.</li>
+      <li>O pacote ainda depende de Python 3.11+, mlx-whisper, ffmpeg e do modelo já presentes na máquina. Para o usuário leigo, isso fica aquém do RF-07; empacotar um runtime próprio é trabalho de feature, a registrar à parte.</li>
+      <li>O instalador do Windows (<code>whispper-windows-x64.exe</code>) não existe; o link passa a falhar como download em vez de baixar HTML. O aviso de falha com nova tentativa (seção 10 da spec) fica para o ciclo do 404B.</li>
+    </ul>
+  </div>
+
+  <h2>Mini-grafo do bug</h2>
+  <div class="grafo">
+    <div class="no"><a href="../../BUG-20261001-404B-link-quebrado/bug.md">#2 · BUG-20261001-404B</a><br><span class="meta">link de download 404</span></div>
+    <div class="aresta">caused-by<br>──────▶<br><span class="badge confirmed">confirmed</span></div>
+    <div class="no centro"><a href="../bug.md">#1 · BUG-20261001-MAC1</a><br><span class="meta">instalador .pkg com erro -1</span></div>
+  </div>
+
+  <h2>Matriz de relações</h2>
+  <table>
+    <thead><tr><th>Origem</th><th>Tipo</th><th>Destino</th><th>Estado</th></tr></thead>
+    <tbody>
+      <tr><td><a href="../../BUG-20261001-404B-link-quebrado/bug.md">BUG-20261001-404B</a></td><td>caused-by</td><td><a href="../bug.md">BUG-20261001-MAC1</a></td><td>confirmed</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Ordem sugerida de correção</h2>
+  <ol>
+    <li><a href="../bug.md">BUG-20261001-MAC1</a>: causa estrutural (não há pacote real para servir).</li>
+    <li><a href="../../BUG-20261001-404B-link-quebrado/bug.md">BUG-20261001-404B</a>: depois deste, o link já não vai ao GitHub; resta conferir o comportamento de falha de download previsto na seção 10 da spec.</li>
+  </ol>
+</body>
+</html>

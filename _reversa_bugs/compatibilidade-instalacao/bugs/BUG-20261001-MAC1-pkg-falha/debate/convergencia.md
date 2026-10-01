@@ -1,0 +1,1 @@
+As propostas convergiram 100% na rodada 1: a estratégia de criar um script gerador de `.pkg` com `pkgbuild` sem acesso de admin e atualizar o link da extensão para uma URL remota mockada até a decisão final de hospedagem.

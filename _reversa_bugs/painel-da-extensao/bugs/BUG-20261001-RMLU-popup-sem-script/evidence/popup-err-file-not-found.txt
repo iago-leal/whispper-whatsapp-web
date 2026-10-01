@@ -1,0 +1,15 @@
+# Chrome for Testing 153 (headless, perfil temporário), extensão desempacotada de extension/ (commit base eab48ad + correção do MAC1), 2026-10-01 13:48
+# Navegação para chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/popup/index.html com Network/Runtime/Log habilitados
+
+alvos: service_worker chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/dist/background.js (carregado)
+       page chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/popup/index.html
+rede: net::ERR_FILE_NOT_FOUND
+log: Failed to load resource: net::ERR_FILE_NOT_FOUND chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/popup/popup.js
+
+# extension/manifest.json
+    "default_popup": "popup/index.html",
+# extension/popup/index.html:72
+  <script type="module" src="./popup.js"></script>
+# arquivos existentes
+extension/popup/      index.html, popup.css            (sem popup.js)
+extension/dist/popup/ index.html, popup.css, popup.js  (gerados por npm run build)

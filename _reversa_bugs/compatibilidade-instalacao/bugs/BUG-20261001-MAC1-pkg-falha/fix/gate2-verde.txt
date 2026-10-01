@@ -1,0 +1,40 @@
+# Gate 2, verde depois da correção (2026-10-01 13:41 -0300, base eab48ad + change set CHG-001..005)
+
+$ (extension) npm test
+ℹ tests 86 · pass 84 · fail 0 · skipped 2 (E2E sem WHISPPER_E2E=1; contrato com MOTOR_REAL=1)
+
+$ (extension) npm run typecheck
+exit 0
+
+$ (auxiliar) pytest -q
+126 passed, 6 skipped (exigem MOTOR_REAL=1)
+
+$ (auxiliar) pytest tests/test_instalador_pkg.py -v
+test_gerador_produz_pacote_xar PASSED
+test_instala_so_na_pasta_do_usuario PASSED
+test_scripts_levam_motor_e_key_sem_lixo PASSED
+test_postinstall_registra_o_host_para_a_extensao PASSED
+test_postinstall_falha_quando_a_instalacao_falha PASSED
+
+$ (extension) WHISPPER_E2E=1 node --test test/e2e-instalacao-guiada.test.ts
+Instalador gerado em <repo>/extension/dist/instaladores/whispper-macos-apple-silicon.pkg
+installer: Package name is Whispper: aplicativo auxiliar
+installer: Installing at base path /Users/iagoleal
+installer: The install was successful.
+✔ instalação guiada de ponta a ponta no macOS (17356 ms)
+
+# ~/Library/Logs/whispper-motor-instalacao.log (postinstall do instalador real)
+== 2026-10-01 13:41:04 instalação do aplicativo auxiliar
+Pré-requisitos:
+  ok     Mac com Apple Silicon: Darwin arm64
+  ok     Python 3.11 ou superior: 3.14 em /Library/Frameworks/Python.framework/Versions/3.14/bin/python3
+  ok     ffmpeg: /opt/homebrew/bin/ffmpeg
+  ok     mlx-whisper: importável por /Library/Frameworks/Python.framework/Versions/3.14/bin/python3
+  ok     modelo: mlx-community/whisper-large-v3-turbo em ~/.cache/huggingface/hub/models--mlx-community--whisper-large-v3-turbo/snapshots/a4aaeec0636e6fef84abdcbe3544cb2bf7e9f6fb
+Interpretador: /Library/Frameworks/Python.framework/Versions/3.14/bin/python3
+Identificador da extensão: femjlfnijaboogbcdionddnjcjpfmieg
+Gravados:
+  ~/Library/Application Support/whispper-motor (código, config.toml e lançador whispper-motor)
+  ~/Library/Application Support/Google/Chrome/NativeMessagingHosts/whispper_whatsapp_web.motor.json
+Confira com: auxiliar/motor.sh diagnosticar
+== código de saída: 0

@@ -1,0 +1,98 @@
+--- a/auxiliar/ferramentas/gerar_pkg.sh
++++ b/auxiliar/ferramentas/gerar_pkg.sh
+@@ -1,57 +1,52 @@
+-#!/bin/bash
+-set -e
++#!/usr/bin/env bash
++# Gera o instalador do aplicativo auxiliar para macOS com Apple Silicon (RF-07).
++#
++#   auxiliar/ferramentas/gerar_pkg.sh [destino.pkg]
++#
++# Sem argumento, grava em extension/dist/instaladores/, de onde a página de boas-vindas oferece o
++# download. O pacote instala só na pasta do usuário, sem senha de administrador, e não tem payload:
++# leva o motor e a key da extensão na pasta de scripts, e o postinstall roda `motor.sh instalar`,
++# que copia o código para ~/Library/Application Support/whispper-motor e registra o host no Chrome.
++# Assinatura e notarização ficam de fora (RNF-03, OQ-03).
++set -euo pipefail
+ 
+-echo "Preparando empacotamento do Whispper Motor..."
+-WORK_DIR=$(mktemp -d)
+-PKG_ROOT="${WORK_DIR}/payload"
+-SCRIPTS_DIR="${WORK_DIR}/scripts"
++RAIZ="$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd -P)"
++DESTINO="${1:-$RAIZ/extension/dist/instaladores/whispper-macos-apple-silicon.pkg}"
++IDENTIFICADOR="com.whispper.motor"
++VERSAO="$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$RAIZ/extension/manifest.json")"
+ 
+-# Colocamos o payload numa pasta oculta temporária dentro da home
+-mkdir -p "${PKG_ROOT}/.whispper_tmp"
+-cp -R auxiliar/* "${PKG_ROOT}/.whispper_tmp/"
+-cp -R extension "${PKG_ROOT}/.whispper_tmp/extension_mock" || true
++TRABALHO="$(mktemp -d)"
++trap 'rm -rf "$TRABALHO"' EXIT
++SCRIPTS="$TRABALHO/scripts"
+ 
+-mkdir -p "${SCRIPTS_DIR}"
+-cat << 'EOF_SCRIPT' > "${SCRIPTS_DIR}/postinstall"
+-#!/bin/bash
+-# No modo CurrentUserHome, $2 é a home do usuário (ex: /Users/iago)
+-export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+-cd "$2/.whispper_tmp"
+-bash motor.sh instalar
+-rm -rf "$2/.whispper_tmp"
+-exit 0
+-EOF_SCRIPT
+-chmod +x "${SCRIPTS_DIR}/postinstall"
++# O layout do repositório: instalacao.py lê a key em parents[2]/extension/manifest.json.
++# Só o que a instalação usa, sem testes nem caches.
++mkdir -p "$SCRIPTS/auxiliar/whispper_motor" "$SCRIPTS/extension"
++cp "$RAIZ/auxiliar/motor.sh" "$SCRIPTS/auxiliar/"
++cp "$RAIZ"/auxiliar/whispper_motor/*.py "$SCRIPTS/auxiliar/whispper_motor/"
++cp "$RAIZ/extension/manifest.json" "$SCRIPTS/extension/"
++cp "$RAIZ/auxiliar/ferramentas/postinstall.sh" "$SCRIPTS/postinstall"
++chmod 755 "$SCRIPTS/postinstall" "$SCRIPTS/auxiliar/motor.sh"
+ 
+-# Passo 1: Cria o componente (pkg interno)
+-pkgbuild --root "${PKG_ROOT}" \
+-         --identifier "com.whispper.motor.pkg" \
+-         --version "1.0.0" \
+-         --scripts "${SCRIPTS_DIR}" \
+-         --install-location "/" \
+-         "${WORK_DIR}/component.pkg"
++pkgbuild --nopayload --scripts "$SCRIPTS" --identifier "$IDENTIFICADOR" --version "$VERSAO" \
++  "$TRABALHO/motor.pkg" >/dev/null
+ 
+-# Passo 2: Cria a distribuição (sem requerer root)
+-cat << 'EOF_DIST' > "${WORK_DIR}/Distribution"
++cat >"$TRABALHO/Distribution" <<EOF
+ <?xml version="1.0" encoding="utf-8"?>
+ <installer-gui-script minSpecVersion="2">
+-    <title>Whispper Motor</title>
++    <title>Whispper: aplicativo auxiliar</title>
+     <options customize="never" require-scripts="false" hostArchitectures="arm64"/>
+     <domains enable_anywhere="false" enable_currentUserHome="true" enable_localSystem="false"/>
+     <choices-outline>
+-        <line choice="default"/>
++        <line choice="motor"/>
+     </choices-outline>
+-    <choice id="default" title="Whispper Motor" visible="false">
+-        <pkg-ref id="com.whispper.motor.pkg"/>
++    <choice id="motor" title="Whispper" visible="false">
++        <pkg-ref id="$IDENTIFICADOR"/>
+     </choice>
+-    <pkg-ref id="com.whispper.motor.pkg" version="1.0.0" onConclusion="none">component.pkg</pkg-ref>
++    <pkg-ref id="$IDENTIFICADOR" version="$VERSAO" onConclusion="none">motor.pkg</pkg-ref>
+ </installer-gui-script>
+-EOF_DIST
++EOF
+ 
+-# Passo 3: Cria o produto final (.pkg) que a interface gráfica abre corretamente
+-productbuild --distribution "${WORK_DIR}/Distribution" \
+-             --package-path "${WORK_DIR}" \
+-             whispper-macos-apple-silicon.pkg
+-
+-rm -rf "${WORK_DIR}"
+-echo "Pacote whispper-macos-apple-silicon.pkg gerado com sucesso."
++mkdir -p "$(dirname -- "$DESTINO")"
++productbuild --distribution "$TRABALHO/Distribution" --package-path "$TRABALHO" "$DESTINO" >/dev/null
++echo "Instalador gerado em $DESTINO"

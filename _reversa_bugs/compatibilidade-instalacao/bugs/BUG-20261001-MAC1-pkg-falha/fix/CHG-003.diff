@@ -1,0 +1,22 @@
+--- a/extension/src/onboarding/onboarding.ts
++++ b/extension/src/onboarding/onboarding.ts
+@@ -122,14 +122,11 @@
+     if (resultado.instaladorSugerido) {
+       if (elNome) elNome.textContent = resultado.instaladorSugerido.nome;
+       if (elLink) {
+-        // WORKAROUND OQ-03: Release no GitHub não existe.
+-        // O link de download é interceptado para não gerar 404.
+-        elLink.href = 'javascript:void(0)';
+-        elLink.removeAttribute('download');
+-        elLink.onclick = (e) => {
+-          e.preventDefault();
+-          alert(`Em desenvolvimento: o arquivo ${resultado.instaladorSugerido!.arquivo} ainda não foi publicado (OQ-03). Por favor, avance clicando no botão "Já instalei".`);
+-        };
++        // O instalador vai embutido na extensão (auxiliar/ferramentas/gerar_pkg.sh), enquanto a
++        // hospedagem fica em aberto (OQ-03). Um href de fragmento salvaria a própria página.
++        const { arquivo } = resultado.instaladorSugerido;
++        elLink.href = chrome.runtime.getURL(`dist/instaladores/${arquivo}`);
++        elLink.download = arquivo;
+       }
+     }
+   }

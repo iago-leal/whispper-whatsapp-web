@@ -1,0 +1,30 @@
+# Gate 1, vermelho antes da correção (2026-10-01 13:25 -0300, base eab48ad + árvore de trabalho)
+
+$ node --test test/onboarding-instalador.test.ts test/onboarding.test.ts
+  ✖ o botão oferece o .pkg embutido na extensão, e não a própria página (BUG-20261001-MAC1) (0.991375ms)
+✖ Instalação Guiada — download do instalador (1.429084ms)
+✔ ControladorOnboarding - Link de download gera URL 404 (702.951541ms)
+ℹ pass 1
+ℹ fail 1
+✖ failing tests:
+✖ o botão oferece o .pkg embutido na extensão, e não a própria página (BUG-20261001-MAC1) (0.991375ms)
+    actual: 'javascript:void(0)',
+    expected: 'chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/dist/instaladores/whispper-macos-apple-silicon.pkg',
+
+$ pytest tests/test_instalador_pkg.py -q
+==================================== ERRORS ====================================
+_______________ ERROR at setup of test_gerador_produz_pacote_xar _______________
+        triggered by setting any of text, encoding, errors or universal_newlines.
+E               subprocess.CalledProcessError: Command '['bash', '<repo>/auxiliar/ferramentas/gerar_pkg.sh', '<tmp>']' returned non-zero exit status 1.
+____________ ERROR at setup of test_instala_so_na_pasta_do_usuario _____________
+        triggered by setting any of text, encoding, errors or universal_newlines.
+E               subprocess.CalledProcessError: Command '['bash', '<repo>/auxiliar/ferramentas/gerar_pkg.sh', '<tmp>']' returned non-zero exit status 1.
+__________ ERROR at setup of test_scripts_levam_motor_e_key_sem_lixo ___________
+
+$ WHISPPER_E2E=1 node --test test/e2e-instalacao-guiada.test.ts
+✖ instalação guiada de ponta a ponta no macOS
+  AssertionError: o botão de download abriu um diálogo em vez de baixar
+  actual: [ 'Em desenvolvimento: o arquivo whispper-macos-apple-silicon.pkg ainda não foi publicado (OQ-03). ...' ], expected: []
+
+# Mesmo E2E contra extension/src/onboarding/onboarding.ts do commit eab48ad (validado na cópia do scratchpad):
+  AssertionError: o arquivo baixado não é um pacote do macOS; actual: '<!DO', expected: 'xar!'

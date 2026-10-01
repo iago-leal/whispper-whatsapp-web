@@ -1,0 +1,23 @@
+# Conferência do usuário no Instalador gráfico, 2026-10-01 13:50-13:51 (após auxiliar/motor.sh desinstalar)
+
+## Arquivo baixado pela etapa 3 da extensão
+-rw-r--r--@ 1 iagoleal  staff  30411  1 out 13:50 ~/Downloads/whispper-macos-apple-silicon.pkg
+~/Downloads/whispper-macos-apple-silicon.pkg: xar archive compressed TOC: 890, SHA-1 checksum, contains  gzip compressed data, from Unix, original size modulo 2^32 2750879260
+9ec43d9fdd871409ed9a31b33ca546e183c4db00262f032dc8ce5002a6c55139  ~/Downloads/whispper-macos-apple-silicon.pkg
+9ec43d9fdd871409ed9a31b33ca546e183c4db00262f032dc8ce5002a6c55139  ~/dev/whispper-whatsapp-web/extension/dist/instaladores/whispper-macos-apple-silicon.pkg
+
+## /var/log/install.log
+2026-10-01 13:51:00-03 MacBook-Pro-de-Iago Installer[15755]: Whispper: aplicativo auxiliar  Installation Log
+2026-10-01 13:51:00-03 MacBook-Pro-de-Iago Installer[15755]: Opened from: ~/Downloads/whispper-macos-apple-silicon.pkg
+2026-10-01 13:51:00-03 MacBook-Pro-de-Iago Installer[15755]: Failed to load specified background image
+2026-10-01 13:51:00-03 MacBook-Pro-de-Iago Installer[15755]: Product archive ~/Downloads/whispper-macos-apple-silicon.pkg trustLevel=100
+2026-10-01 13:51:00-03 MacBook-Pro-de-Iago Installer[15755]: External component packages (1) trustLevel=100 (trust evaluation failed: Error Domain=PKInstallErrorDomain Code=101 "O pacote “whispper-macos-apple-silicon.pkg” não está assinado." UserInfo={NSURL=#motor.pkg -- file://~/Downl
+2026-10-01 13:51:03-03 MacBook-Pro-de-Iago Installer[15755]: 	Instalar: "Whispper: aplicativo auxiliar"
+2026-10-01 13:51:03-03 MacBook-Pro-de-Iago Installer[15755]: 		whispper-macos-apple-silicon.pkg#motor.pkg : com.whispper.motor : 0.1.0
+2026-10-01 13:51:04-03 MacBook-Pro-de-Iago installd[29732]: PackageKit (package_script_service): Preparing to execute script "./postinstall" in /private/tmp/PKInstallSandbox.9rzNtO/Scripts/com.whispper.motor.DkWWDK
+2026-10-01 13:51:04-03 MacBook-Pro-de-Iago package_script_service[29738]: PackageKit: Preparing to execute script "postinstall" in /tmp/PKInstallSandbox.9rzNtO/Scripts/com.whispper.motor.DkWWDK
+2026-10-01 13:51:04-03 MacBook-Pro-de-Iago package_script_service[29738]: Set responsibility to pid: 15755, responsible_path: /System/Library/CoreServices/Installer.app/Contents/MacOS/Installer
+2026-10-01 13:51:04-03 MacBook-Pro-de-Iago package_script_service[29738]: PackageKit: Executing script "postinstall" in /tmp/PKInstallSandbox.9rzNtO/Scripts/com.whispper.motor.DkWWDK
+2026-10-01 13:51:08-03 MacBook-Pro-de-Iago package_script_service[29738]: Responsibility set back to self.
+2026-10-01 13:51:08-03 MacBook-Pro-de-Iago installd[29732]: Installed "Whispper: aplicativo auxiliar" ()
+2026-10-01 13:51:12-03 MacBook-Pro-de-Iago Installer[15755]: Package Removal: Failed to rename(~/Downloads/whispper-macos-apple-silicon.pkg, ~/.Trash/whispper-macos-apple-silicon.pkg) due to errno:1

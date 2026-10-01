@@ -1,0 +1,14 @@
+# SHA-256 dos .pkg baixados pela extensão comparados com a página de onboarding (2026-10-01 12:3x)
+69248b359a4e963dbc4dc1363918fa9ac7968d1b864c5730ad46563ed505edd3  ~/Downloads/whispper-macos-apple-silicon (1).pkg
+69248b359a4e963dbc4dc1363918fa9ac7968d1b864c5730ad46563ed505edd3  ~/Downloads/whispper-macos-apple-silicon (2).pkg
+69248b359a4e963dbc4dc1363918fa9ac7968d1b864c5730ad46563ed505edd3  ~/Downloads/whispper-macos-apple-silicon (3).pkg
+69248b359a4e963dbc4dc1363918fa9ac7968d1b864c5730ad46563ed505edd3  ~/Downloads/whispper-macos-apple-silicon.pkg
+69248b359a4e963dbc4dc1363918fa9ac7968d1b864c5730ad46563ed505edd3  extension/onboarding/index.html
+
+# file(1)
+~/Downloads/whispper-macos-apple-silicon.pkg: HTML document text, Unicode text, UTF-8 text
+
+# kMDItemWhereFroms
+kMDItemWhereFroms = (
+    "chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/"
+)

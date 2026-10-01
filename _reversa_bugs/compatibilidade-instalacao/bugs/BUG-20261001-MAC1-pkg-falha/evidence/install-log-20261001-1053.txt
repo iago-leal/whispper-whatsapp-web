@@ -1,0 +1,20 @@
+2026-10-01 10:51:29-03 MacBook-Pro-de-Iago Installer[13655]: Opened from: /Users/iagoleal/dev/whispper-whatsapp-web/whispper-macos-apple-silicon.pkg
+2026-10-01 10:51:29-03 MacBook-Pro-de-Iago Installer[13655]: Failed to load specified background image
+2026-10-01 10:51:29-03 MacBook-Pro-de-Iago Installer[13655]: Product archive /Users/iagoleal/dev/whispper-whatsapp-web/whispper-macos-apple-silicon.pkg trustLevel=100
+2026-10-01 10:51:29-03 MacBook-Pro-de-Iago Installer[13655]: External component packages (1) trustLevel=100 (trust evaluation failed: Error Domain=PKInstallErrorDomain Code=101 "O pacote “whispper-macos-apple-silicon.pkg” não está assinado." UserInfo={NSURL=#component.pkg -- file:///Users/iagoleal/dev/whispper-whatsapp-web/whispper-macos-apple-silicon.pkg#Distribution, PKInstallPackageIdentifier=c
+2026-10-01 10:53:25-03 MacBook-Pro-de-Iago installd[15545]: PackageKit: Extracting file:///Users/iagoleal/dev/whispper-whatsapp-web/whispper-macos-apple-silicon.pkg#component.pkg (destination=/private/var/folders/wy/6ny1w8792fl9r6jkww89352c0000gn/C/PKInstallSandboxManager/F2ED65E4-E182-49F5-9740-889727C6961F.activeSandbox/Root, uid=501)
+2026-10-01 10:53:26-03 MacBook-Pro-de-Iago installd[15545]: PackageKit: prevent user idle system sleep
+2026-10-01 10:53:26-03 MacBook-Pro-de-Iago installd[15545]: PackageKit: suspending backupd
+2026-10-01 10:53:26-03 MacBook-Pro-de-Iago installd[15545]: PackageKit: Using trashcan path /var/folders/wy/6ny1w8792fl9r6jkww89352c0000gn/T/PKInstallSandboxTrash/F2ED65E4-E182-49F5-9740-889727C6961F.sandboxTrash for sandbox /private/var/folders/wy/6ny1w8792fl9r6jkww89352c0000gn/C/PKInstallSandboxManager/F2ED65E4-E182-49F5-9740-889727C6961F.activeSandbox
+2026-10-01 10:53:26-03 MacBook-Pro-de-Iago installd[15545]: PackageKit: Shoving /private/var/folders/wy/6ny1w8792fl9r6jkww89352c0000gn/C/PKInstallSandboxManager/F2ED65E4-E182-49F5-9740-889727C6961F.activeSandbox/Root (1 items) to /Users/iagoleal
+2026-10-01 10:53:26-03 MacBook-Pro-de-Iago installd[15545]: PackageKit (package_script_service): Preparing to execute script "./postinstall" in /private/tmp/PKInstallSandbox.WnixFS/Scripts/com.whispper.motor.pkg.GtMxdR
+2026-10-01 10:53:26-03 MacBook-Pro-de-Iago package_script_service[15549]: PackageKit: Preparing to execute script "postinstall" in /tmp/PKInstallSandbox.WnixFS/Scripts/com.whispper.motor.pkg.GtMxdR
+2026-10-01 10:53:26-03 MacBook-Pro-de-Iago package_script_service[15549]: Set responsibility to pid: 13655, responsible_path: /System/Library/CoreServices/Installer.app/Contents/MacOS/Installer
+2026-10-01 10:53:26-03 MacBook-Pro-de-Iago package_script_service[15549]: PackageKit: Executing script "postinstall" in /tmp/PKInstallSandbox.WnixFS/Scripts/com.whispper.motor.pkg.GtMxdR
+2026-10-01 10:53:27-03 MacBook-Pro-de-Iago package_script_service[15549]: ./postinstall: motor.sh: não foi possível ler a key de /Users/iagoleal/extension/manifest.json: [Errno 2] No such file or directory: '/Users/iagoleal/extension/manifest.json'
+2026-10-01 10:53:27-03 MacBook-Pro-de-Iago package_script_service[15549]: Responsibility set back to self.
+2026-10-01 10:53:27-03 MacBook-Pro-de-Iago installd[15545]: PackageKit: Writing receipt for com.whispper.motor.pkg to /Users/iagoleal
+2026-10-01 10:53:27-03 MacBook-Pro-de-Iago installd[15545]: Installed "Whispper Motor" ()
+2026-10-01 10:53:27-03 MacBook-Pro-de-Iago installd[15545]: Successfully wrote install history to /Library/Receipts/InstallHistory.plist
+2026-10-01 10:53:27-03 MacBook-Pro-de-Iago installd[15545]: PackageKit: releasing backupd
+2026-10-01 10:53:27-03 MacBook-Pro-de-Iago installd[15545]: PackageKit: allow user idle system sleep

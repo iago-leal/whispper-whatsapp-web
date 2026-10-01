@@ -1,4 +1,4 @@
-<!-- GENERATED, DO NOT EDIT: regenerado por /reversa-debugger-graph em 2026-10-01T18:24Z a partir de 5 bugs -->
+<!-- GENERATED, DO NOT EDIT: regenerado por /reversa-debugger-graph em 2026-10-01T19:57Z a partir de 5 bugs -->
 
 # Bugs por artefato de spec
 
@@ -11,7 +11,7 @@ Espelho gerado a partir de `_reversa_bugs/`; o vínculo é registrado aqui, a mu
 ## `_reversa_sdd/sdd/integracao-whatsapp-web.md`
 
 - BUG-20261001-GAOZ (resolved/fixed, P0): Ícone de transcrição não aparece: a integração desiste se a página carrega sem conversa aberta · `_reversa_bugs/integracao-whatsapp-web/bugs/BUG-20261001-GAOZ-icone-ausente/`
-- BUG-20261001-2MOY (open, P0): Extração do áudio depende de <audio src>, que o WhatsApp não cria antes da reprodução · `_reversa_bugs/integracao-whatsapp-web/bugs/BUG-20261001-2MOY-audio-sem-elemento/`
+- BUG-20261001-2MOY (resolved/fixed, P0): Extração do áudio depende de <audio src>, que o WhatsApp não cria antes da reprodução · `_reversa_bugs/integracao-whatsapp-web/bugs/BUG-20261001-2MOY-audio-sem-elemento/` · adendo `_reversa_sdd/addenda/bug-BUG-20261001-2MOY-v001.md`
 
 ## `_reversa_sdd/sdd/nucleo-transcricao.md`
 

@@ -1,0 +1,249 @@
+# Gate 1 · BUG-20261001-2MOY · 2026-10-01 16:06 -0300 · commit base 9eee588 + testes.diff
+$ npm test
+
+> whispper-whatsapp-web-extensao@0.1.0 test
+> node --test "test/**/*.test.ts"
+
+✔ recusa áudio acima do limite sem abrir conexão (4.467208ms)
+✔ conecta sob demanda, envia o pedido e copia o resultado (1.379834ms)
+✔ erro FALHA_NA_TRANSCRICAO do host é repassado (0.220541ms)
+✔ erro VERSAO_INCOMPATIVEL do host é repassado (0.146917ms)
+✔ erro MOTOR_INDISPONIVEL do host é repassado (0.1095ms)
+✔ MENSAGEM_INVALIDA do host vira falha e fica registrada (0.117958ms)
+✔ queda com pedido pendente vira MOTOR_INDISPONIVEL e o pedido seguinte reconecta (0.392834ms)
+✔ host não instalado: uma única tentativa de conexão por pedido (0.119833ms)
+✔ pedidos simultâneos saem em ordem e são correlacionados por idPedido (0.198791ms)
+✔ respostas estado e resultado intercaladas não se confundem (0.152709ms)
+✔ depois de verificação sem resposta, o pedido seguinte verifica antes de transcrever (0.185792ms)
+✔ verificação prévia que falha encerra o pedido sem enviá-lo (0.142667ms)
+✔ erro sem idPedido é registrado e ignorado (3.5155ms)
+✔ estado pronto (1.512958ms)
+✔ carregando vira iniciando (0.15775ms)
+✔ erro vira indisponível e fecha a porta para o próximo host reler a configuração (0.202042ms)
+✔ protocolo diferente vira VERSAO_INCOMPATIVEL com instrução de atualizar (0.115042ms)
+✔ desconexão com "Specified native messaging host not found." vira indisponível: aplicativo auxiliar não instalado (0.180791ms)
+✔ desconexão com "Access to the specified native messaging host is forbidden." vira indisponível: extensão não autorizada no aplicativo auxiliar (0.066709ms)
+✔ desconexão com "Native host has exited." vira indisponível: aplicativo auxiliar encerrou (0.067541ms)
+✔ desconexão com "Failed to start native messaging host." vira indisponível: aplicativo auxiliar não iniciou (0.074292ms)
+✔ desconexão com "null" vira indisponível: aplicativo auxiliar encerrou (0.113125ms)
+✔ sem resposta em 10 s vira indisponível e fecha a porta (3.026834ms)
+✔ resposta cancela o prazo (0.1155ms)
+✔ verificações simultâneas são correlacionadas na ordem (0.066709ms)
+✔ reaproveita a conexão aberta (0.060875ms)
+✔ motorDiagnostico.verificar consulta o host pelo canal do Chrome (1.080292ms)
+✔ motorDiagnostico.transcreverAmostra envia a amostra empacotada em dist/diagnostico/ (24.28225ms)
+✔ conecta ao host do protocolo (0.930583ms)
+✔ envia pela porta e entrega as mensagens recebidas (0.987417ms)
+✔ entrega a desconexão com o texto de lastError, ou null sem ele (0.153583ms)
+✔ desconectar fecha a porta, e enviar depois disso lança (0.195959ms)
+✔ com o adaptador, a recusa do Chrome vira extensão não autorizada (0.40225ms)
+▶ Compatibilidade e Instalação Guiada — Domínio
+  ✔ Mac Apple Silicon com 8 GB ou mais é aprovado como compatível (RF-03, RF-04) (0.439625ms)
+  ✔ Mac com processador Intel (x86_64) é rejeitado com explicação leiga (RF-04, RF-05) (0.128958ms)
+  ✔ Windows 64 bits com 8 GB ou mais é aprovado como compatível (RF-04, RF-08) (0.077459ms)
+  ✔ Windows de 32 bits é rejeitado com explicação sobre 64 bits (RF-04, RF-05) (0.069291ms)
+  ✔ Computador com RAM inferior a 8 GB (ex: 4 GB) é rejeitado com explicação clara (RF-04, RF-05) (0.103167ms)
+  ✔ Sistema operacional não suportado (ex: Linux) é rejeitado antes de downloads (RF-04, RF-05) (0.063ms)
+  ✔ extrairInfoDoNavegador infere plataforma e memória a partir de objetos do browser (0.110292ms)
+✔ Compatibilidade e Instalação Guiada — Domínio (1.546583ms)
+✔ CONFIGURACAO_ESTRUTURAS possui versão e data de verificação válidas (0.504417ms)
+✔ CONFIGURACAO_ESTRUTURAS define seletores obrigatórios sem strings vazias (0.075ms)
+✔ CONFIGURACAO_ESTRUTURAS define atributos com prefixo whispper para evitar colisão (0.078625ms)
+✖ CONFIGURACAO_ESTRUTURAS nomeia os módulos internos da página, e nenhum outro fonte os cita (0.301167ms)
+✔ identificarMensagemDeAudio reconhece mensagem de voz válida (0.4905ms)
+✔ deveIgnorarMensagem rejeita mensagem com marcador de visualização única ou já injetada (0.089708ms)
+﹣ instalação guiada de ponta a ponta no macOS (0.375916ms) # instala o aplicativo auxiliar na sua conta; rode com WHISPPER_E2E=1
+✖ reprodução: balão sem <audio>, como no WhatsApp real, entrega bytes, tipo e duração pelo download da própria página (RF-06, EC-01) (0.611292ms)
+✖ a obtenção não toca nem altera a mensagem: só o download decifrado é pedido à página (RF-05, RF-07) (0.175625ms)
+✖ o pedido à página leva o mimetype e os campos de mídia do próprio modelo (sem mimetype, a página recusa) (0.116667ms)
+✖ mensagem que a página já descartou termina em AUDIO_INDISPONIVEL com "Abra a conversa e tente de novo" (EC-06) (0.524917ms)
+✖ download sem conclusão em 30 s termina em AUDIO_INDISPONIVEL com "Falha ao baixar o áudio; verifique a conexão" (EC-03) (161.117667ms)
+✔ GerenciadorDeJanelas abre janela e atualiza estados corretamente (0.637583ms)
+✔ GerenciadorDeJanelas respeita limite máximo de 20 janelas (1.534875ms)
+▶ integração com a conversa aberta no WhatsApp Web
+  ✔ reprodução: a página carrega sem conversa e o ícone aparece em até 500 ms quando a conversa abre (RF-01, RF-03) (485.678125ms)
+  ✔ reprodução no WhatsApp real: o player montado depois do balão recebe o ícone em até 500 ms (RF-01, RF-03) (2138.026042ms)
+  ✔ trocar de conversa e voltar mantém exatamente um ícone por mensagem de voz (RF-02, RF-11) (102.422667ms)
+  ✔ sem conversa aberta não há aviso de degradação (EC-10) (89.313791ms)
+  ✔ conversa sem a lista de mensagens fica degradada e sem ícone, e a seguinte volta a receber (RF-11, RF-12) (2095.331375ms)
+✔ integração com a conversa aberta no WhatsApp Web (6097.82625ms)
+﹣ contrato MotorDeTranscricao: adaptador do motor local com o host real (1.247583ms) # exige o modelo real; rode com MOTOR_REAL=1
+✔ o popup declarado no manifesto carrega um script que a extensão contém (BUG-20261001-RMLU) (1.102042ms)
+✔ todo arquivo do manifesto e toda página aberta pela extensão existem no pacote (0.543791ms)
+✖ o script do mundo da página entra só no WhatsApp Web, antes da página, e sai do build num arquivo único (RNF-05, BUG-20261001-2MOY) (1.405583ms)
+✔ avaliarSaudeDasEstruturas retorna ativa quando a conversa aberta tem a lista de mensagens (0.476542ms)
+✔ avaliarSaudeDasEstruturas não acusa degradação sem conversa aberta (EC-10, BUG-20261001-GAOZ) (0.072834ms)
+✔ avaliarSaudeDasEstruturas acusa degradação quando a conversa aberta não tem a lista de mensagens (RF-11) (0.383084ms)
+✔ calcularCoordenadasAncora extrai retângulo e visibilidade do elemento (0.113542ms)
+▶ contrato MotorDeTranscricao: adaptador simulado
+  ✔ verificar passa por iniciando até pronto (51.658125ms)
+  ✔ transcreve fala com texto, idioma, duração e tempo (30.75025ms)
+  ✔ áudio sem fala devolve texto vazio, sem erro (0.18075ms)
+  ✔ áudio ilegível devolve FALHA_NA_TRANSCRICAO (0.529167ms)
+  ✔ três chamadas simultâneas terminam na ordem das chamadas (37.469542ms)
+  ✔ motor indisponível responde MOTOR_INDISPONIVEL com instrução (0.196167ms)
+  ✔ versão incompatível responde VERSAO_INCOMPATIVEL (0.149667ms)
+✔ contrato MotorDeTranscricao: adaptador simulado (122.048375ms)
+✔ sem roteiro, responde pronto e uma transcrição padrão (0.187916ms)
+✔ roteiro em lista segue a ordem das chamadas e repete a última resposta (0.117709ms)
+✔ registra as chamadas recebidas, com o áudio e o tipo de mídia (0.108334ms)
+✔ a resposta entregue é cópia: alterá-la não muda o roteiro (0.072083ms)
+✔ argumento de tipo errado lança exceção (0.220875ms)
+▶ Núcleo de Transcrição — Domínio e Hexagonal
+  ✔ RF-01 e RF-02: Atende pedidos estritamente sequenciais (FIFO) em sequência fragmentada (108.866083ms)
+  ✔ RF-06 e RF-07: Reabertura imediata a partir do cache sem chamar o motor (22.586417ms)
+  ✔ RF-08: Cliques repetidos em áudio com janela já aberta apenas a destacam (0.293084ms)
+  ✔ RF-09: Tentar de novo recoloca pedido com erro no fim da fila (42.974834ms)
+  ✔ RF-10: Fechar janela na fila cancela o pedido; fechar transcrevendo conclui em background (50.605708ms)
+  ✔ RF-19: Motor indisponível encerra pedido em curso e fila inteira imediatamente (21.6595ms)
+  ✔ EC-05: Mensagem removida limpa pedido, cache e fecha a janela (21.665958ms)
+  ✔ RF-12 a RF-17: Contadores locais anônimos e cálculo exato de adoção e qualidade (0.393666ms)
+✔ Núcleo de Transcrição — Domínio e Hexagonal (269.955042ms)
+▶ Instalação Guiada — download do instalador
+  ✔ o botão oferece o .pkg embutido na extensão, e não a própria página (BUG-20261001-MAC1) (0.745042ms)
+✔ Instalação Guiada — download do instalador (1.572583ms)
+✔ ControladorOnboarding - Link de download gera URL 404 (703.030125ms)
+✔ calcularPosicoesJanelas posiciona janela ao lado da âncora em espaço suficiente (0.739541ms)
+✔ calcularPosicoesJanelas desloca verticalmente janela para resolver colisão (0.117583ms)
+✔ calcularPosicoesJanelas usa fallback abaixo do balão quando espaço lateral for insuficiente (0.080083ms)
+✔ constantes iguais às do contrato (0.460916ms)
+✔ pedidos serializados iguais aos exemplos do contrato (0.454417ms)
+✔ base64 igual ao do Node, inclusive acima do tamanho de bloco (11.7735ms)
+✔ tamanho do pedido calculado sem serializar o áudio (2.040416ms)
+✔ 50 MiB passam do limite; 1 MiB cabe (0.167792ms)
+✔ respostas válidas do contrato são reconhecidas (0.150792ms)
+✔ respostas inválidas do contrato são descartadas (0.082167ms)
+ℹ tests 100
+ℹ suites 4
+ℹ pass 91
+ℹ fail 7
+ℹ cancelled 0
+ℹ skipped 2
+ℹ todo 0
+ℹ duration_ms 11422.662958
+
+✖ failing tests:
+
+test at test/configuracao-estruturas.test.ts:29:1
+✖ CONFIGURACAO_ESTRUTURAS nomeia os módulos internos da página, e nenhum outro fonte os cita (0.301167ms)
+  AssertionError [ERR_ASSERTION]: modulosDaPagina ausente ou incompleto
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/configuracao-estruturas.test.ts:32:10)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at test/extrator-audio.test.ts:175:1
+✖ reprodução: balão sem <audio>, como no WhatsApp real, entrega bytes, tipo e duração pelo download da própria página (RF-06, EC-01) (0.611292ms)
+  Error: AUDIO_INDISPONIVEL: elemento de áudio ausente ou sem fonte para a mensagem A
+      at extrairAudioDeElemento (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/src/content/extrator-audio.ts:17:11)
+      at AdaptadorWhatsAppWeb.obterAudio (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/src/adaptadores/adaptador-whatsapp-web.ts:39:12)
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/extrator-audio.test.ts:177:41)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3)
+
+test at test/extrator-audio.test.ts:184:1
+✖ a obtenção não toca nem altera a mensagem: só o download decifrado é pedido à página (RF-05, RF-07) (0.175625ms)
+  Error: AUDIO_INDISPONIVEL: elemento de áudio ausente ou sem fonte para a mensagem B
+      at extrairAudioDeElemento (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/src/content/extrator-audio.ts:17:11)
+      at AdaptadorWhatsAppWeb.obterAudio (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/src/adaptadores/adaptador-whatsapp-web.ts:39:12)
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/extrator-audio.test.ts:187:27)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7)
+
+test at test/extrator-audio.test.ts:194:1
+✖ o pedido à página leva o mimetype e os campos de mídia do próprio modelo (sem mimetype, a página recusa) (0.116667ms)
+  Error: AUDIO_INDISPONIVEL: elemento de áudio ausente ou sem fonte para a mensagem C
+      at extrairAudioDeElemento (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/src/content/extrator-audio.ts:17:11)
+      at AdaptadorWhatsAppWeb.obterAudio (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/src/adaptadores/adaptador-whatsapp-web.ts:39:12)
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/extrator-audio.test.ts:197:27)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7)
+
+test at test/extrator-audio.test.ts:212:1
+✖ mensagem que a página já descartou termina em AUDIO_INDISPONIVEL com "Abra a conversa e tente de novo" (EC-06) (0.524917ms)
+  AssertionError [ERR_ASSERTION]: The validation function is expected to return "true". Received false
+  
+  Caught error:
+  
+  Error: AUDIO_INDISPONIVEL: elemento de áudio ausente ou sem fonte para a mensagem descartada
+      at async TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/extrator-audio.test.ts:213:3)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: Error: AUDIO_INDISPONIVEL: elemento de áudio ausente ou sem fonte para a mensagem descartada
+        at extrairAudioDeElemento (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/src/content/extrator-audio.ts:17:11)
+        at AdaptadorWhatsAppWeb.obterAudio (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/src/adaptadores/adaptador-whatsapp-web.ts:39:12)
+        at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/extrator-audio.test.ts:213:51)
+        at Test.runInAsyncScope (node:async_hooks:214:14)
+        at Test.run (node:internal/test_runner/test:1106:25)
+        at async Test.processPendingSubtests (node:internal/test_runner/test:788:7),
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at test/extrator-audio.test.ts:216:1
+✖ download sem conclusão em 30 s termina em AUDIO_INDISPONIVEL com "Falha ao baixar o áudio; verifique a conexão" (EC-03) (161.117667ms)
+  AssertionError [ERR_ASSERTION]: The validation function is expected to return "true". Received false
+  
+  Caught error:
+  
+  Error: AUDIO_INDISPONIVEL: elemento de áudio ausente ou sem fonte para a mensagem D
+      at async TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/extrator-audio.test.ts:226:5)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: Error: AUDIO_INDISPONIVEL: elemento de áudio ausente ou sem fonte para a mensagem D
+        at extrairAudioDeElemento (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/src/content/extrator-audio.ts:17:11)
+        at AdaptadorWhatsAppWeb.obterAudio (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/src/adaptadores/adaptador-whatsapp-web.ts:39:12)
+        at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/extrator-audio.test.ts:222:38)
+        at Test.runInAsyncScope (node:async_hooks:214:14)
+        at Test.run (node:internal/test_runner/test:1106:25)
+        at async Test.processPendingSubtests (node:internal/test_runner/test:788:7),
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at test/manifesto.test.ts:63:1
+✖ o script do mundo da página entra só no WhatsApp Web, antes da página, e sai do build num arquivo único (RNF-05, BUG-20261001-2MOY) (1.405583ms)
+  AssertionError [ERR_ASSERTION]: nenhum script declarado no mundo da página
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/manifesto.test.ts:65:10)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+exit=1
+
+$ npm run typecheck
+
+> whispper-whatsapp-web-extensao@0.1.0 typecheck
+> tsc -p tsconfig.test.json
+
+test/configuracao-estruturas.test.ts(30,55): error TS2339: Property 'modulosDaPagina' does not exist on type 'RegrasDeEstrutura'.
+exit=1

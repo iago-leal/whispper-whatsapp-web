@@ -1,0 +1,90 @@
+diff --git a/_reversa_sdd/addenda/bug-BUG-20261001-2MOY-v001.md b/_reversa_sdd/addenda/bug-BUG-20261001-2MOY-v001.md
+new file mode 100644
+index 0000000..45836e7
+--- /dev/null
++++ b/_reversa_sdd/addenda/bug-BUG-20261001-2MOY-v001.md
+@@ -0,0 +1,84 @@
++# Adendo: obtenção do áudio pelo download da própria página
++
++> Identificador: `bug-BUG-20261001-2MOY-v001`
++> Data: 2026-10-01
++> Origem: veredito `spec-desatualizada` do BUG-20261001-2MOY (`/reversa-debugger-fix`)
++> Spec alvo: `_reversa_sdd/sdd/integracao-whatsapp-web.md` (a original não é editada)
++
++## Vigência
++
++Vigente desde 2026-10-01. Imutável: mudança posterior exige um adendo `v002`.
++
++## Contexto
++
++O BUG-20261001-2MOY mostrou que o WhatsApp Web não cria o `<audio>` de uma mensagem de voz antes da
++reprodução e não guarda cópia decifrada de um áudio nunca tocado. A correção obtém o áudio pelo
++mecanismo de download e decifração da própria página (EC-01), por um script no mundo principal da
++página. RF-06, RF-07, EC-01 e o passo 5 da seção 6.2 seguem corretos e inalterados; os deltas abaixo
++corrigem três trechos que a prova de conceito e a aceitação desmentiram ou deixaram em aberto.
++
++## Delta 1: seção 12, Autenticação
++
++**Antes:**
++
++> O adaptador usa a sessão do WhatsApp Web aberta pelo usuário; não lê, copia nem guarda
++> credenciais, chaves ou dados da sessão.
++
++**Como deve ser lido agora:**
++
++> O adaptador usa a sessão do WhatsApp Web aberta pelo usuário e não extrai para a extensão, não
++> copia nem guarda credenciais, chaves ou dados da sessão. Para obter um áudio (EC-01), os campos de
++> mídia da mensagem, inclusive a chave de mídia, são repassados, dentro do mundo da página, ao
++> mecanismo de download da própria página; só os bytes decifrados, o tipo de mídia e a duração
++> atravessam para a extensão.
++
++**Por quê:** o EC-01 só é cumprível entregando ao download da página os campos da própria mensagem;
++a letra anterior proibia essa leitura, embora o propósito dela, impedir a extração de segredos,
++continue atendido.
++
++## Delta 2: RF-07, critério de aceitação
++
++**Antes:**
++
++> Após transcrever um áudio recebido e nunca tocado, o aparelho remetente de teste continua a
++> mostrá-lo como não reproduzido.
++
++**Como deve ser lido agora:**
++
++> Após transcrever um áudio recebido e nunca tocado, o aparelho remetente de teste continua a
++> mostrá-lo como não reproduzido, **desde que** a conta destinatária esteja com as confirmações de
++> leitura ligadas e um controle positivo (tocar outro áudio de teste) faça o microfone ficar azul no
++> remetente. Com as confirmações desligadas, o remetente não recebe o recibo de reprodução e o
++> critério perde valor de prova; vale então o estado de reprodução no próprio cliente: o
++> reconhecimento da mensagem (`ack`) não chega a "reproduzido" durante ao menos 3 minutos após a
++> transcrição, com o controle positivo de que tocar um áudio de teste o leva a "reproduzido".
++
++**Por quê:** na aceitação de 2026-10-01, com as confirmações desligadas, áudios efetivamente tocados
++seguiram cinza no remetente, enquanto o `ack` local passou de 1 a 4; o áudio transcrito e nunca
++tocado ficou em `ack` 1 por 191 s.
++
++## Delta 3: seção 14, OQ-01, e seção 15, técnica de obtenção
++
++**OQ-01, antes:** ⚠️ ABERTO: se a prova de conceito não encontrar caminho para obter o áudio sem
++marcá-lo como reproduzido, o usuário aceita que a transcrição o marque como ouvido?
++
++**Como deve ser lido agora:** RESPONDIDA em 2026-10-01: a prova de conceito encontrou o caminho; o
++áudio é obtido sem ser marcado como reproduzido, e a pergunta deixa de se aplicar.
++
++**Decisão "técnica de obtenção do áudio deixada para o /reversa-plan", como deve ser lida agora:**
++a técnica fica definida pela prova de conceito. O adaptador obtém o áudio pelo download e decifração
++da própria página, alcançado por um script declarado no manifesto com `world: "MAIN"`, só em
++`https://web.whatsapp.com/*`, e ligado ao script de conteúdo por uma porta privada; os nomes dos
++módulos internos da página ficam no módulo de configuração (RF-13). Exige Chrome 111 ou superior. A
++premissa anterior do plano, um `<audio>` com blob já decifrado no balão, foi refutada.
++
++## Evidências
++
++- `_reversa_bugs/integracao-whatsapp-web/bugs/BUG-20261001-2MOY-audio-sem-elemento/evidence/prova-de-conceito.md`
++- `_reversa_bugs/integracao-whatsapp-web/bugs/BUG-20261001-2MOY-audio-sem-elemento/evidence/aceitacao-whatsapp-real.md`
++- `_reversa_bugs/integracao-whatsapp-web/bugs/BUG-20261001-2MOY-audio-sem-elemento/fix/CHG-001.diff` a `CHG-007.diff`
++
++## Aprovação
++
++- Veredito `spec-desatualizada` escolhido por iago em 2026-10-01 16:36 -03.
++- Texto deste adendo aprovado por iago em 2026-10-01 16:54 -03.

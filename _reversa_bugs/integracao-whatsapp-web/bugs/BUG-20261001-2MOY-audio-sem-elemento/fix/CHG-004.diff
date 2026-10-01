@@ -1,0 +1,44 @@
+diff --git a/extension/src/content/configuracao-estruturas.ts b/extension/src/content/configuracao-estruturas.ts
+index b9475d5..43e9e3b 100644
+--- a/extension/src/content/configuracao-estruturas.ts
++++ b/extension/src/content/configuracao-estruturas.ts
+@@ -1,8 +1,8 @@
+ /**
+  * Módulo de Configuração de Estruturas do WhatsApp Web.
+  *
+- * Isola 100% dos seletores de DOM, classes e atributos utilizados pela extensão
+- * para interagir com a interface web.whatsapp.com.
++ * Isola 100% dos seletores de DOM, classes, atributos e módulos internos utilizados
++ * pela extensão para interagir com a interface web.whatsapp.com.
+  *
+  * Em caso de mudanças no WhatsApp Web, este é o único arquivo a ser atualizado.
+  */
+@@ -38,10 +38,17 @@ export interface RegrasDeEstrutura {
+     // Atributo da direção da mensagem (recebido ou enviado)
+     marcadorDirecao: string;
+   };
++  // Módulos internos da página, alcançáveis só pelo carregador de módulos dela, no mundo da página
++  modulosDaPagina: {
++    // Coleções de modelos; a de mensagens guarda as carregadas, com id.id igual ao data-id do balão
++    colecoes: string;
++    // Download e decifração de mídia da própria página
++    gerenciadorDeDownload: string;
++  };
+ }
+ 
+ export const CONFIGURACAO_ESTRUTURAS: RegrasDeEstrutura = {
+-  versao: '1.0.0',
++  versao: '1.1.0',
+   verificadoEm: '2026-10-01',
+   seletores: {
+     containerConversa: '#main',
+@@ -59,5 +66,9 @@ export const CONFIGURACAO_ESTRUTURAS: RegrasDeEstrutura = {
+     idMensagem: 'data-id',
+     marcadorInjetado: 'data-whispper-injetado',
+     marcadorDirecao: 'data-whispper-direcao'
++  },
++  modulosDaPagina: {
++    colecoes: 'WAWebCollections',
++    gerenciadorDeDownload: 'WAWebDownloadManager'
+   }
+ };

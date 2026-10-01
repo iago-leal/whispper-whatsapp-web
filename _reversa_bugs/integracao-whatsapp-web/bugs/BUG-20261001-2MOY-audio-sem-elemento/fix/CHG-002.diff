@@ -1,0 +1,138 @@
+diff --git a/extension/src/content/extrator-audio.ts b/extension/src/content/extrator-audio.ts
+index 6bbb437..1797f7c 100644
+--- a/extension/src/content/extrator-audio.ts
++++ b/extension/src/content/extrator-audio.ts
+@@ -1,46 +1,94 @@
+ import type { DadosDoAudio } from '../dominio/fonte-de-audio.ts';
+-import { CONFIGURACAO_ESTRUTURAS } from './configuracao-estruturas.ts';
++import {
++  CANAL_DA_PONTE,
++  type AvisoDeConexao,
++  type FalhaDaPonte,
++  type PedidoDeAudio,
++  type RespostaDaPonte
++} from '../pagina/protocolo-ponte.ts';
++
++/** Prazo do download pela página (EC-03). */
++const PRAZO_DO_DOWNLOAD_MS = 30_000;
++/** Prazo para a ponte do mundo da página responder ao aperto de mão. */
++const PRAZO_DA_CONEXAO_MS = 2_000;
++
++// Motivos entregues ao núcleo junto com AUDIO_INDISPONIVEL (integracao-whatsapp-web.md, seção 11)
++const MOTIVOS: Record<FalhaDaPonte | 'prazo' | 'sem-ponte', string> = {
++  'mensagem-ausente': 'Abra a conversa e tente de novo',
++  'prazo': 'Falha ao baixar o áudio; verifique a conexão',
++  'download': 'Não foi possível baixar o áudio do WhatsApp Web',
++  'estrutura-ausente': 'A integração com o WhatsApp Web mudou; atualize a extensão',
++  'sem-ponte': 'Recarregue a página do WhatsApp Web e tente de novo'
++};
++
++const pendentes = new Map<number, (resposta: RespostaDaPonte) => void>();
++let conexao: Promise<MessagePort> | null = null;
++let ultimoPedido = 0;
++
++function indisponivel(motivo: string): Error {
++  return new Error(`AUDIO_INDISPONIVEL: ${motivo}`);
++}
+ 
+ /**
+- * Extrai os bytes de áudio descriptografados de um elemento de mensagem de voz no WhatsApp Web.
+- * Lê diretamente do blob em cache na aba sem executar play() audível.
++ * Entrega uma porta à ponte do mundo da página, uma vez por aba, e espera que ela a aceite.
+  */
+-export async function extrairAudioDeElemento(
+-  elementoBalao: HTMLElement,
+-  idAudio: string
+-): Promise<DadosDoAudio> {
+-  const elementoAudio = elementoBalao.querySelector<HTMLAudioElement>(
+-    CONFIGURACAO_ESTRUTURAS.seletores.tagAudio
+-  );
+-
+-  if (!elementoAudio || !elementoAudio.src) {
+-    throw new Error(`AUDIO_INDISPONIVEL: elemento de áudio ausente ou sem fonte para a mensagem ${idAudio}`);
+-  }
+-
+-  const url = elementoAudio.src;
+-  try {
+-    const resposta = await fetch(url);
+-    if (!resposta.ok) {
+-      throw new Error(`AUDIO_INDISPONIVEL: resposta HTTP ${resposta.status} ao carregar o blob`);
+-    }
+-
+-    const buffer = await resposta.arrayBuffer();
+-    const bytes = new Uint8Array(buffer);
+-    const tipoDeMidia = resposta.headers.get('Content-Type') || 'audio/ogg; codecs=opus';
+-    const duracaoSeg = Number.isFinite(elementoAudio.duration) && elementoAudio.duration > 0
+-      ? elementoAudio.duration
+-      : 0;
+-
+-    return {
+-      idAudio,
+-      bytes,
+-      tipoDeMidia,
+-      duracaoSeg
++function conectar(): Promise<MessagePort> {
++  conexao ??= new Promise<MessagePort>((resolver, rejeitar) => {
++    const { port1, port2 } = new MessageChannel();
++    const prazo = setTimeout(() => {
++      port1.close();
++      rejeitar(indisponivel(MOTIVOS['sem-ponte']));
++    }, PRAZO_DA_CONEXAO_MS);
++    port1.onmessage = ({ data }: MessageEvent<RespostaDaPonte>) => {
++      if (data.tipo === 'pronta') {
++        clearTimeout(prazo);
++        resolver(port1);
++      } else {
++        pendentes.get(data.pedido)?.(data);
++      }
+     };
+-  } catch (erro) {
+-    if (erro instanceof Error && erro.message.startsWith('AUDIO_INDISPONIVEL')) {
+-      throw erro;
+-    }
+-    throw new Error(`AUDIO_INDISPONIVEL: falha ao extrair bytes do áudio (${erro instanceof Error ? erro.message : String(erro)})`);
++    window.postMessage({ canal: CANAL_DA_PONTE, tipo: 'conectar' } satisfies AvisoDeConexao, window.location.origin, [port2]);
++  }).catch((erro: unknown) => {
++    conexao = null;
++    throw erro;
++  });
++  return conexao;
++}
++
++/**
++ * Obtém os bytes decifrados de uma mensagem de voz do WhatsApp Web pelo download da própria página,
++ * sem reproduzi-la nem alterar o estado de reprodução (RF-06, RF-07, EC-01).
++ */
++export async function extrairAudio(idAudio: string): Promise<DadosDoAudio> {
++  const porta = await conectar();
++  const pedido = ++ultimoPedido;
++  const resposta = await new Promise<RespostaDaPonte | null>((resolver) => {
++    const prazo = setTimeout(() => {
++      pendentes.delete(pedido);
++      resolver(null);
++    }, PRAZO_DO_DOWNLOAD_MS);
++    pendentes.set(pedido, (recebida) => {
++      clearTimeout(prazo);
++      pendentes.delete(pedido);
++      resolver(recebida);
++    });
++    porta.postMessage({ pedido, idMensagem: idAudio } satisfies PedidoDeAudio);
++  });
++
++  if (!resposta) {
++    throw indisponivel(MOTIVOS.prazo);
+   }
++  if (resposta.tipo === 'falha') {
++    throw indisponivel(`${MOTIVOS[resposta.falha]} (${resposta.detalhe})`);
++  }
++  if (resposta.tipo !== 'audio') {
++    throw indisponivel(MOTIVOS.download);
++  }
++
++  return {
++    idAudio,
++    bytes: new Uint8Array(resposta.bytes),
++    tipoDeMidia: resposta.tipoDeMidia,
++    duracaoSeg: resposta.duracaoSeg
++  };
+ }

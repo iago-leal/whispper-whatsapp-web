@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plano de correção · BUG-20261001-2MOY</title>
+  <style>
+body { background-color: #121212; color: #e0e0e0; font-family: sans-serif; padding: 20px; max-width: 1100px; margin: 0 auto; line-height: 1.5; }
+a { color: #bb86fc; text-decoration: none; } a:hover { text-decoration: underline; }
+table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+th, td { border: 1px solid #333; padding: 8px 10px; text-align: left; vertical-align: top; }
+th { background-color: #1e1e1e; }
+.card { background-color: #1e1e1e; padding: 12px 16px; border-radius: 8px; margin: 0 12px 12px 0; display: inline-block; min-width: 120px; }
+.card b { display: block; font-size: 1.3em; }
+.meta { color: #9e9e9e; font-size: 0.9em; }
+.tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 0.85em; background: #2a2a2a; border: 1px solid #444; }
+.ok { color: #81c784; } .alerta { color: #ffb74d; } .erro { color: #ef5350; } .novo { color: #64b5f6; }
+.aviso { background: #2a2210; border-left: 4px solid #ffb74d; padding: 10px 14px; border-radius: 6px; }
+code { background: #1e1e1e; padding: 1px 5px; border-radius: 4px; }
+ol li, ul li { margin-bottom: 4px; }
+svg { background: #181818; border-radius: 8px; max-width: 100%; }
+pre.bloco { background: #0d0d0d; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.82em; line-height: 1.35; }
+  </style>
+</head>
+<body>
+  <h1>Plano de correção · #5 BUG-20261001-2MOY</h1>
+  <p class="meta">Contexto <code>integracao-whatsapp-web</code> · 2026-10-01 15:58 · gerado por /reversa-debugger-fix · commit base <code>9eee588</code></p>
+  <div>
+    <div class="card"><b class="erro">critical</b>Severidade</div>
+    <div class="card"><b class="erro">P0</b>Prioridade</div>
+    <div class="card"><b class="ok">confirmed</b>Causa raiz</div>
+    <div class="card"><b class="alerta">média</b>Risco da mudança</div>
+    <div class="card"><b>6</b>CHG propostos</div>
+    <div class="card"><b>1 + 6</b>Testes (reprodução + regressão)</div>
+  </div>
+
+  <h2>1. Defeito</h2>
+  <p><b>A transcrição nunca obtém o áudio.</b> Ao clicar no ícone de um áudio recebido e nunca tocado, a janela abre com
+  <code>AUDIO_INDISPONIVEL</code>. O extrator só sabe ler um <code>&lt;audio src="blob:…"&gt;</code> dentro do balão, e o WhatsApp Web não cria
+  esse elemento antes da reprodução. Fere RF-06, o passo 5 da seção 6.2 e o EC-01 de <code>integracao-whatsapp-web.md</code>.</p>
+
+  <h2>2. Causa raiz <span class="tag ok">confirmed</span></h2>
+  <p>O defeito nasceu no plano, não no código. A seção 13 da spec exigia uma prova de conceito do RF-06 e do RF-07 antes de qualquer outra frente; sem ela,
+  <code>investigation.md</code> (Desafio 2) afirmou que o blob decifrado já estaria no <code>&lt;audio&gt;</code> do player, e a decisão D-02 do
+  <code>roadmap.md</code> fixou essa captura. <code>extrator-audio.ts:12-18</code> faz uma única consulta ao balão e, sem <code>&lt;audio&gt;</code>, lança o erro antes
+  de qualquer requisição. O caminho que a spec prevê para esse caso, o mecanismo de download da própria página (EC-01), nunca foi implementado.</p>
+  <table>
+    <thead><tr><th>Evidência</th><th>Observação</th></tr></thead>
+    <tbody>
+      <tr><td><a href="../evidence/reproduction.md">evidence/reproduction.md</a></td><td>Reprodução isolada 3/3 (uma consulta <code>audio</code>, nenhum <code>fetch</code>) e de ponta a ponta 1/1 no WhatsApp real.</td></tr>
+      <tr><td><a href="../evidence/prova-de-conceito.md">evidence/prova-de-conceito.md</a></td><td>Clique no ícone abre a janela com <code>AUDIO_INDISPONIVEL</code>; 0 <code>&lt;audio&gt;</code> no documento; <code>mediaBlob</code> ausente;
+        <code>downloadAndMaybeDecrypt</code> da página entrega Ogg decifrado (14.771 bytes, 6,21 s, 12 ms) sem som e sem mudar nenhum estado da página.</td></tr>
+      <tr><td><a href="../evidence/inspecao-estrutural.md">evidence/inspecao-estrutural.md</a> · <a href="../../BUG-20261001-GAOZ-icone-ausente/evidence/conferencia-whatsapp-real.md">conferência do GAOZ</a></td><td>Nenhuma linha de voz tem <code>&lt;audio&gt;</code> antes da reprodução, em duas conversas.</td></tr>
+    </tbody>
+  </table>
+  <p class="meta">Nascida em <code>bab1e53</code>, o primeiro commit da extensão; sem commit bom, não há bisect.</p>
+
+  <h2>3. Estratégia: correção direta</h2>
+  <p>Escolhida pelo usuário às 15:57. A dúvida que pedia debate era empírica, e a prova de conceito a resolveu: a página expõe o próprio mecanismo de download e
+  decifração, que entrega o áudio sem tocá-lo. A correção leva esse mecanismo para a extensão por um script no mundo principal da página, o único que enxerga o
+  carregador de módulos do WhatsApp, e liga esse script ao extrator por uma porta privada.</p>
+  <pre class="bloco">mundo isolado (script de conteúdo)                    mundo da página (script novo, document_start)
+───────────────────────────────────────              ───────────────────────────────────────────────
+obterAudio(id) → extrairAudio(id)
+  1ª vez: new MessageChannel()
+  window.postMessage({canal, "conectar"}, [porta]) ──▶ guarda a porta e responde "pronta"   (≤ 2 s)
+  porta.postMessage({pedido, idMensagem}) ──────────▶ Msg.getModelsArray().find(m =&gt; m.id.id === idMensagem)
+                                                      downloadAndMaybeDecrypt({directPath, encFilehash, filehash,
+                                                        mediaKey, mediaKeyTimestamp, type, mimetype, signal, downloadQpl})
+  ◀──────────────── {ok, bytes (transferidos), tipoDeMidia, duracaoSeg} | {ok: false, motivo}
+  prazo de 30 s (EC-03)                               a chave da mídia nunca sai deste mundo</pre>
+
+  <h2>4. Correction Change Set proposto</h2>
+  <table>
+    <thead><tr><th>CHG</th><th>Tipo</th><th>Artefato</th><th>Propósito</th></tr></thead>
+    <tbody>
+      <tr><td>CHG-001</td><td>code</td><td><code>extension/src/pagina/ponte-audio.ts</code> <span class="tag novo">novo</span></td><td>Script do mundo da página: aceita a porta, acha o modelo pelo <code>data-id</code>
+        (<code>msg.id.id</code>), chama <code>downloadAndMaybeDecrypt</code> com o <code>mimetype</code> e devolve só bytes, tipo e duração. Não chama
+        <code>downloadMedia</code>, não toca, não altera o modelo.</td></tr>
+      <tr><td>CHG-002</td><td>code</td><td><code>extension/src/content/extrator-audio.ts</code></td><td>Troca a leitura de <code>&lt;audio src&gt;</code> pelo pedido à ponte: conexão sob demanda,
+        prazo de 30 s, motivos do EC-03 e do EC-06.</td></tr>
+      <tr><td>CHG-003</td><td>code</td><td><code>extension/src/adaptadores/adaptador-whatsapp-web.ts</code></td><td><code>obterAudio</code> pede o áudio pelo identificador (uma linha).</td></tr>
+      <tr><td>CHG-004</td><td>configuration</td><td><code>extension/src/content/configuracao-estruturas.ts</code></td><td><code>modulosDaPagina</code> com <code>WAWebCollections</code> e
+        <code>WAWebDownloadManager</code>; versão 1.1.0 (RF-13: nenhum nome interno fora deste módulo).</td></tr>
+      <tr><td>CHG-005</td><td>configuration</td><td><code>extension/manifest.json</code></td><td>Entrada de script com <code>"world": "MAIN"</code> e <code>"run_at": "document_start"</code>, só em
+        <code>https://web.whatsapp.com/*</code> (RNF-05); <code>minimum_chrome_version</code> de 105 para 111, a primeira que aceita <code>world</code> no manifesto.</td></tr>
+      <tr><td>CHG-006</td><td>configuration</td><td><code>extension/package.json</code></td><td>O <code>build</code> empacota <code>src/pagina/ponte-audio.ts</code> em <code>dist/pagina/ponte-audio.js</code>.</td></tr>
+      <tr><td class="meta">CHG-007?</td><td class="meta">specification</td><td class="meta"><code>_reversa_sdd/addenda/bug-BUG-20261001-2MOY-v001.md</code></td><td class="meta">Só se o veredito de spec pedir (ver risco 5).</td></tr>
+    </tbody>
+  </table>
+  <p class="meta">Sem reparo de dados: o defeito não gravou nem corrompeu estado algum.</p>
+
+  <h2>5. Testes planejados</h2>
+  <p>Os testes montam uma página falsa modelada na prova de conceito: <code>window.require</code> com <code>WAWebCollections.Msg</code> e
+  <code>WAWebDownloadManager.downloadManager</code>, cujo <code>downloadAndMaybeDecrypt</code> recusa o pedido sem <code>mimetype</code>, como o real. Os scripts do mundo da
+  página entram como o Chrome os carrega: lidos do manifesto (<code>world: "MAIN"</code>). Assim, hoje nada é instalado e o teste falha pelo defeito, não por
+  arquivo ausente.</p>
+  <table>
+    <thead><tr><th>ID</th><th>Tipo</th><th>Arquivo</th><th>O que prova</th><th>Hoje</th></tr></thead>
+    <tbody>
+      <tr><td>R-1</td><td>reprodução</td><td><code>extrator-audio.test.ts</code></td><td>Balão sem <code>&lt;audio&gt;</code>, como no WhatsApp real: <code>obterAudio</code> entrega os bytes Ogg, o tipo e a duração
+        pelo download da própria página (RF-06, EC-01).</td><td class="erro">falha: AUDIO_INDISPONIVEL</td></tr>
+      <tr><td>G-1</td><td>regressão</td><td><code>extrator-audio.test.ts</code></td><td>A obtenção só chama <code>downloadAndMaybeDecrypt</code>: nenhum <code>downloadMedia</code>, nenhum <code>play</code>,
+        nenhum <code>&lt;audio&gt;</code> criado, modelo inalterado (RF-05, RF-07).</td><td class="erro">falha</td></tr>
+      <tr><td>G-2</td><td>regressão</td><td><code>extrator-audio.test.ts</code></td><td>O pedido leva o <code>mimetype</code> do modelo; sem ele, a página recusa (achado da prova).</td><td class="erro">falha</td></tr>
+      <tr><td>G-3</td><td>regressão</td><td><code>extrator-audio.test.ts</code></td><td>Mensagem que a página descartou: <code>AUDIO_INDISPONIVEL</code> com "Abra a conversa e tente de novo" (EC-06).</td><td class="erro">falha: motivo errado</td></tr>
+      <tr><td>G-4</td><td>regressão</td><td><code>extrator-audio.test.ts</code></td><td>Página sem resposta em 30 s: <code>AUDIO_INDISPONIVEL</code> com "Falha ao baixar o áudio; verifique a conexão" (EC-03), com relógio simulado.</td><td class="erro">falha: motivo errado</td></tr>
+      <tr><td>G-5</td><td>regressão</td><td><code>manifesto.test.ts</code></td><td>O script do mundo da página entra só em <code>web.whatsapp.com</code>, em <code>document_start</code>, e o Chrome mínimo aceita
+        <code>world</code> (≥ 111) (RNF-05).</td><td class="erro">falha</td></tr>
+      <tr><td>G-6</td><td>regressão</td><td><code>configuracao-estruturas.test.ts</code></td><td>Os nomes dos módulos internos da página vivem só em <code>configuracao-estruturas.ts</code> (RF-13).</td><td class="erro">falha</td></tr>
+    </tbody>
+  </table>
+  <p><b>Removidos:</b> os dois testes atuais de <code>extrator-audio.test.ts</code>. O primeiro codifica a premissa refutada (<code>&lt;audio src="blob:…"&gt;</code> no balão);
+  o segundo exige justamente o comportamento defeituoso (balão sem <code>&lt;audio&gt;</code> falha).</p>
+  <p><b>Aceitação no WhatsApp real</b>, depois do Gate 2: <code>npm run build</code>, extensão recarregada, áudio de teste novo e nunca tocado; clique no ícone e transcrição
+  exibida pelo motor real; remetente sem o microfone azul; em seguida, o controle positivo: tocar o áudio e ver o microfone ficar azul. Se as confirmações de leitura
+  desligadas suprimirem até o recibo de reprodução, a decisão de religá-las para a prova é sua.</p>
+
+  <h2>6. Riscos e o que fica de fora</h2>
+  <p><span class="tag alerta">change_risk: média</span></p>
+  <ol>
+    <li><b>Contrato externo instável.</b> <code>WAWebCollections</code> e <code>WAWebDownloadManager</code> são internos e não documentados; o WhatsApp pode renomeá-los. Os nomes
+      ficam no módulo de configuração (RF-13) e a falha volta a ser <code>AUDIO_INDISPONIVEL</code>, nunca erro na página.</li>
+    <li><b>Contexto de execução novo.</b> O script roda no mundo da página desde <code>document_start</code>. Ele só registra um ouvinte de mensagens e não toca em nada até
+      receber um pedido; qualquer exceção fica dentro dele.</li>
+    <li><b>Compatibilidade.</b> O Chrome mínimo sobe para 111 (março de 2023). O ambiente do usuário usa 153.</li>
+    <li><b>Privacidade.</b> Os bytes viajam por uma porta privada, não por <code>window.postMessage</code> aberto; só o aperto de mão, sem conteúdo, passa pela janela.
+      Outro script no mundo da página poderia se conectar, mas já poderia chamar os mesmos módulos diretamente: a ponte não cria capacidade nova.
+      A chave da mídia não sai do mundo da página. Uma requisição por clique, a mesma que a página faz ao tocar o áudio: nenhum dano técnico à plataforma.</li>
+    <li><b>Veredito de spec.</b> A §12 diz que o adaptador "não lê, copia nem guarda credenciais, chaves ou dados da sessão". A ponte lê o <code>mediaKey</code> do modelo
+      para devolvê-lo à função da própria página, sem copiá-lo para a extensão. Proponho tratar isso no veredito: <code>spec-correta</code> se a leitura for "não extrai
+      chaves da página", ou adendo de esclarecimento.</li>
+    <li><b>Reversão.</b> <code>git revert</code> dos commits; o manifesto antigo volta a funcionar sem resíduo.</li>
+  </ol>
+  <p><b>Fora desta correção</b> (vão para as Agent Notes como candidatos a bug próprio):</p>
+  <ul>
+    <li><b>EC-02, mídia expirada:</b> o formato do erro do WhatsApp para mídia expirada é desconhecido; sem amostra, cai no motivo genérico.</li>
+    <li><b>RF-08:</b> <code>index.ts</code> escuta <code>play</code> num <code>&lt;audio&gt;</code> que não existe; o evento de reprodução provavelmente nunca é emitido. Mesma premissa refutada.</li>
+    <li><b>RF-11:</b> o monitor de saúde não verifica os módulos internos; se sumirem, só o clique falha.</li>
+    <li><b>Janela flutuante:</b> mostra "Erro: AUDIO_INDISPONIVEL" sem o texto "Não foi possível obter este áudio." e o motivo, que <code>janela-flutuante.md</code> pede.</li>
+  </ul>
+
+  <h2>7. Mini-grafo do bug</h2>
+  <svg width="620" height="170" viewBox="0 0 620 170" role="img" aria-label="2MOY bloqueado por GAOZ">
+    <defs><marker id="seta" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#81c784"/></marker></defs>
+    <a href="../bug.md">
+      <rect x="20" y="50" width="250" height="70" rx="10" fill="#2a1a1a" stroke="#ef5350" stroke-width="3"/>
+      <text x="145" y="80" fill="#e0e0e0" text-anchor="middle" font-size="15" font-weight="bold">#5 BUG-20261001-2MOY</text>
+      <text x="145" y="102" fill="#9e9e9e" text-anchor="middle" font-size="12">active · diagnosing · critical</text>
+    </a>
+    <line x1="270" y1="85" x2="350" y2="85" stroke="#81c784" stroke-width="2" marker-end="url(#seta)"/>
+    <text x="310" y="72" fill="#81c784" text-anchor="middle" font-size="11">blocked-by</text>
+    <text x="310" y="104" fill="#81c784" text-anchor="middle" font-size="11">confirmed</text>
+    <a href="../../BUG-20261001-GAOZ-icone-ausente/bug.md">
+      <rect x="352" y="50" width="250" height="70" rx="10" fill="#1a2a1a" stroke="#81c784" stroke-width="2"/>
+      <text x="477" y="80" fill="#e0e0e0" text-anchor="middle" font-size="15" font-weight="bold">#4 BUG-20261001-GAOZ</text>
+      <text x="477" y="102" fill="#9e9e9e" text-anchor="middle" font-size="12">resolved · fixed · travado</text>
+    </a>
+  </svg>
+  <p class="meta">O bloqueio está satisfeito: o GAOZ foi resolvido às 15:26, e o ícone aparece no WhatsApp real.</p>
+
+  <h2>8. Matriz de relações</h2>
+  <table>
+    <thead><tr><th>Origem</th><th>Tipo</th><th>Destino</th><th>Estado</th><th>Evidência</th></tr></thead>
+    <tbody>
+      <tr><td><a href="../bug.md">BUG-20261001-2MOY</a></td><td>blocked-by</td><td><a href="../../BUG-20261001-GAOZ-icone-ausente/bug.md">BUG-20261001-GAOZ</a></td><td class="ok">confirmed</td>
+        <td><code>index.ts</code> é a única origem do pedido de transcrição; sem ícone, a extração nunca é acionada.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>9. Próximos passos</h2>
+  <ol>
+    <li>Você aprova este plano (ou pede ajustes, e eu o regenero).</li>
+    <li>Gate 1: diff dos testes, aplicação e saída vermelha.</li>
+    <li>Gate 2: diffs dos CHG-001 a CHG-006, aplicação, saída verde, <code>typecheck</code> e <code>build</code>.</li>
+    <li>Aceitação no WhatsApp real, veredito de spec, fechamento e trava.</li>
+  </ol>
+</body>
+</html>

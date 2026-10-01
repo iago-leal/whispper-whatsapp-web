@@ -1,4 +1,4 @@
-<!-- GENERATED, DO NOT EDIT: regenerado por /reversa-debugger-graph em 2026-10-01T18:24Z a partir de 2 bugs -->
+<!-- GENERATED, DO NOT EDIT: regenerado por /reversa-debugger-graph em 2026-10-01T19:57Z a partir de 2 bugs -->
 
 # Grafo · integracao-whatsapp-web
 
@@ -13,9 +13,7 @@ Arestas tracejadas são relações `proposed` (hipótese).
 
 ## Impact score (heurística de triagem, não substitui priority/severity)
 
-| bug | impact score |
-|---|---|
-| BUG-20261001-2MOY | 0 |
+Nenhum bug aberto ou ativo neste contexto.
 
 ## Clusters
 

@@ -1,0 +1,30 @@
+diff --git a/extension/manifest.json b/extension/manifest.json
+index 7ecd74f..a90c28b 100644
+--- a/extension/manifest.json
++++ b/extension/manifest.json
+@@ -3,7 +3,7 @@
+   "name": "whispper-whatsapp-web",
+   "description": "Transcrição local das mensagens de voz do WhatsApp Web.",
+   "version": "0.1.0",
+-  "minimum_chrome_version": "105",
++  "minimum_chrome_version": "111",
+   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAhWHBecp9UuqDn0Y9s2mpl2i694NQjaWPsvCF0DX8GP2L1haE1Ga+tWhxIvb+GT2y9CbsCsohSQxfPotgpMp1cgJ3lyqCH4KnZ8nxrzfn3be784L9W2NhLnhfrkApDbTzAL53Z9jGlZ/6O9C1ri8Z9jAUHXlPsJZDQ2D9e+FPzOod8DGu+x1GHrnuqfxLFqSL/LqpJm34e2xLv/GBGeUD/Gz+07u2BagJWCjXvRNUrt+vfQbNC5B+gjv2gjkL6M0yaTsP0G8eBwhUp1L3uThxSAN+WgCRwqi5yyi4s9NXVdDmhiar2cjqsaeUl3OwKBGwiAbjTD4PYtvlWWwK1uYPAQIDAQAB",
+   "permissions": [
+     "nativeMessaging",
+@@ -19,6 +19,16 @@
+     "type": "module"
+   },
+   "content_scripts": [
++    {
++      "matches": [
++        "https://web.whatsapp.com/*"
++      ],
++      "js": [
++        "dist/pagina/ponte-audio.js"
++      ],
++      "run_at": "document_start",
++      "world": "MAIN"
++    },
+     {
+       "matches": [
+         "https://web.whatsapp.com/*"

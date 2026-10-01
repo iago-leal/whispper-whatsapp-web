@@ -55,9 +55,17 @@ export class RastreadorDeAncoras {
   private elementos = new Map<string, HTMLElement>();
   private ouvintes: Array<(ancora: CoordenadasAncora) => void> = [];
   private handlerScroll: () => void;
+  private rafId: number | null = null;
 
   constructor() {
-    this.handlerScroll = () => this.notificarTodas();
+    this.handlerScroll = () => {
+      if (this.rafId === null) {
+        this.rafId = requestAnimationFrame(() => {
+          this.notificarTodas();
+          this.rafId = null;
+        });
+      }
+    };
     if (typeof window !== 'undefined') {
       window.addEventListener('scroll', this.handlerScroll, true);
       window.addEventListener('resize', this.handlerScroll);

@@ -41,10 +41,11 @@ if (typeof chrome !== "undefined" && chrome.runtime?.onMessage) {
     if (!mensagem) return;
 
     if (mensagem.tipo === "verificar_motor") {
-      motor
-        .verificar()
-        .then((resultado) => responder({ ok: true, resultado }))
-        .catch((erro) =>
+      (async () => {
+        try {
+          const resultado = await motor.verificar();
+          responder({ ok: true, resultado });
+        } catch (erro) {
           responder({
             ok: false,
             erro: erro instanceof Error ? erro.message : String(erro),
@@ -53,17 +54,22 @@ if (typeof chrome !== "undefined" && chrome.runtime?.onMessage) {
               codigo: "MOTOR_INDISPONIVEL",
               motivo: erro instanceof Error ? erro.message : String(erro)
             }
-          })
-        );
+          });
+        }
+      })();
       return true;
     }
 
     if (mensagem.tipo === "transcrever_audio") {
-      const bytes = Uint8Array.from(atob(mensagem.audioBase64), (c) => c.charCodeAt(0));
-      motor
-        .transcrever(bytes, mensagem.tipoDeMidia)
-        .then((resultado) => responder({ ok: true, resultado }))
-        .catch((erro) => responder({ ok: false, erro: erro instanceof Error ? erro.message : String(erro) }));
+      (async () => {
+        try {
+          const bytes = Uint8Array.from(atob(mensagem.audioBase64), (c) => c.charCodeAt(0));
+          const resultado = await motor.transcrever(bytes, mensagem.tipoDeMidia);
+          responder({ ok: true, resultado });
+        } catch (erro) {
+          responder({ ok: false, erro: erro instanceof Error ? erro.message : String(erro) });
+        }
+      })();
       return true; // Comunicação assíncrona
     }
   });

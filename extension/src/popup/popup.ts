@@ -91,7 +91,7 @@ function configurarEventos(): void {
       if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
         chrome.tabs.create({ url: 'dist/onboarding/index.html' });
       } else {
-        window.open('../dist/onboarding/index.html', '_blank');
+        window.open('../onboarding/index.html', '_blank');
       }
     });
   }

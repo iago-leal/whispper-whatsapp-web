@@ -122,11 +122,19 @@ export function atualizarConteudoJanela(
     });
     rodape.appendChild(btnCopiar);
   } else if (estado.tipo === 'erro') {
-    corpo.innerHTML = `
-      <div style="color: #ea4335;">
-        <strong>Erro:</strong> ${estado.mensagem}
-      </div>
-    `;
+    corpo.innerHTML = '';
+    const erroDiv = document.createElement('div');
+    erroDiv.style.color = '#ea4335';
+    
+    const strongErro = document.createElement('strong');
+    strongErro.textContent = 'Erro: ';
+    erroDiv.appendChild(strongErro);
+    
+    const msgErro = document.createTextNode(estado.mensagem);
+    erroDiv.appendChild(msgErro);
+    
+    corpo.appendChild(erroDiv);
+
     const btnReexecutar = document.createElement('button');
     btnReexecutar.type = 'button';
     btnReexecutar.className = 'whispper-btn-acao';

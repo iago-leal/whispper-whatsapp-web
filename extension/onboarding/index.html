@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bem-vindo ao Whispper</title>
+  <link rel="stylesheet" href="onboarding.css">
+</head>
+<body>
+  <div class="onboarding-container">
+    <header class="header">
+      <div class="logo-area">
+        <h1>Whispper</h1>
+        <span class="badge">Instalação Guiada</span>
+      </div>
+      <p class="tagline">Transcrição privada de mensagens de voz direto no seu computador</p>
+    </header>
+
+    <!-- Indicador de progresso com as 6 etapas -->
+    <nav class="progresso-etapas" aria-label="Etapas da instalação">
+      <div class="passo ativo" id="step-indicador-1">
+        <span class="numero">1</span>
+        <span class="nome">Privacidade</span>
+      </div>
+      <div class="passo" id="step-indicador-2">
+        <span class="numero">2</span>
+        <span class="nome">Compatibilidade</span>
+      </div>
+      <div class="passo" id="step-indicador-3">
+        <span class="numero">3</span>
+        <span class="nome">Aplicativo</span>
+      </div>
+      <div class="passo" id="step-indicador-4">
+        <span class="numero">4</span>
+        <span class="nome">Modelo IA</span>
+      </div>
+      <div class="passo" id="step-indicador-5">
+        <span class="numero">5</span>
+        <span class="nome">Teste</span>
+      </div>
+      <div class="passo" id="step-indicador-6">
+        <span class="numero">6</span>
+        <span class="nome">Pronto</span>
+      </div>
+    </nav>
+
+    <!-- Conteúdo das Etapas -->
+    <main class="conteudo-principal">
+      <!-- Etapa 1: Privacidade -->
+      <section class="card-etapa" id="etapa-privacidade">
+        <h2>Seus áudios e conversas pertencem só a você</h2>
+        <p class="descricao">
+          O Whispper foi construído sob um princípio inegociável de <strong>privacidade local</strong>:
+        </p>
+        <ul class="lista-beneficios">
+          <li>🔒 <strong>Zero envio para a nuvem:</strong> Todo o processamento de áudio acontece dentro do seu computador. Nenhum segundo de fala é enviado para a internet.</li>
+          <li>🛡️ <strong>Zero gravação permanente:</strong> O texto transcrito vive apenas na memória enquanto a aba estiver aberta e é apagado ao fechá-la.</li>
+          <li>📊 <strong>Sem espionagem:</strong> A extensão não coleta nomes de contatos, mensagens de texto ou conteúdos de conversa. Apenas números anônimos de uso local ficam guardados.</li>
+        </ul>
+        <div class="acoes">
+          <button id="btn-aceitar-privacidade" class="btn-primario">Entendi e quero continuar</button>
+        </div>
+      </section>
+
+      <!-- Etapa 2: Compatibilidade -->
+      <section class="card-etapa" id="etapa-verificacao" style="display: none;">
+        <h2>Verificando seu computador</h2>
+        <div id="verificando-spinner" class="status-carregando">
+          <div class="spinner"></div>
+          <p>Analisando configurações de hardware…</p>
+        </div>
+
+        <div id="resultado-compativel" style="display: none;">
+          <div class="alerta alerta-sucesso">
+            ✅ <strong>Seu computador é compatível!</strong>
+            <p>Seu sistema atende a todos os requisitos mínimos de processamento e memória para rodar a inteligência artificial localmente.</p>
+          </div>
+          <div class="acoes">
+            <button id="btn-avancar-instalador" class="btn-primario">Avançar para a instalação</button>
+          </div>
+        </div>
+
+        <div id="resultado-incompativel" style="display: none;">
+          <div class="alerta alerta-erro">
+            ⚠️ <strong>Seu computador não atende aos requisitos mínimos</strong>
+            <div id="lista-incompatibilidades" class="lista-detalhes"></div>
+          </div>
+          <p class="texto-ajuda">
+            Como o Whispper não utiliza servidores externos para proteger suas conversas, é necessário um computador com processamento dedicado. Nenhuma alteração foi feita no seu aparelho.
+          </p>
+          <div class="acoes">
+            <span class="instrucao-remover">Você pode clicar com o botão direito no ícone da extensão no Chrome e escolher "Remover do Chrome".</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Etapa 3: Aplicativo Auxiliar -->
+      <section class="card-etapa" id="etapa-instalador" style="display: none;">
+        <h2>Instalação do Aplicativo Auxiliar</h2>
+        <p class="descricao">
+          As extensões do Chrome não têm permissão para usar diretamente os chips de IA do seu computador. Por isso, o Whispper utiliza um pequeno aplicativo auxiliar local.
+        </p>
+
+        <div class="bloco-download">
+          <div class="info-instalador">
+            <h3 id="nome-instalador">Whispper Auxiliar</h3>
+            <p id="desc-instalador">Instalador para o seu usuário (não precisa de senha de administrador).</p>
+          </div>
+          <a id="link-download-instalador" class="btn-download" href="#" target="_blank">
+            ⬇️ Baixar Instalador
+          </a>
+        </div>
+
+        <div class="bloco-espera">
+          <div class="spinner-pequeno"></div>
+          <span id="texto-polling-motor">Aguardando a instalação do aplicativo auxiliar…</span>
+        </div>
+        <p class="dica-polling">Assim que você executar o instalador baixado, a página avançará automaticamente.</p>
+      </section>
+
+      <!-- Etapa 4: Download do Modelo -->
+      <section class="card-etapa" id="etapa-modelo" style="display: none;">
+        <h2>Preparando o Modelo de Fala</h2>
+        <p class="descricao">
+          O modelo Whisper treinado para entender português está sendo verificado na sua máquina.
+        </p>
+        <div class="barra-progresso-container">
+          <div class="barra-progresso" id="barra-progresso-modelo" style="width: 100%;"></div>
+        </div>
+        <div class="status-download">
+          <span id="label-progresso-modelo">Modelo pronto para uso local</span>
+          <span id="tempo-restante-modelo">Verificado</span>
+        </div>
+        <div class="acoes">
+          <button id="btn-avancar-teste" class="btn-primario">Avançar para o teste prático</button>
+        </div>
+      </section>
+
+      <!-- Etapa 5: Teste Prático -->
+      <section class="card-etapa" id="etapa-teste" style="display: none;">
+        <h2>Transcrição de Teste</h2>
+        <p class="descricao">
+          Vamos realizar uma transcrição real de teste usando um áudio de exemplo em português gravado no aplicativo.
+        </p>
+        <div class="player-amostra">
+          <audio id="audio-amostra-teste" controls src="../dist/diagnostico/fala-pt.ogg"></audio>
+        </div>
+        <div class="acoes">
+          <button id="btn-executar-teste" class="btn-primario">Transcrever áudio de teste</button>
+        </div>
+        <div id="resultado-teste-container" class="resultado-teste" style="display: none;">
+          <h4>Texto reconhecido:</h4>
+          <blockquote id="texto-resultado-teste"></blockquote>
+          <span class="tempo-proc" id="tempo-resultado-teste"></span>
+        </div>
+      </section>
+
+      <!-- Etapa 6: Pronto -->
+      <section class="card-etapa" id="etapa-pronto" style="display: none;">
+        <div class="sucesso-hero">
+          <div class="icone-sucesso">🎉</div>
+          <h2>Tudo pronto para usar!</h2>
+          <p class="descricao">
+            O Whispper está configurado e integrado com sucesso ao seu computador.
+          </p>
+        </div>
+        <div class="guia-uso">
+          <h3>Como usar no WhatsApp Web:</h3>
+          <ol>
+            <li>Abra o <strong>WhatsApp Web</strong> no seu navegador.</li>
+            <li>Ao passar o mouse ou receber uma mensagem de voz, você verá o ícone do Whispper no balão do áudio.</li>
+            <li>Dê <strong>um clique</strong> no ícone para ler a transcrição em uma janela flutuante imediata.</li>
+          </ol>
+        </div>
+        <div class="acoes">
+          <a class="btn-primario btn-grande" href="https://web.whatsapp.com" target="_blank">
+            Abrir WhatsApp Web agora
+          </a>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="../dist/onboarding/onboarding.js"></script>
+</body>
+</html>

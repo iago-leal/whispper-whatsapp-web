@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM"],
+    "types": ["chrome", "node"],
+    "rootDir": ".",
+    "noEmit": true
+  },
+  "include": ["src", "test"]
+}

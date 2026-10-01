@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "whispper-whatsapp-web: extensão intrusa de teste",
+  "description": "Extensão sem a key autorizada, que tenta se conectar ao aplicativo auxiliar; o Chrome deve recusar (RF-14).",
+  "version": "0.0.1",
+  "permissions": [
+    "nativeMessaging"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}

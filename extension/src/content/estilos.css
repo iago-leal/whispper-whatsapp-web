@@ -1,0 +1,47 @@
+/* Estilos discretos do Whispper no WhatsApp Web */
+.whispper-btn-transcrever {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  margin-left: 6px;
+  margin-right: 4px;
+  border-radius: 50%;
+  color: var(--secondary-lighter, #8696a0);
+  transition: color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+  vertical-align: middle;
+  outline: none;
+}
+
+.whispper-btn-transcrever:hover,
+.whispper-btn-transcrever:focus-visible {
+  color: var(--teal, #00a884);
+  background-color: rgba(0, 168, 132, 0.1);
+  transform: scale(1.08);
+}
+
+.whispper-btn-transcrever:active {
+  transform: scale(0.95);
+}
+
+.whispper-btn-transcrever.whispper-animando {
+  animation: whispper-pulsar 1.2s infinite ease-in-out;
+  color: var(--teal, #00a884);
+}
+
+.whispper-btn-transcrever.whispper-concluido {
+  color: #00a884;
+}
+
+.whispper-btn-transcrever.whispper-erro {
+  color: #ea4335;
+}
+
+@keyframes whispper-pulsar {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.8; }
+}

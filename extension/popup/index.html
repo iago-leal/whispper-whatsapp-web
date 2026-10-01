@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Whispper</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="whispper-popup">
+    <header class="header">
+      <div class="titulo-area">
+        <h1>Whispper</h1>
+        <span class="versao">v0.1.0</span>
+      </div>
+      <p class="subtitulo">Transcrição local para WhatsApp Web</p>
+    </header>
+
+    <section class="secao-status">
+      <div class="status-item">
+        <span class="status-label">Motor local:</span>
+        <span id="motor-status" class="status-tag status-aviso">Verificando o motor…</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">WhatsApp Web:</span>
+        <span id="integracao-status" class="status-tag status-aviso">Verificando…</span>
+      </div>
+    </section>
+
+    <section class="secao-metricas">
+      <h2>Métricas Locais</h2>
+      <div class="cards-grid">
+        <div class="card-metrica">
+          <div class="valor" id="metric-adocao">-</div>
+          <div class="rotulo">Taxa de Adoção</div>
+        </div>
+        <div class="card-metrica">
+          <div class="valor" id="metric-qualidade">-</div>
+          <div class="rotulo">Taxa de Qualidade</div>
+        </div>
+      </div>
+
+      <div class="detalhes-contadores">
+        <div class="contador-linha">
+          <span>Áudios lidos:</span>
+          <strong id="metric-lidos">0</strong>
+        </div>
+        <div class="contador-linha">
+          <span>Áudios ouvidos:</span>
+          <strong id="metric-ouvidos">0</strong>
+        </div>
+        <div class="contador-linha">
+          <span>Lidos e tocados depois:</span>
+          <strong id="metric-lidos-tocados">0</strong>
+        </div>
+        <div class="data-inicio" id="data-inicio">Início: -</div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <button id="btn-verificar-compatibilidade" class="btn-secundario" style="margin-bottom: 8px;">Verificar compatibilidade</button>
+      <button id="btn-zerar" class="btn-secundario">Zerar contadores</button>
+      <div id="painel-confirmacao" class="painel-confirmacao" style="display: none;">
+        <span>Zerar métricas?</span>
+        <div class="botoes-confirmacao">
+          <button id="btn-confirmar-zerar" class="btn-perigo">Sim</button>
+          <button id="btn-cancelar-zerar" class="btn-neutro">Não</button>
+        </div>
+      </div>
+    </footer>
+  </div>
+  <script type="module" src="../dist/popup/popup.js"></script>
+</body>
+</html>

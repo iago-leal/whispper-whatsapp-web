@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "whispper-whatsapp-web",
+  "description": "Transcrição local das mensagens de voz do WhatsApp Web.",
+  "version": "0.1.0",
+  "minimum_chrome_version": "105",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAhWHBecp9UuqDn0Y9s2mpl2i694NQjaWPsvCF0DX8GP2L1haE1Ga+tWhxIvb+GT2y9CbsCsohSQxfPotgpMp1cgJ3lyqCH4KnZ8nxrzfn3be784L9W2NhLnhfrkApDbTzAL53Z9jGlZ/6O9C1ri8Z9jAUHXlPsJZDQ2D9e+FPzOod8DGu+x1GHrnuqfxLFqSL/LqpJm34e2xLv/GBGeUD/Gz+07u2BagJWCjXvRNUrt+vfQbNC5B+gjv2gjkL6M0yaTsP0G8eBwhUp1L3uThxSAN+WgCRwqi5yyi4s9NXVdDmhiar2cjqsaeUl3OwKBGwiAbjTD4PYtvlWWwK1uYPAQIDAQAB",
+  "permissions": [
+    "nativeMessaging",
+    "storage"
+  ],
+  "action": {
+    "default_popup": "popup/index.html",
+    "default_title": "Whispper"
+  },
+  "background": {
+    "service_worker": "dist/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://web.whatsapp.com/*"
+      ],
+      "js": [
+        "dist/content/index.js"
+      ],
+      "css": [
+        "dist/content/estilos.css",
+        "dist/content/janela-flutuante.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

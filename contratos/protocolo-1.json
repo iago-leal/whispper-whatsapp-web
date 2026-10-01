@@ -1,0 +1,152 @@
+{
+  "descricao": "Exemplos canônicos do protocolo 1 entre a extensão e o aplicativo auxiliar. Lido pelas suítes de teste de Python e de TypeScript. Detalhe em _reversa_forward/001-motor-transcricao-local/interfaces/protocolo-native-messaging.md.",
+  "protocolo": 1,
+  "nomeDoHost": "whispper_whatsapp_web.motor",
+  "limites": {
+    "entradaMaxBytes": 67108864,
+    "saidaMaxBytes": 1000000
+  },
+  "midiasAceitas": [
+    "audio/ogg",
+    "audio/opus",
+    "audio/mpeg",
+    "audio/mp3",
+    "audio/mp4",
+    "audio/x-m4a",
+    "audio/aac"
+  ],
+  "pedidosValidos": [
+    {
+      "nome": "verificar",
+      "mensagem": { "tipo": "verificar", "protocolo": 1 }
+    },
+    {
+      "nome": "transcrever Ogg com Opus",
+      "mensagem": {
+        "tipo": "transcrever",
+        "protocolo": 1,
+        "idPedido": "p-17",
+        "midia": "audio/ogg; codecs=opus",
+        "audioBase64": "T2dnUw=="
+      }
+    },
+    {
+      "nome": "transcrever com áudio vazio",
+      "mensagem": {
+        "tipo": "transcrever",
+        "protocolo": 1,
+        "idPedido": "p-18",
+        "midia": "audio/mpeg",
+        "audioBase64": ""
+      }
+    }
+  ],
+  "pedidosRecusados": [
+    {
+      "nome": "JSON inválido",
+      "bruto": "{tipo",
+      "esperado": { "tipo": "erro", "idPedido": null, "codigo": "MENSAGEM_INVALIDA", "motivo": "mensagem inválida", "detalhe": "JSON inválido" }
+    },
+    {
+      "nome": "mensagem que não é objeto",
+      "bruto": "[1, 2]",
+      "esperado": { "tipo": "erro", "idPedido": null, "codigo": "MENSAGEM_INVALIDA", "motivo": "mensagem inválida", "detalhe": "mensagem não é objeto" }
+    },
+    {
+      "nome": "tipo ausente",
+      "mensagem": { "protocolo": 1 },
+      "esperado": { "tipo": "erro", "idPedido": null, "codigo": "MENSAGEM_INVALIDA", "motivo": "mensagem inválida", "detalhe": "campo tipo ausente" }
+    },
+    {
+      "nome": "tipo desconhecido",
+      "mensagem": { "tipo": "executar", "protocolo": 1, "comando": "ls" },
+      "esperado": { "tipo": "erro", "idPedido": null, "codigo": "MENSAGEM_INVALIDA", "motivo": "mensagem inválida", "detalhe": "tipo desconhecido: executar" }
+    },
+    {
+      "nome": "protocolo ausente",
+      "mensagem": { "tipo": "verificar" },
+      "esperado": { "tipo": "erro", "idPedido": null, "codigo": "MENSAGEM_INVALIDA", "motivo": "mensagem inválida", "detalhe": "campo protocolo ausente ou inválido" }
+    },
+    {
+      "nome": "protocolo como texto",
+      "mensagem": { "tipo": "verificar", "protocolo": "1" },
+      "esperado": { "tipo": "erro", "idPedido": null, "codigo": "MENSAGEM_INVALIDA", "motivo": "mensagem inválida", "detalhe": "campo protocolo ausente ou inválido" }
+    },
+    {
+      "nome": "versão de protocolo diferente",
+      "mensagem": { "tipo": "transcrever", "protocolo": 2, "idPedido": "p-20", "midia": "audio/ogg", "audioBase64": "T2dnUw==" },
+      "esperado": { "tipo": "erro", "idPedido": "p-20", "codigo": "VERSAO_INCOMPATIVEL", "motivo": "versão de protocolo incompatível", "protocoloApp": 1, "protocoloPedido": 2 }
+    },
+    {
+      "nome": "idPedido ausente",
+      "mensagem": { "tipo": "transcrever", "protocolo": 1, "midia": "audio/ogg", "audioBase64": "T2dnUw==" },
+      "esperado": { "tipo": "erro", "idPedido": null, "codigo": "MENSAGEM_INVALIDA", "motivo": "mensagem inválida", "detalhe": "campo idPedido ausente ou inválido" }
+    },
+    {
+      "nome": "idPedido com caracteres proibidos",
+      "mensagem": { "tipo": "transcrever", "protocolo": 1, "idPedido": "p 17!", "midia": "audio/ogg", "audioBase64": "T2dnUw==" },
+      "esperado": { "tipo": "erro", "idPedido": null, "codigo": "MENSAGEM_INVALIDA", "motivo": "mensagem inválida", "detalhe": "campo idPedido ausente ou inválido" }
+    },
+    {
+      "nome": "midia ausente",
+      "mensagem": { "tipo": "transcrever", "protocolo": 1, "idPedido": "p-21", "audioBase64": "T2dnUw==" },
+      "esperado": { "tipo": "erro", "idPedido": "p-21", "codigo": "MENSAGEM_INVALIDA", "motivo": "mensagem inválida", "detalhe": "campo midia ausente ou inválido" }
+    },
+    {
+      "nome": "audioBase64 que não é texto",
+      "mensagem": { "tipo": "transcrever", "protocolo": 1, "idPedido": "p-22", "midia": "audio/ogg", "audioBase64": 42 },
+      "esperado": { "tipo": "erro", "idPedido": "p-22", "codigo": "MENSAGEM_INVALIDA", "motivo": "mensagem inválida", "detalhe": "campo audioBase64 ausente ou inválido" }
+    },
+    {
+      "nome": "audioBase64 malformado",
+      "mensagem": { "tipo": "transcrever", "protocolo": 1, "idPedido": "p-23", "midia": "audio/ogg", "audioBase64": "@@@" },
+      "esperado": { "tipo": "erro", "idPedido": "p-23", "codigo": "MENSAGEM_INVALIDA", "motivo": "mensagem inválida", "detalhe": "campo audioBase64 não é base64 válido" }
+    }
+  ],
+  "respostasValidas": [
+    {
+      "nome": "estado pronto",
+      "mensagem": { "tipo": "estado", "protocolo": 1, "versaoApp": "1.0.0", "modelo": "mlx-community/whisper-large-v3-turbo", "estado": "pronto", "motivo": null }
+    },
+    {
+      "nome": "estado carregando",
+      "mensagem": { "tipo": "estado", "protocolo": 1, "versaoApp": "1.0.0", "modelo": "mlx-community/whisper-large-v3-turbo", "estado": "carregando", "motivo": null }
+    },
+    {
+      "nome": "estado em erro",
+      "mensagem": { "tipo": "estado", "protocolo": 1, "versaoApp": "1.0.0", "modelo": "mlx-community/whisper-large-v3-turbo", "estado": "erro", "motivo": "modelo não encontrado" }
+    },
+    {
+      "nome": "resultado",
+      "mensagem": { "tipo": "resultado", "idPedido": "p-17", "texto": "Oi, tudo bem?", "idioma": "pt", "duracaoAudioSeg": 42.0, "processamentoMs": 3100 }
+    },
+    {
+      "nome": "resultado sem fala",
+      "mensagem": { "tipo": "resultado", "idPedido": "p-19", "texto": "", "idioma": "pt", "duracaoAudioSeg": 10.0, "processamentoMs": 4 }
+    },
+    {
+      "nome": "falha na transcrição",
+      "mensagem": { "tipo": "erro", "idPedido": "p-17", "codigo": "FALHA_NA_TRANSCRICAO", "motivo": "áudio ilegível" }
+    },
+    {
+      "nome": "motor indisponível",
+      "mensagem": { "tipo": "erro", "idPedido": "p-17", "codigo": "MOTOR_INDISPONIVEL", "motivo": "modelo não encontrado" }
+    },
+    {
+      "nome": "versão incompatível",
+      "mensagem": { "tipo": "erro", "idPedido": "p-20", "codigo": "VERSAO_INCOMPATIVEL", "motivo": "versão de protocolo incompatível", "protocoloApp": 1, "protocoloPedido": 2 }
+    },
+    {
+      "nome": "mensagem inválida",
+      "mensagem": { "tipo": "erro", "idPedido": null, "codigo": "MENSAGEM_INVALIDA", "motivo": "mensagem inválida", "detalhe": "tipo desconhecido: executar" }
+    }
+  ],
+  "respostasInvalidas": [
+    { "nome": "tipo desconhecido", "mensagem": { "tipo": "outro" } },
+    { "nome": "estado sem protocolo", "mensagem": { "tipo": "estado", "estado": "pronto" } },
+    { "nome": "estado com valor desconhecido", "mensagem": { "tipo": "estado", "protocolo": 1, "estado": "dormindo", "motivo": null } },
+    { "nome": "resultado sem idPedido", "mensagem": { "tipo": "resultado", "texto": "a", "idioma": "pt", "duracaoAudioSeg": 1, "processamentoMs": 1 } },
+    { "nome": "resultado sem texto", "mensagem": { "tipo": "resultado", "idPedido": "p-1", "idioma": "pt", "duracaoAudioSeg": 1, "processamentoMs": 1 } },
+    { "nome": "erro com código desconhecido", "mensagem": { "tipo": "erro", "idPedido": "p-1", "codigo": "OUTRO", "motivo": "x" } }
+  ]
+}

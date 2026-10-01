@@ -1,0 +1,24 @@
+{"ts": "2026-10-01T21:02:39Z", "action": "T001", "status": "done", "files": ["extension/src/dominio/exibicao-de-transcricao.ts"]}
+{"ts": "2026-10-01T21:02:39Z", "action": "T002", "status": "done", "files": ["extension/src/dominio/fonte-de-audio.ts"]}
+{"ts": "2026-10-01T21:02:39Z", "action": "T003", "status": "done", "files": ["extension/src/dominio/armazenamento-navegador.ts"]}
+{"ts": "2026-10-01T21:06:06Z", "action": "T004", "status": "done", "files": ["extension/test/tempo-de-espera.test.ts"]}
+{"ts": "2026-10-01T21:06:06Z", "action": "T005", "status": "done", "files": ["extension/test/cronometro-espera.test.ts"]}
+{"ts": "2026-10-01T21:06:06Z", "action": "T006", "status": "done", "files": ["extension/test/nucleo-transcricao.test.ts"]}
+{"ts": "2026-10-01T21:06:06Z", "action": "T007", "status": "done", "files": ["extension/test/contadores-espera.test.ts"]}
+{"ts": "2026-10-01T21:06:06Z", "action": "T008", "status": "done", "files": ["extension/test/gerenciador-janelas.test.ts"]}
+{"ts": "2026-10-01T21:06:37Z", "action": "T009", "status": "done", "files": ["extension/src/dominio/tempo-de-espera.ts", "extension/test/tempo-de-espera.test.ts"]}
+{"ts": "2026-10-01T21:06:57Z", "action": "T010", "status": "done", "files": ["extension/src/dominio/fila-transcricao.ts"]}
+{"ts": "2026-10-01T21:06:57Z", "action": "T011", "status": "done", "files": ["extension/src/dominio/cache-sessao.ts"]}
+{"ts": "2026-10-01T21:07:53Z", "action": "T012", "status": "done", "files": ["extension/src/dominio/contadores.ts", "extension/src/dominio/armazenamento-navegador.ts"]}
+{"ts": "2026-10-01T21:07:53Z", "action": "T013", "status": "done", "files": ["extension/src/adaptadores/armazenamento-chrome.ts"]}
+{"ts": "2026-10-01T21:09:13Z", "action": "T014", "status": "done", "files": ["extension/src/dominio/nucleo.ts", "extension/src/dominio/fila-transcricao.ts"]}
+{"ts": "2026-10-01T21:09:13Z", "action": "T015", "status": "done", "files": ["extension/src/dominio/nucleo.ts", "extension/src/dominio/fila-transcricao.ts"]}
+{"ts": "2026-10-01T21:09:13Z", "action": "T016", "status": "done", "files": ["extension/src/dominio/nucleo.ts"]}
+{"ts": "2026-10-01T21:10:04Z", "action": "T017", "status": "done", "files": ["extension/src/content/cronometro-espera.ts"]}
+{"ts": "2026-10-01T21:10:04Z", "action": "T018", "status": "done", "files": ["extension/src/content/botao-transcricao.ts"]}
+{"ts": "2026-10-01T21:10:04Z", "action": "T019", "status": "done", "files": ["extension/src/adaptadores/adaptador-whatsapp-web.ts"]}
+{"ts": "2026-10-01T21:13:07Z", "action": "T022", "status": "done", "files": ["extension/src/content/janela-elemento.ts", "extension/src/content/gerenciador-janelas.ts"]}
+{"ts": "2026-10-01T21:13:07Z", "action": "T020", "status": "done", "files": ["extension/src/content/index.ts", "extension/src/content/cronometro-espera.ts"]}
+{"ts": "2026-10-01T21:13:07Z", "action": "T021", "status": "done", "files": ["extension/src/content/estilos.css"]}
+{"ts": "2026-10-01T21:13:07Z", "action": "T023", "status": "done", "files": ["extension/src/content/janela-flutuante.css"]}
+{"ts": "2026-10-01T21:13:07Z", "action": "T024", "status": "done", "files": ["extension/popup/index.html", "extension/src/popup/popup.ts"]}

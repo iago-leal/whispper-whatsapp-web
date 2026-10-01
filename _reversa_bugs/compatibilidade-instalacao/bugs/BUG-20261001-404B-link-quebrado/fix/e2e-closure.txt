@@ -1,0 +1,33 @@
+# Closure · BUG-20261001-404B · E2E da instalação guiada (WHISPPER_E2E=1), aceito pelo usuário
+# HEAD 9f0c6a9 + testes.diff + CHG-001 + CHG-002, 2026-10-01 17:35 -0300
+$ WHISPPER_E2E=1 node --test test/e2e-instalacao-guiada.test.ts
+
+> whispper-whatsapp-web-extensao@0.1.0 build
+> tsc -p tsconfig.json && esbuild src/content/index.ts --bundle --format=iife --outfile=dist/content/index.js && esbuild src/pagina/ponte-audio.ts --bundle --format=iife --outfile=dist/pagina/ponte-audio.js && mkdir -p dist/diagnostico dist/content dist/popup dist/onboarding && cp ../amostras/sinteticas/fala-pt.ogg dist/diagnostico/ && cp src/content/estilos.css dist/content/ && cp src/content/janela-flutuante.css dist/content/ && cp popup/index.html dist/popup/ && cp popup/popup.css dist/popup/ && cp onboarding/index.html dist/onboarding/ && cp onboarding/onboarding.css dist/onboarding/ && npm run build:instalador
+
+
+  dist/content/index.js  47.0kb
+
+⚡ Done in 10ms
+
+  dist/pagina/ponte-audio.js  4.3kb
+
+⚡ Done in 2ms
+
+> whispper-whatsapp-web-extensao@0.1.0 build:instalador
+> test $(uname) != Darwin || bash ../auxiliar/ferramentas/gerar_pkg.sh
+
+Instalador gerado em /Users/iagoleal/dev/whispper-whatsapp-web/extension/dist/instaladores/whispper-macos-apple-silicon.pkg
+installer: Package name is Whispper: aplicativo auxiliar
+installer: Installing at base path /Users/iagoleal
+installer: The install was successful.
+✔ instalação guiada de ponta a ponta no macOS (17754.079ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 22928.501542
+exit=0

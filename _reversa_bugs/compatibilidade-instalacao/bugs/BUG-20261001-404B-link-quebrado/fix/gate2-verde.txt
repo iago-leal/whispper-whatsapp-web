@@ -1,0 +1,174 @@
+# Gate 2 · BUG-20261001-404B · verde
+# commit base 9f0c6a9 + fix/testes.diff + fix/CHG-001.diff + fix/CHG-002.diff, 2026-10-01 17:32 -0300
+
+$ node --test test/onboarding-instalador.test.ts test/onboarding.test.ts
+▶ Instalação Guiada — download do instalador
+  ✔ o botão oferece o .pkg embutido na extensão, e não a própria página (BUG-20261001-MAC1) (1.420917ms)
+  ✔ com o instalador disponível, o botão segue visível e a página não acusa falha (BUG-20261001-404B) (3.898917ms)
+  ✔ sem o instalador, a etapa 3 informa a falha e esconde o botão (BUG-20261001-404B) (0.462375ms)
+  ✔ "Tentar de novo" refaz a conferência e devolve o botão quando o instalador aparece (BUG-20261001-404B) (0.468084ms)
+✔ Instalação Guiada — download do instalador (8.004083ms)
+✔ ControladorOnboarding - Link de download gera URL 404 (704.301208ms)
+ℹ tests 5
+ℹ suites 1
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 918.272
+exit=0
+
+$ npm test
+
+> whispper-whatsapp-web-extensao@0.1.0 test
+> node --test "test/**/*.test.ts"
+
+✔ recusa áudio acima do limite sem abrir conexão (2.008167ms)
+✔ conecta sob demanda, envia o pedido e copia o resultado (0.356083ms)
+✔ erro FALHA_NA_TRANSCRICAO do host é repassado (0.144875ms)
+✔ erro VERSAO_INCOMPATIVEL do host é repassado (0.125417ms)
+✔ erro MOTOR_INDISPONIVEL do host é repassado (0.085042ms)
+✔ MENSAGEM_INVALIDA do host vira falha e fica registrada (0.103208ms)
+✔ queda com pedido pendente vira MOTOR_INDISPONIVEL e o pedido seguinte reconecta (0.365708ms)
+✔ host não instalado: uma única tentativa de conexão por pedido (0.112791ms)
+✔ pedidos simultâneos saem em ordem e são correlacionados por idPedido (0.161125ms)
+✔ respostas estado e resultado intercaladas não se confundem (0.143375ms)
+✔ depois de verificação sem resposta, o pedido seguinte verifica antes de transcrever (0.180166ms)
+✔ verificação prévia que falha encerra o pedido sem enviá-lo (0.14125ms)
+✔ erro sem idPedido é registrado e ignorado (2.881ms)
+✔ estado pronto (1.196625ms)
+✔ carregando vira iniciando (7.683375ms)
+✔ erro vira indisponível e fecha a porta para o próximo host reler a configuração (0.203459ms)
+✔ protocolo diferente vira VERSAO_INCOMPATIVEL com instrução de atualizar (0.106416ms)
+✔ desconexão com "Specified native messaging host not found." vira indisponível: aplicativo auxiliar não instalado (0.169209ms)
+✔ desconexão com "Access to the specified native messaging host is forbidden." vira indisponível: extensão não autorizada no aplicativo auxiliar (0.071916ms)
+✔ desconexão com "Native host has exited." vira indisponível: aplicativo auxiliar encerrou (0.06475ms)
+✔ desconexão com "Failed to start native messaging host." vira indisponível: aplicativo auxiliar não iniciou (0.065625ms)
+✔ desconexão com "null" vira indisponível: aplicativo auxiliar encerrou (0.106459ms)
+✔ sem resposta em 10 s vira indisponível e fecha a porta (3.888083ms)
+✔ resposta cancela o prazo (0.171333ms)
+✔ verificações simultâneas são correlacionadas na ordem (0.077917ms)
+✔ reaproveita a conexão aberta (0.077709ms)
+✔ motorDiagnostico.verificar consulta o host pelo canal do Chrome (1.146084ms)
+✔ motorDiagnostico.transcreverAmostra envia a amostra empacotada em dist/diagnostico/ (31.301916ms)
+✔ conecta ao host do protocolo (8.917167ms)
+✔ envia pela porta e entrega as mensagens recebidas (0.245208ms)
+✔ entrega a desconexão com o texto de lastError, ou null sem ele (0.163459ms)
+✔ desconectar fecha a porta, e enviar depois disso lança (0.18825ms)
+✔ com o adaptador, a recusa do Chrome vira extensão não autorizada (0.401125ms)
+▶ Compatibilidade e Instalação Guiada — Domínio
+  ✔ Mac Apple Silicon com 8 GB ou mais é aprovado como compatível (RF-03, RF-04) (1.328ms)
+  ✔ Mac com processador Intel (x86_64) é rejeitado com explicação leiga (RF-04, RF-05) (0.203666ms)
+  ✔ Windows 64 bits com 8 GB ou mais é aprovado como compatível (RF-04, RF-08) (0.077167ms)
+  ✔ Windows de 32 bits é rejeitado com explicação sobre 64 bits (RF-04, RF-05) (0.076958ms)
+  ✔ Computador com RAM inferior a 8 GB (ex: 4 GB) é rejeitado com explicação clara (RF-04, RF-05) (0.104333ms)
+  ✔ Sistema operacional não suportado (ex: Linux) é rejeitado antes de downloads (RF-04, RF-05) (0.09775ms)
+  ✔ extrairInfoDoNavegador infere plataforma e memória a partir de objetos do browser (0.120209ms)
+✔ Compatibilidade e Instalação Guiada — Domínio (3.501292ms)
+✔ CONFIGURACAO_ESTRUTURAS possui versão e data de verificação válidas (3.317875ms)
+✔ CONFIGURACAO_ESTRUTURAS define seletores obrigatórios sem strings vazias (0.364583ms)
+✔ CONFIGURACAO_ESTRUTURAS define atributos com prefixo whispper para evitar colisão (0.193041ms)
+✔ CONFIGURACAO_ESTRUTURAS nomeia os módulos internos da página, e nenhum outro fonte os cita (18.111625ms)
+✔ identificarMensagemDeAudio reconhece mensagem de voz válida (0.516ms)
+✔ deveIgnorarMensagem rejeita mensagem com marcador de visualização única ou já injetada (0.087791ms)
+﹣ instalação guiada de ponta a ponta no macOS (1.007416ms) # instala o aplicativo auxiliar na sua conta; rode com WHISPPER_E2E=1
+✔ reprodução: balão sem <audio>, como no WhatsApp real, entrega bytes, tipo e duração pelo download da própria página (RF-06, EC-01) (79.039125ms)
+✔ a obtenção não toca nem altera a mensagem: só o download decifrado é pedido à página (RF-05, RF-07) (4.981958ms)
+✔ o pedido à página leva o mimetype e os campos de mídia do próprio modelo (sem mimetype, a página recusa) (3.664375ms)
+✔ mensagem que a página já descartou termina em AUDIO_INDISPONIVEL com "Abra a conversa e tente de novo" (EC-06) (2.418666ms)
+✔ download sem conclusão em 30 s termina em AUDIO_INDISPONIVEL com "Falha ao baixar o áudio; verifique a conexão" (EC-03) (0.947416ms)
+✔ GerenciadorDeJanelas abre janela e atualiza estados corretamente (2.487708ms)
+✔ GerenciadorDeJanelas respeita limite máximo de 20 janelas (12.737208ms)
+▶ integração com a conversa aberta no WhatsApp Web
+  ✔ reprodução: a página carrega sem conversa e o ícone aparece em até 500 ms quando a conversa abre (RF-01, RF-03) (467.27425ms)
+  ✔ reprodução no WhatsApp real: o player montado depois do balão recebe o ícone em até 500 ms (RF-01, RF-03) (2125.93775ms)
+  ✔ trocar de conversa e voltar mantém exatamente um ícone por mensagem de voz (RF-02, RF-11) (93.346583ms)
+  ✔ sem conversa aberta não há aviso de degradação (EC-10) (84.596708ms)
+  ✔ conversa sem a lista de mensagens fica degradada e sem ícone, e a seguinte volta a receber (RF-11, RF-12) (2094.447375ms)
+✔ integração com a conversa aberta no WhatsApp Web (6158.058083ms)
+﹣ contrato MotorDeTranscricao: adaptador do motor local com o host real (0.408042ms) # exige o modelo real; rode com MOTOR_REAL=1
+✔ o popup declarado no manifesto carrega um script que a extensão contém (BUG-20261001-RMLU) (4.92275ms)
+✔ todo arquivo do manifesto e toda página aberta pela extensão existem no pacote (0.399208ms)
+✔ o script do mundo da página entra só no WhatsApp Web, antes da página, e sai do build num arquivo único (RNF-05, BUG-20261001-2MOY) (0.3305ms)
+✔ avaliarSaudeDasEstruturas retorna ativa quando a conversa aberta tem a lista de mensagens (11.387791ms)
+✔ avaliarSaudeDasEstruturas não acusa degradação sem conversa aberta (EC-10, BUG-20261001-GAOZ) (0.083083ms)
+✔ avaliarSaudeDasEstruturas acusa degradação quando a conversa aberta não tem a lista de mensagens (RF-11) (0.427417ms)
+✔ calcularCoordenadasAncora extrai retângulo e visibilidade do elemento (0.107875ms)
+▶ contrato MotorDeTranscricao: adaptador simulado
+  ✔ verificar passa por iniciando até pronto (52.012875ms)
+  ✔ transcreve fala com texto, idioma, duração e tempo (29.819459ms)
+  ✔ áudio sem fala devolve texto vazio, sem erro (0.233458ms)
+  ✔ áudio ilegível devolve FALHA_NA_TRANSCRICAO (0.696583ms)
+  ✔ três chamadas simultâneas terminam na ordem das chamadas (35.620042ms)
+  ✔ motor indisponível responde MOTOR_INDISPONIVEL com instrução (0.273667ms)
+  ✔ versão incompatível responde VERSAO_INCOMPATIVEL (0.137083ms)
+✔ contrato MotorDeTranscricao: adaptador simulado (120.220958ms)
+✔ sem roteiro, responde pronto e uma transcrição padrão (0.0915ms)
+✔ roteiro em lista segue a ordem das chamadas e repete a última resposta (0.08775ms)
+✔ registra as chamadas recebidas, com o áudio e o tipo de mídia (0.112167ms)
+✔ a resposta entregue é cópia: alterá-la não muda o roteiro (0.066333ms)
+✔ argumento de tipo errado lança exceção (0.2225ms)
+▶ Núcleo de Transcrição — Domínio e Hexagonal
+  ✔ RF-01 e RF-02: Atende pedidos estritamente sequenciais (FIFO) em sequência fragmentada (104.97025ms)
+  ✔ RF-06 e RF-07: Reabertura imediata a partir do cache sem chamar o motor (21.810458ms)
+  ✔ RF-08: Cliques repetidos em áudio com janela já aberta apenas a destacam (0.468959ms)
+  ✔ RF-09: Tentar de novo recoloca pedido com erro no fim da fila (41.873459ms)
+  ✔ RF-10: Fechar janela na fila cancela o pedido; fechar transcrevendo conclui em background (51.221042ms)
+  ✔ RF-19: Motor indisponível encerra pedido em curso e fila inteira imediatamente (20.655667ms)
+  ✔ EC-05: Mensagem removida limpa pedido, cache e fecha a janela (21.447667ms)
+  ✔ RF-12 a RF-17: Contadores locais anônimos e cálculo exato de adoção e qualidade (0.669959ms)
+✔ Núcleo de Transcrição — Domínio e Hexagonal (264.372709ms)
+▶ Instalação Guiada — download do instalador
+  ✔ o botão oferece o .pkg embutido na extensão, e não a própria página (BUG-20261001-MAC1) (7.194583ms)
+  ✔ com o instalador disponível, o botão segue visível e a página não acusa falha (BUG-20261001-404B) (3.721959ms)
+  ✔ sem o instalador, a etapa 3 informa a falha e esconde o botão (BUG-20261001-404B) (0.761917ms)
+  ✔ "Tentar de novo" refaz a conferência e devolve o botão quando o instalador aparece (BUG-20261001-404B) (0.948625ms)
+✔ Instalação Guiada — download do instalador (17.338125ms)
+✔ ControladorOnboarding - Link de download gera URL 404 (702.848042ms)
+✔ calcularPosicoesJanelas posiciona janela ao lado da âncora em espaço suficiente (0.743542ms)
+✔ calcularPosicoesJanelas desloca verticalmente janela para resolver colisão (0.230792ms)
+✔ calcularPosicoesJanelas usa fallback abaixo do balão quando espaço lateral for insuficiente (0.156125ms)
+✔ constantes iguais às do contrato (0.4485ms)
+✔ pedidos serializados iguais aos exemplos do contrato (0.460959ms)
+✔ base64 igual ao do Node, inclusive acima do tamanho de bloco (9.6645ms)
+✔ tamanho do pedido calculado sem serializar o áudio (1.668875ms)
+✔ 50 MiB passam do limite; 1 MiB cabe (0.12325ms)
+✔ respostas válidas do contrato são reconhecidas (0.129625ms)
+✔ respostas inválidas do contrato são descartadas (0.109459ms)
+ℹ tests 103
+ℹ suites 4
+ℹ pass 101
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 2
+ℹ todo 0
+ℹ duration_ms 11700.088417
+exit=0
+
+$ npm run typecheck
+
+> whispper-whatsapp-web-extensao@0.1.0 typecheck
+> tsc -p tsconfig.test.json
+
+exit=0
+
+$ npm run build
+
+> whispper-whatsapp-web-extensao@0.1.0 build
+> tsc -p tsconfig.json && esbuild src/content/index.ts --bundle --format=iife --outfile=dist/content/index.js && esbuild src/pagina/ponte-audio.ts --bundle --format=iife --outfile=dist/pagina/ponte-audio.js && mkdir -p dist/diagnostico dist/content dist/popup dist/onboarding && cp ../amostras/sinteticas/fala-pt.ogg dist/diagnostico/ && cp src/content/estilos.css dist/content/ && cp src/content/janela-flutuante.css dist/content/ && cp popup/index.html dist/popup/ && cp popup/popup.css dist/popup/ && cp onboarding/index.html dist/onboarding/ && cp onboarding/onboarding.css dist/onboarding/ && npm run build:instalador
+
+
+  dist/content/index.js  47.0kb
+
+⚡ Done in 3ms
+
+  dist/pagina/ponte-audio.js  4.3kb
+
+⚡ Done in 1ms
+
+> whispper-whatsapp-web-extensao@0.1.0 build:instalador
+> test $(uname) != Darwin || bash ../auxiliar/ferramentas/gerar_pkg.sh
+
+Instalador gerado em /Users/iagoleal/dev/whispper-whatsapp-web/extension/dist/instaladores/whispper-macos-apple-silicon.pkg
+exit=0

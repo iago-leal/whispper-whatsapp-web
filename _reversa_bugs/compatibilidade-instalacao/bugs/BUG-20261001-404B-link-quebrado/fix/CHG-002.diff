@@ -1,0 +1,19 @@
+diff --git a/extension/onboarding/index.html b/extension/onboarding/index.html
+index e2f499c..511cab7 100644
+--- a/extension/onboarding/index.html
++++ b/extension/onboarding/index.html
+@@ -111,6 +111,14 @@
+           </a>
+         </div>
+ 
++        <div id="erro-download-instalador" class="alerta alerta-erro" style="display: none;">
++          ⚠️ <strong>Não foi possível baixar o instalador.</strong>
++          O arquivo para o seu sistema não está disponível nesta versão da extensão.
++          <div class="acoes">
++            <button id="btn-tentar-download" class="btn-primario">Tentar de novo</button>
++          </div>
++        </div>
++
+         <div class="bloco-espera">
+           <div class="spinner-pequeno"></div>
+           <span id="texto-polling-motor">Aguardando a instalação do aplicativo auxiliar…</span>

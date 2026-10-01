@@ -1,0 +1,11 @@
+[20:23:47] navegador aberto
+[20:23:48] página aberta
+[20:23:48] carregada
+[20:23:48] HEAD .pkg existente: HTTP 200 ok=true
+[20:23:48] HEAD .exe ausente:   rejeitado: TypeError: Failed to fetch
+[20:23:48] GET .pkg existente: HTTP 200 ok=true
+[20:23:48] GET .exe ausente:   rejeitado: TypeError: Failed to fetch
+[20:23:48] progresso gravado na etapa 3
+[20:23:50] retomada na etapa 3, href: chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/dist/onboarding/index.html#
+[20:23:50] retomada na etapa 3, download: "", target: _blank
+[20:23:50] retomada na etapa 3, nome: Whispper Auxiliar

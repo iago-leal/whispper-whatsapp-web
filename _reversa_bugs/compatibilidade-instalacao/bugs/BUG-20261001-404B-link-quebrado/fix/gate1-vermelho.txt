@@ -1,0 +1,59 @@
+# Gate 1 · BUG-20261001-404B · vermelho
+# commit base 9f0c6a9, testes aplicados de fix/testes.diff, 2026-10-01 17:31 -0300
+$ node --test test/onboarding-instalador.test.ts test/onboarding.test.ts
+▶ Instalação Guiada — download do instalador
+  ✔ o botão oferece o .pkg embutido na extensão, e não a própria página (BUG-20261001-MAC1) (1.104042ms)
+  ✔ com o instalador disponível, o botão segue visível e a página não acusa falha (BUG-20261001-404B) (3.251416ms)
+  ✖ sem o instalador, a etapa 3 informa a falha e esconde o botão (BUG-20261001-404B) (1.29925ms)
+  ✖ "Tentar de novo" refaz a conferência e devolve o botão quando o instalador aparece (BUG-20261001-404B) (0.886083ms)
+✖ Instalação Guiada — download do instalador (7.710709ms)
+✔ ControladorOnboarding - Link de download gera URL 404 (703.526292ms)
+ℹ tests 5
+ℹ suites 1
+ℹ pass 3
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 900.229125
+
+✖ failing tests:
+
+test at test/onboarding-instalador.test.ts:98:3
+✖ sem o instalador, a etapa 3 informa a falha e esconde o botão (BUG-20261001-404B) (1.29925ms)
+  AssertionError [ERR_ASSERTION]: a falha de download não foi informada (seção 10 da spec)
+  + actual - expected
+  
+  + undefined
+  - 'block'
+  
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/onboarding-instalador.test.ts:107:12)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'block',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/onboarding-instalador.test.ts:114:3
+✖ "Tentar de novo" refaz a conferência e devolve o botão quando o instalador aparece (BUG-20261001-404B) (0.886083ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'block'
+  
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/onboarding-instalador.test.ts:122:12)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'block',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+exit=1

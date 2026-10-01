@@ -1,0 +1,72 @@
+### execução 1 (HEAD 9f0c6a9, 2026-10-01)
+=== A: macOS (UA nativo do Chrome for Testing) ===
+navigator.platform: MacIntel
+instalador sugerido: Whispper para Mac (Apple Silicon)
+href do botão: chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/dist/instaladores/whispper-macos-apple-silicon.pkg
+aponta para github.com: false
+recurso do href: HTTP 200, null bytes
+eventos de download: ["willBegin chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/dist/instaladores/whispper-macos-apple-silicon.pkg -> whispper-macos-apple-silicon.pkg","progress completed"]
+arquivos em Downloads: ["whispper-macos-apple-silicon.pkg"]
+diálogos: []
+etapa 3 menciona falha/"Tentar de novo": false
+texto da etapa 3: "Instalação do Aplicativo Auxiliar As extensões do Chrome não têm permissão para usar diretamente os chips de IA do seu computador. Por isso, o Whispper utiliza um pequeno aplicativo auxiliar local. Whispper para Mac (Apple Silicon) Instalador para o seu usuário (não precisa de senha de administrador). ⬇️ Baixar Instalador Aguardando a instalação do aplicativo auxiliar… Assim que você executar o instalador baixado, a página avançará automaticamente."
+=== B: Windows 64 bits (UA emulado) ===
+navigator.platform: Win32
+instalador sugerido: Whispper para Windows (64 bits)
+href do botão: chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/dist/instaladores/whispper-windows-x64.exe
+aponta para github.com: false
+recurso do href: fetch rejeitado: Failed to fetch
+eventos de download: ["willBegin chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/dist/instaladores/whispper-windows-x64.exe -> whispper-windows-x64.exe","progress canceled"]
+arquivos em Downloads: []
+diálogos: []
+etapa 3 menciona falha/"Tentar de novo": false
+texto da etapa 3: "Instalação do Aplicativo Auxiliar As extensões do Chrome não têm permissão para usar diretamente os chips de IA do seu computador. Por isso, o Whispper utiliza um pequeno aplicativo auxiliar local. Whispper para Windows (64 bits) Instalador para o seu usuário (não precisa de senha de administrador). ⬇️ Baixar Instalador Aguardando a instalação do aplicativo auxiliar… Assim que você executar o instalador baixado, a página avançará automaticamente."
+
+### execução 2 (HEAD 9f0c6a9, 2026-10-01)
+=== A: macOS (UA nativo do Chrome for Testing) ===
+navigator.platform: MacIntel
+instalador sugerido: Whispper para Mac (Apple Silicon)
+href do botão: chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/dist/instaladores/whispper-macos-apple-silicon.pkg
+aponta para github.com: false
+recurso do href: HTTP 200, null bytes
+eventos de download: ["willBegin chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/dist/instaladores/whispper-macos-apple-silicon.pkg -> whispper-macos-apple-silicon.pkg","progress completed"]
+arquivos em Downloads: ["whispper-macos-apple-silicon.pkg"]
+diálogos: []
+etapa 3 menciona falha/"Tentar de novo": false
+texto da etapa 3: "Instalação do Aplicativo Auxiliar As extensões do Chrome não têm permissão para usar diretamente os chips de IA do seu computador. Por isso, o Whispper utiliza um pequeno aplicativo auxiliar local. Whispper para Mac (Apple Silicon) Instalador para o seu usuário (não precisa de senha de administrador). ⬇️ Baixar Instalador Aguardando a instalação do aplicativo auxiliar… Assim que você executar o instalador baixado, a página avançará automaticamente."
+=== B: Windows 64 bits (UA emulado) ===
+navigator.platform: Win32
+instalador sugerido: Whispper para Windows (64 bits)
+href do botão: chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/dist/instaladores/whispper-windows-x64.exe
+aponta para github.com: false
+recurso do href: fetch rejeitado: Failed to fetch
+eventos de download: ["willBegin chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/dist/instaladores/whispper-windows-x64.exe -> whispper-windows-x64.exe","progress canceled"]
+arquivos em Downloads: []
+diálogos: []
+etapa 3 menciona falha/"Tentar de novo": false
+texto da etapa 3: "Instalação do Aplicativo Auxiliar As extensões do Chrome não têm permissão para usar diretamente os chips de IA do seu computador. Por isso, o Whispper utiliza um pequeno aplicativo auxiliar local. Whispper para Windows (64 bits) Instalador para o seu usuário (não precisa de senha de administrador). ⬇️ Baixar Instalador Aguardando a instalação do aplicativo auxiliar… Assim que você executar o instalador baixado, a página avançará automaticamente."
+
+### execução 3 (HEAD 9f0c6a9, 2026-10-01)
+=== A: macOS (UA nativo do Chrome for Testing) ===
+navigator.platform: MacIntel
+instalador sugerido: Whispper para Mac (Apple Silicon)
+href do botão: chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/dist/instaladores/whispper-macos-apple-silicon.pkg
+aponta para github.com: false
+recurso do href: HTTP 200, null bytes
+eventos de download: ["willBegin chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/dist/instaladores/whispper-macos-apple-silicon.pkg -> whispper-macos-apple-silicon.pkg","progress completed"]
+arquivos em Downloads: ["whispper-macos-apple-silicon.pkg"]
+diálogos: []
+etapa 3 menciona falha/"Tentar de novo": false
+texto da etapa 3: "Instalação do Aplicativo Auxiliar As extensões do Chrome não têm permissão para usar diretamente os chips de IA do seu computador. Por isso, o Whispper utiliza um pequeno aplicativo auxiliar local. Whispper para Mac (Apple Silicon) Instalador para o seu usuário (não precisa de senha de administrador). ⬇️ Baixar Instalador Aguardando a instalação do aplicativo auxiliar… Assim que você executar o instalador baixado, a página avançará automaticamente."
+=== B: Windows 64 bits (UA emulado) ===
+navigator.platform: Win32
+instalador sugerido: Whispper para Windows (64 bits)
+href do botão: chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/dist/instaladores/whispper-windows-x64.exe
+aponta para github.com: false
+recurso do href: fetch rejeitado: Failed to fetch
+eventos de download: ["willBegin chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/dist/instaladores/whispper-windows-x64.exe -> whispper-windows-x64.exe","progress canceled"]
+arquivos em Downloads: []
+diálogos: []
+etapa 3 menciona falha/"Tentar de novo": false
+texto da etapa 3: "Instalação do Aplicativo Auxiliar As extensões do Chrome não têm permissão para usar diretamente os chips de IA do seu computador. Por isso, o Whispper utiliza um pequeno aplicativo auxiliar local. Whispper para Windows (64 bits) Instalador para o seu usuário (não precisa de senha de administrador). ⬇️ Baixar Instalador Aguardando a instalação do aplicativo auxiliar… Assim que você executar o instalador baixado, a página avançará automaticamente."
+

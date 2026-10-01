@@ -1,0 +1,101 @@
+# Aceitação · BUG-20261001-404B · 2026-10-01 17:32 -0300
+# HEAD 9f0c6a9 + testes.diff + CHG-001 + CHG-002, dist/ do npm run build de 17:32
+
+### execução 1
+(node:26460) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/iagoleal/dev/whispper-whatsapp-web/_reversa_bugs/compatibilidade-instalacao/bugs/BUG-20261001-404B-link-quebrado/evidence/aceitacao-404b.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/iagoleal/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+=== A: macOS (UA nativo do Chrome for Testing) ===
+navigator.platform: MacIntel
+instalador sugerido: Whispper para Mac (Apple Silicon)
+href do botão: chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/dist/instaladores/whispper-macos-apple-silicon.pkg
+aponta para github.com: false
+recurso do href: HTTP 200, null bytes
+eventos de download: ["willBegin chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/dist/instaladores/whispper-macos-apple-silicon.pkg -> whispper-macos-apple-silicon.pkg","progress completed"]
+arquivos em Downloads: ["whispper-macos-apple-silicon.pkg"]
+botão de download visível: true; alerta de falha visível: false
+clique em: Baixar Instalador; alerta depois do clique: false
+diálogos: []
+etapa 3 menciona falha/"Tentar de novo": false
+texto da etapa 3: "Instalação do Aplicativo Auxiliar As extensões do Chrome não têm permissão para usar diretamente os chips de IA do seu computador. Por isso, o Whispper utiliza um pequeno aplicativo auxiliar local. Whispper para Mac (Apple Silicon) Instalador para o seu usuário (não precisa de senha de administrador). ⬇️ Baixar Instalador Aguardando a instalação do aplicativo auxiliar… Assim que você executar o instalador baixado, a página avançará automaticamente."
+=== B: Windows 64 bits (UA emulado) ===
+navigator.platform: Win32
+instalador sugerido: Whispper para Windows (64 bits)
+href do botão: chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/dist/instaladores/whispper-windows-x64.exe
+aponta para github.com: false
+recurso do href: fetch rejeitado: Failed to fetch
+eventos de download: []
+arquivos em Downloads: []
+botão de download visível: false; alerta de falha visível: true
+clique em: Tentar de novo; alerta depois do clique: true
+diálogos: []
+etapa 3 menciona falha/"Tentar de novo": true
+texto da etapa 3: "Instalação do Aplicativo Auxiliar As extensões do Chrome não têm permissão para usar diretamente os chips de IA do seu computador. Por isso, o Whispper utiliza um pequeno aplicativo auxiliar local. Whispper para Windows (64 bits) Instalador para o seu usuário (não precisa de senha de administrador). ⚠️ Não foi possível baixar o instalador. O arquivo para o seu sistema não está disponível nesta versão da extensão. Tentar de novo Aguardando a instalação do aplicativo auxiliar… Assim que você executar o instalador baixado, a página avançará automaticamente."
+exit=0
+
+### execução 2
+(node:27635) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/iagoleal/dev/whispper-whatsapp-web/_reversa_bugs/compatibilidade-instalacao/bugs/BUG-20261001-404B-link-quebrado/evidence/aceitacao-404b.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/iagoleal/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+=== A: macOS (UA nativo do Chrome for Testing) ===
+navigator.platform: MacIntel
+instalador sugerido: Whispper para Mac (Apple Silicon)
+href do botão: chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/dist/instaladores/whispper-macos-apple-silicon.pkg
+aponta para github.com: false
+recurso do href: HTTP 200, null bytes
+eventos de download: ["willBegin chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/dist/instaladores/whispper-macos-apple-silicon.pkg -> whispper-macos-apple-silicon.pkg","progress completed"]
+arquivos em Downloads: ["whispper-macos-apple-silicon.pkg"]
+botão de download visível: true; alerta de falha visível: false
+clique em: Baixar Instalador; alerta depois do clique: false
+diálogos: []
+etapa 3 menciona falha/"Tentar de novo": false
+texto da etapa 3: "Instalação do Aplicativo Auxiliar As extensões do Chrome não têm permissão para usar diretamente os chips de IA do seu computador. Por isso, o Whispper utiliza um pequeno aplicativo auxiliar local. Whispper para Mac (Apple Silicon) Instalador para o seu usuário (não precisa de senha de administrador). ⬇️ Baixar Instalador Aguardando a instalação do aplicativo auxiliar… Assim que você executar o instalador baixado, a página avançará automaticamente."
+=== B: Windows 64 bits (UA emulado) ===
+navigator.platform: Win32
+instalador sugerido: Whispper para Windows (64 bits)
+href do botão: chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/dist/instaladores/whispper-windows-x64.exe
+aponta para github.com: false
+recurso do href: fetch rejeitado: Failed to fetch
+eventos de download: []
+arquivos em Downloads: []
+botão de download visível: false; alerta de falha visível: true
+clique em: Tentar de novo; alerta depois do clique: true
+diálogos: []
+etapa 3 menciona falha/"Tentar de novo": true
+texto da etapa 3: "Instalação do Aplicativo Auxiliar As extensões do Chrome não têm permissão para usar diretamente os chips de IA do seu computador. Por isso, o Whispper utiliza um pequeno aplicativo auxiliar local. Whispper para Windows (64 bits) Instalador para o seu usuário (não precisa de senha de administrador). ⚠️ Não foi possível baixar o instalador. O arquivo para o seu sistema não está disponível nesta versão da extensão. Tentar de novo Aguardando a instalação do aplicativo auxiliar… Assim que você executar o instalador baixado, a página avançará automaticamente."
+exit=0
+
+### execução 3
+(node:27806) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/iagoleal/dev/whispper-whatsapp-web/_reversa_bugs/compatibilidade-instalacao/bugs/BUG-20261001-404B-link-quebrado/evidence/aceitacao-404b.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/iagoleal/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+=== A: macOS (UA nativo do Chrome for Testing) ===
+navigator.platform: MacIntel
+instalador sugerido: Whispper para Mac (Apple Silicon)
+href do botão: chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/dist/instaladores/whispper-macos-apple-silicon.pkg
+aponta para github.com: false
+recurso do href: HTTP 200, null bytes
+eventos de download: ["willBegin chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/dist/instaladores/whispper-macos-apple-silicon.pkg -> whispper-macos-apple-silicon.pkg","progress completed"]
+arquivos em Downloads: ["whispper-macos-apple-silicon.pkg"]
+botão de download visível: true; alerta de falha visível: false
+clique em: Baixar Instalador; alerta depois do clique: false
+diálogos: []
+etapa 3 menciona falha/"Tentar de novo": false
+texto da etapa 3: "Instalação do Aplicativo Auxiliar As extensões do Chrome não têm permissão para usar diretamente os chips de IA do seu computador. Por isso, o Whispper utiliza um pequeno aplicativo auxiliar local. Whispper para Mac (Apple Silicon) Instalador para o seu usuário (não precisa de senha de administrador). ⬇️ Baixar Instalador Aguardando a instalação do aplicativo auxiliar… Assim que você executar o instalador baixado, a página avançará automaticamente."
+=== B: Windows 64 bits (UA emulado) ===
+navigator.platform: Win32
+instalador sugerido: Whispper para Windows (64 bits)
+href do botão: chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/dist/instaladores/whispper-windows-x64.exe
+aponta para github.com: false
+recurso do href: fetch rejeitado: Failed to fetch
+eventos de download: []
+arquivos em Downloads: []
+botão de download visível: false; alerta de falha visível: true
+clique em: Tentar de novo; alerta depois do clique: true
+diálogos: []
+etapa 3 menciona falha/"Tentar de novo": true
+texto da etapa 3: "Instalação do Aplicativo Auxiliar As extensões do Chrome não têm permissão para usar diretamente os chips de IA do seu computador. Por isso, o Whispper utiliza um pequeno aplicativo auxiliar local. Whispper para Windows (64 bits) Instalador para o seu usuário (não precisa de senha de administrador). ⚠️ Não foi possível baixar o instalador. O arquivo para o seu sistema não está disponível nesta versão da extensão. Tentar de novo Aguardando a instalação do aplicativo auxiliar… Assim que você executar o instalador baixado, a página avançará automaticamente."
+exit=0

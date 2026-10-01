@@ -1,0 +1,42 @@
+diff --git a/extension/src/onboarding/onboarding.ts b/extension/src/onboarding/onboarding.ts
+index 8066add..0f1e0ff 100644
+--- a/extension/src/onboarding/onboarding.ts
++++ b/extension/src/onboarding/onboarding.ts
+@@ -127,10 +127,25 @@ export class ControladorOnboarding {
+         const { arquivo } = resultado.instaladorSugerido;
+         elLink.href = chrome.runtime.getURL(`dist/instaladores/${arquivo}`);
+         elLink.download = arquivo;
++        void this.conferirInstalador(elLink);
+       }
+     }
+   }
+ 
++  // Sem o instalador (o do Windows ainda não existe), o Chrome cancelaria o download em silêncio: a
++  // página informa a falha e oferece nova tentativa (seção 10 da spec), sem interceptar o clique.
++  private async conferirInstalador(elLink: HTMLAnchorElement): Promise<void> {
++    let disponivel = false;
++    try {
++      disponivel = (await fetch(elLink.href, { method: 'HEAD' })).ok;
++    } catch {
++      disponivel = false;
++    }
++    elLink.style.display = disponivel ? '' : 'none';
++    const elErro = document.getElementById('erro-download-instalador');
++    if (elErro) elErro.style.display = disponivel ? 'none' : 'block';
++  }
++
+   private iniciarPollingMotor(): void {
+     this.pararPollingMotor();
+     this.consultarMotor();
+@@ -235,6 +250,11 @@ export class ControladorOnboarding {
+       this.irParaEtapa(3);
+     });
+ 
++    // Etapa 3 (nova tentativa de download)
++    document.getElementById('btn-tentar-download')?.addEventListener('click', () => {
++      if (this.resultadoVerificacao) this.configurarDownload(this.resultadoVerificacao);
++    });
++
+     // Etapa 4 -> 5
+     document.getElementById('btn-avancar-teste')?.addEventListener('click', () => {
+       this.irParaEtapa(5);

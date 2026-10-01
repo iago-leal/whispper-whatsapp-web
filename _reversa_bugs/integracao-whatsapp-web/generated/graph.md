@@ -1,4 +1,4 @@
-<!-- GENERATED, DO NOT EDIT: regenerado por /reversa-debugger-graph em 2026-10-01T17:05Z a partir de 2 bugs -->
+<!-- GENERATED, DO NOT EDIT: regenerado por /reversa-debugger-graph em 2026-10-01T18:24Z a partir de 2 bugs -->
 
 # Grafo · integracao-whatsapp-web
 
@@ -6,7 +6,7 @@
 graph LR
   BUG_20261001_GAOZ["#4 BUG-20261001-GAOZ"]
   BUG_20261001_2MOY["#5 BUG-20261001-2MOY"]
-  BUG_20261001_2MOY -.->|blocked-by| BUG_20261001_GAOZ
+  BUG_20261001_2MOY -->|blocked-by| BUG_20261001_GAOZ
 ```
 
 Arestas tracejadas são relações `proposed` (hipótese).
@@ -15,9 +15,8 @@ Arestas tracejadas são relações `proposed` (hipótese).
 
 | bug | impact score |
 |---|---|
-| BUG-20261001-GAOZ | 0 |
 | BUG-20261001-2MOY | 0 |
 
 ## Clusters
 
-Nenhum cluster com arestas supported/confirmed neste contexto.
+Ver arestas confirmadas acima.

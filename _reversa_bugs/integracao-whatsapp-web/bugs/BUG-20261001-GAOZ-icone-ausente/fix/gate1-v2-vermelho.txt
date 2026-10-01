@@ -1,0 +1,85 @@
+# Gate 1 (revisão 2) · vermelho · 2026-10-01 15:08 -0300 · commit base 9dbd731 + CHG-001 a CHG-005 aplicados + CHG-007; detector intocado
+$ node --test --test-reporter=spec test/integracao-conversa.test.ts
+▶ integração com a conversa aberta no WhatsApp Web
+  ✖ reprodução: a página carrega sem conversa e o ícone aparece em até 500 ms quando a conversa abre (RF-01, RF-03) (541.266458ms)
+  ✖ reprodução no WhatsApp real: o player montado depois do balão recebe o ícone em até 500 ms (RF-01, RF-03) (4107.308ms)
+  ✖ trocar de conversa e voltar mantém exatamente um ícone por mensagem de voz (RF-02, RF-11) (99.10575ms)
+  ✔ sem conversa aberta não há aviso de degradação (EC-10) (86.536458ms)
+  ✔ conversa sem a lista de mensagens fica degradada e sem ícone, e a seguinte volta a receber (RF-11, RF-12) (2094.310083ms)
+✖ integração com a conversa aberta no WhatsApp Web (8894.584292ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 2
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14013.092458
+
+✖ failing tests:
+
+test at test/integracao-conversa.test.ts:124:11
+✖ reprodução: a página carrega sem conversa e o ícone aparece em até 500 ms quando a conversa abre (RF-01, RF-03) (541.266458ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   2
+  -   1
+    ]
+  
+      at TestContext.<anonymous> (extension/test/integracao-conversa.test.ts:129:12)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async TestContext.<anonymous> (extension/test/integracao-conversa.test.ts:124:3)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 2 ],
+    expected: [ 1 ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at test/integracao-conversa.test.ts:133:11
+✖ reprodução no WhatsApp real: o player montado depois do balão recebe o ícone em até 500 ms (RF-01, RF-03) (4107.308ms)
+  AssertionError [ERR_ASSERTION]: o player montado depois do balão ficou sem ícone
+      at TestContext.<anonymous> (extension/test/integracao-conversa.test.ts:137:12)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async TestContext.<anonymous> (extension/test/integracao-conversa.test.ts:133:3)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: null,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at test/integracao-conversa.test.ts:143:11
+✖ trocar de conversa e voltar mantém exatamente um ícone por mensagem de voz (RF-02, RF-11) (99.10575ms)
+  AssertionError [ERR_ASSERTION]: a conversa aberta no carregamento ficou sem ícone
+  + actual - expected
+  
+    [
+  +   2
+  -   1
+    ]
+  
+      at TestContext.<anonymous> (extension/test/integracao-conversa.test.ts:145:12)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async TestContext.<anonymous> (extension/test/integracao-conversa.test.ts:143:3)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ 2 ],
+    expected: [ 1 ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+exit=1
+
+$ npx tsc -p tsconfig.test.json
+typecheck: limpo

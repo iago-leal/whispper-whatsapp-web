@@ -1,0 +1,71 @@
+--- a/extension/src/content/detector-mensagens.ts
++++ b/extension/src/content/detector-mensagens.ts
+@@ -75,42 +75,45 @@
+ }
+ 
+ /**
++ * Devolve, sem repetição, o balão de cada elemento de voz que está em `raiz` ou é a própria `raiz`.
++ * O WhatsApp Web monta o player depois do balão, dentro dele, e aninha balões (a linha e a mensagem):
++ * subir do elemento de voz ao balão mais próximo cobre os dois casos e chega ao balão que carrega o
++ * identificador da mensagem (RF-04).
++ */
++function baloesComVoz(raiz: HTMLElement): HTMLElement[] {
++  const { elementoMensagemVoz, balaoMensagem } = CONFIGURACAO_ESTRUTURAS.seletores;
++  const vozes = raiz.matches(elementoMensagemVoz) ? [raiz] : Array.from(raiz.querySelectorAll(elementoMensagemVoz));
++  const baloes = new Set<HTMLElement>();
++  for (const voz of vozes) {
++    const balao = voz.closest<HTMLElement>(balaoMensagem);
++    if (balao) baloes.add(balao);
++  }
++  return [...baloes];
++}
++
++/**
+  * Inicializa a observação contínua de mutações no container da conversa.
+  */
+ export function observarMensagensDeAudio(
+   container: HTMLElement,
+   aoDetectar: (mensagem: MensagemDetectada) => void
+ ): MutationObserver {
++  const processar = (raiz: HTMLElement) => {
++    for (const balao of baloesComVoz(raiz)) {
++      const detectada = identificarMensagemDeAudio(balao);
++      if (detectada) aoDetectar(detectada);
++    }
++  };
++
+   const processarNos = (nos: NodeList) => {
+     for (let i = 0; i < nos.length; i++) {
+       const no = nos[i];
+-      if (!(no instanceof HTMLElement)) continue;
+-
+-      if (no.matches(CONFIGURACAO_ESTRUTURAS.seletores.balaoMensagem)) {
+-        const detectada = identificarMensagemDeAudio(no);
+-        if (detectada) aoDetectar(detectada);
+-      } else {
+-        const baloes = no.querySelectorAll<HTMLElement>(CONFIGURACAO_ESTRUTURAS.seletores.balaoMensagem);
+-        for (let j = 0; j < baloes.length; j++) {
+-          const balao = baloes[j];
+-          if (balao) {
+-            const detectada = identificarMensagemDeAudio(balao);
+-            if (detectada) aoDetectar(detectada);
+-          }
+-        }
+-      }
++      if (no instanceof HTMLElement) processar(no);
+     }
+   };
+ 
+   // Processa nós iniciais já presentes
+-  const baloesIniciais = container.querySelectorAll<HTMLElement>(CONFIGURACAO_ESTRUTURAS.seletores.balaoMensagem);
+-  for (let k = 0; k < baloesIniciais.length; k++) {
+-    const balao = baloesIniciais[k];
+-    if (balao) {
+-      const detectada = identificarMensagemDeAudio(balao);
+-      if (detectada) aoDetectar(detectada);
+-    }
+-  }
++  processar(container);
+ 
+   const observer = new MutationObserver((mutations) => {
+     for (const mutation of mutations) {

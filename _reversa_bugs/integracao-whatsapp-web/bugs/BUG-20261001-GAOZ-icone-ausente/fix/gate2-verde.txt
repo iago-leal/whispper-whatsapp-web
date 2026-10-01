@@ -1,0 +1,38 @@
+# Gate 2 · verde · 2026-10-01 14:43 -0300 · commit base 9dbd731 + testes (Gate 1) + CHG-001 e CHG-002
+
+$ node --test --test-reporter=spec test/monitor-degradacao.test.ts test/integracao-conversa.test.ts
+▶ integração com a conversa aberta no WhatsApp Web
+  ✔ reprodução: a página carrega sem conversa e o ícone aparece em até 500 ms quando a conversa abre (RF-01, RF-03) (647.586292ms)
+  ✔ trocar de conversa e voltar mantém exatamente um ícone por mensagem de voz (RF-02, RF-11) (106.938958ms)
+  ✔ sem conversa aberta não há aviso de degradação (EC-10) (92.496041ms)
+  ✔ conversa sem a lista de mensagens fica degradada e sem ícone, e a seguinte volta a receber (RF-11, RF-12) (2124.214542ms)
+✔ integração com a conversa aberta no WhatsApp Web (4654.965583ms)
+✔ avaliarSaudeDasEstruturas retorna ativa quando a conversa aberta tem a lista de mensagens (0.71325ms)
+✔ avaliarSaudeDasEstruturas não acusa degradação sem conversa aberta (EC-10, BUG-20261001-GAOZ) (0.088416ms)
+✔ avaliarSaudeDasEstruturas acusa degradação quando a conversa aberta não tem a lista de mensagens (RF-11) (1.506459ms)
+✔ calcularCoordenadasAncora extrai retângulo e visibilidade do elemento (0.120667ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9752.331625
+exit=0
+
+$ npm test
+﹣ instalação guiada de ponta a ponta no macOS (0.964833ms) # instala o aplicativo auxiliar na sua conta; rode com WHISPPER_E2E=1
+﹣ contrato MotorDeTranscricao: adaptador do motor local com o host real (0.444709ms) # exige o modelo real; rode com MOTOR_REAL=1
+ℹ tests 94
+ℹ suites 4
+ℹ pass 92
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 2
+ℹ todo 0
+ℹ duration_ms 9051.084084
+exit=0
+
+$ npx tsc -p tsconfig.test.json
+typecheck: limpo

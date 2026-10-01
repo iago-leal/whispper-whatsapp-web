@@ -1,0 +1,41 @@
+# Gate 2 (revisão 2) · verde · 2026-10-01 15:09 -0300 · commit base 9dbd731 + CHG-001 a CHG-007
+
+$ node --test --test-reporter=spec test/monitor-degradacao.test.ts test/integracao-conversa.test.ts test/detector-mensagens.test.ts
+✔ identificarMensagemDeAudio reconhece mensagem de voz válida (1.985583ms)
+✔ deveIgnorarMensagem rejeita mensagem com marcador de visualização única ou já injetada (0.391417ms)
+▶ integração com a conversa aberta no WhatsApp Web
+  ✔ reprodução: a página carrega sem conversa e o ícone aparece em até 500 ms quando a conversa abre (RF-01, RF-03) (975.886209ms)
+  ✔ reprodução no WhatsApp real: o player montado depois do balão recebe o ícone em até 500 ms (RF-01, RF-03) (2192.598292ms)
+  ✔ trocar de conversa e voltar mantém exatamente um ícone por mensagem de voz (RF-02, RF-11) (144.931833ms)
+  ✔ sem conversa aberta não há aviso de degradação (EC-10) (109.659459ms)
+  ✔ conversa sem a lista de mensagens fica degradada e sem ícone, e a seguinte volta a receber (RF-11, RF-12) (2128.67025ms)
+✔ integração com a conversa aberta no WhatsApp Web (9732.36675ms)
+✔ avaliarSaudeDasEstruturas retorna ativa quando a conversa aberta tem a lista de mensagens (1.863958ms)
+✔ avaliarSaudeDasEstruturas não acusa degradação sem conversa aberta (EC-10, BUG-20261001-GAOZ) (0.222375ms)
+✔ avaliarSaudeDasEstruturas acusa degradação quando a conversa aberta não tem a lista de mensagens (RF-11) (8.733834ms)
+✔ calcularCoordenadasAncora extrai retângulo e visibilidade do elemento (0.57725ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14986.502542
+exit=0
+
+$ npm test
+﹣ instalação guiada de ponta a ponta no macOS (0.395791ms) # instala o aplicativo auxiliar na sua conta; rode com WHISPPER_E2E=1
+﹣ contrato MotorDeTranscricao: adaptador do motor local com o host real (2.18875ms) # exige o modelo real; rode com MOTOR_REAL=1
+ℹ tests 95
+ℹ suites 4
+ℹ pass 93
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 2
+ℹ todo 0
+ℹ duration_ms 13897.795167
+exit=0
+
+$ npx tsc -p tsconfig.test.json
+typecheck: limpo

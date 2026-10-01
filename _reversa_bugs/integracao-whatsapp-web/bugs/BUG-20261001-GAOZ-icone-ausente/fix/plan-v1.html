@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plano de correção · BUG-20261001-GAOZ</title>
+  <style>
+body { background-color: #121212; color: #e0e0e0; font-family: sans-serif; padding: 20px; max-width: 1100px; margin: 0 auto; line-height: 1.5; }
+a { color: #bb86fc; text-decoration: none; } a:hover { text-decoration: underline; }
+table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+th, td { border: 1px solid #333; padding: 8px 10px; text-align: left; vertical-align: top; }
+th { background-color: #1e1e1e; }
+.card { background-color: #1e1e1e; padding: 12px 16px; border-radius: 8px; margin: 0 12px 12px 0; display: inline-block; min-width: 120px; }
+.card b { display: block; font-size: 1.3em; }
+.meta { color: #9e9e9e; font-size: 0.9em; }
+.tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 0.85em; background: #2a2a2a; border: 1px solid #444; }
+.ok { color: #81c784; } .alerta { color: #ffb74d; } .erro { color: #ef5350; }
+code { background: #1e1e1e; padding: 1px 5px; border-radius: 4px; }
+ol li, ul li { margin-bottom: 4px; }
+svg { background: #181818; border-radius: 8px; max-width: 100%; }
+details { background: #181818; border-radius: 8px; padding: 8px 12px; margin: 10px 0; }
+summary { cursor: pointer; color: #bb86fc; }
+pre.diff { background: #0d0d0d; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.82em; line-height: 1.35; }
+pre.diff .add { color: #81c784; } pre.diff .del { color: #ef5350; } pre.diff .hdr { color: #64b5f6; }
+  </style>
+</head>
+<body>
+  <h1>Plano de correção · #4 BUG-20261001-GAOZ</h1>
+  <p class="meta">Contexto <code>integracao-whatsapp-web</code> · 2026-10-01 · gerado por /reversa-debugger-fix antes de qualquer alteração no projeto</p>
+  <div>
+    <div class="card"><b class="erro">critical</b>Severidade</div>
+    <div class="card"><b class="erro">P0</b>Prioridade</div>
+    <div class="card"><b class="ok">confirmed</b>Causa raiz</div>
+    <div class="card"><b class="alerta">média</b>Risco da mudança</div>
+    <div class="card"><b>2/2</b>Reprodução determinística</div>
+  </div>
+
+  <h2>1. Defeito</h2>
+  <p><b>Ícone de transcrição não aparece: a integração desiste se a página carrega sem conversa aberta.</b>
+  Com o aplicativo auxiliar instalado, nenhuma mensagem de voz recebe o ícone do Whispper. O console mostra, no carregamento,
+  <code>[Whispper] Adaptador em estado degradado. Estruturas ausentes: Array(1)</code>. Fere RF-01, RF-02, RF-03 e RF-11 de
+  <code>integracao-whatsapp-web.md</code> e contraria o EC-10, que manda não acusar degradação quando nenhuma conversa está carregada.</p>
+
+  <h2>2. Causa raiz <span class="tag ok">confirmed</span></h2>
+  <ol>
+    <li>O script de conteúdo roda em <code>document_idle</code>, e o WhatsApp Web sempre carrega sem conversa aberta.</li>
+    <li><code>avaliarSaudeDasEstruturas</code> (<code>monitor-degradacao.ts</code>) não acha <code>#main</code> e devolve
+      <code>degradada ["containerConversa"]</code>: confunde ausência de conversa com estrutura ausente.</li>
+    <li><code>inicializar()</code> (<code>index.ts</code>) avisa e faz <code>return</code>; o único reagendamento,
+      <code>setTimeout(inicializar, 1000)</code>, fica depois desse retorno. A integração desiste para sempre.</li>
+    <li><b>Contribuinte:</b> quando <code>#main</code> existe, <code>observarMensagensDeAudio</code> observa aquela instância; um
+      <code>#main</code> novo, a cada troca de conversa, fica sem observador. A reavaliação "a cada troca de conversa" do RF-11 nunca existiu.</li>
+  </ol>
+  <p>Nascida em <code>bab1e53</code> (primeiro commit da extensão); sem commit bom, não há bisect.</p>
+  <table>
+    <thead><tr><th>Evidência</th><th>Observação</th></tr></thead>
+    <tbody>
+      <tr><td><a href="../evidence/reproduction.md">evidence/reproduction.md</a> · S1</td><td>Página falsa em <code>web.whatsapp.com</code>, carregada sem conversa: mesmo aviso do relato; 0 ícones 0,5 s e 2,5 s depois de abrir a conversa.</td></tr>
+      <tr><td><a href="../evidence/reproduction.md">evidence/reproduction.md</a> · S2</td><td>Controle: com <code>#main</code> no carregamento, 1 ícone, logo os seletores de balão e voz funcionam. Ao substituir <code>#main</code>: 0 ícones na conversa nova e no retorno.</td></tr>
+      <tr><td><a href="../evidence/console-e-inspecao.md">evidence/console-e-inspecao.md</a></td><td>No DOM real, os seletores do projeto casam o balão de voz dentro de <code>#main</code>, e há 0 botões injetados.</td></tr>
+      <tr><td>Spec, EC-10</td><td>"Nenhuma conversa carregada, nenhum ícone e nenhum aviso de degradação."</td></tr>
+    </tbody>
+  </table>
+  <p class="meta">Ponto em aberto (<code>supported</code>): que o WhatsApp real recria <code>#main</code> a cada troca vem do relato. A correção funciona nos dois casos.</p>
+
+  <h2>3. Estratégia escolhida: correção direta</h2>
+  <p>Escolhida pelo usuário em 2026-10-01, porque há uma única hipótese, confirmada, e nenhuma estratégia concorrente de peso.
+  "Sem conversa aberta" deixa de ser degradação. Um observador em <code>document.body</code> passa a acompanhar o painel <code>#main</code> da vez:
+  liga a observação das mensagens a cada painel novo, desliga a do anterior e reavalia a saúde a cada troca.
+  Com conversa aberta, a saúde confere a lista de mensagens dentro do painel, o que mantém o RF-11 capaz de acusar degradação real.</p>
+
+  <h2>4. Correction Change Set proposto</h2>
+  <table>
+    <thead><tr><th>CHG</th><th>Tipo</th><th>Artefato</th><th>Propósito</th></tr></thead>
+    <tbody>
+      <tr><td>CHG-001</td><td>code</td><td><code>extension/src/content/monitor-degradacao.ts</code></td><td>Sem conversa aberta, a integração está ativa (EC-10). Com conversa aberta, falta de <code>containerMensagens</code> dentro dela é degradação (RF-11).</td></tr>
+      <tr><td>CHG-002</td><td>code</td><td><code>extension/src/content/index.ts</code></td><td>Acompanha cada <code>#main</code> novo, desliga o observador anterior, reavalia a saúde a cada troca, avisa só na entrada em degradação e nomeia as estruturas ausentes. Remove o laço de <code>setTimeout</code>, que também reinicializava o núcleo a cada tentativa.</td></tr>
+      <tr><td>CHG-003</td><td>test</td><td><code>extension/test/monitor-degradacao.test.ts</code> (alterado)</td><td>O teste que exigia <code>degradada</code> sem <code>#main</code> codificava o defeito; passa a exigir o contrário e ganha o caso de degradação real.</td></tr>
+      <tr><td>CHG-004</td><td>test</td><td><code>extension/test/integracao-conversa.test.ts</code> (novo)</td><td>Chrome for Testing com a extensão montada do código-fonte (esbuild) e página falsa em <code>web.whatsapp.com</code>. Pulado sem o navegador.</td></tr>
+      <tr><td>CHG-005</td><td>test</td><td><code>extension/test/suporte/navegador-cdp.ts</code> (alterado)</td><td><code>Pagina.navegarSimulado</code>: serve HTML no lugar da rede e anota o console e os mundos isolados da página.</td></tr>
+    </tbody>
+  </table>
+  <details><summary>Diff proposto · CHG-001</summary><pre class="diff"><span class="hdr">--- a/extension/src/content/monitor-degradacao.ts</span>
+<span class="hdr">+++ b/extension/src/content/monitor-degradacao.ts</span>
+<span class="hdr">@@ -2,15 +2,16 @@</span>
+ import { CONFIGURACAO_ESTRUTURAS } from &#x27;./configuracao-estruturas.ts&#x27;;
+ 
+ /**
+<span class="del">- * Avalia se os seletores essenciais para a operação do adaptador estão disponíveis na página.</span>
+<span class="add">+ * Avalia se as estruturas de que o adaptador depende existem na conversa aberta.</span>
+<span class="add">+ * Sem conversa aberta não há o que conferir: o WhatsApp Web sempre carrega assim, e isso não é</span>
+<span class="add">+ * degradação (EC-10).</span>
+  */
+ export function avaliarSaudeDasEstruturas(raiz: Document | HTMLElement = document): StatusSaudeFonte {
+   const ausentes: string[] = [];
+ 
+<span class="del">-  // Seletor crítico: painel de conversa principal</span>
+<span class="del">-  const container = raiz.querySelector(CONFIGURACAO_ESTRUTURAS.seletores.containerConversa);</span>
+<span class="del">-  if (!container) {</span>
+<span class="del">-    ausentes.push(&#x27;containerConversa&#x27;);</span>
+<span class="add">+  const conversa = raiz.querySelector(CONFIGURACAO_ESTRUTURAS.seletores.containerConversa);</span>
+<span class="add">+  if (conversa &amp;&amp; !conversa.querySelector(CONFIGURACAO_ESTRUTURAS.seletores.containerMensagens)) {</span>
+<span class="add">+    ausentes.push(&#x27;containerMensagens&#x27;);</span>
+   }
+ 
+   if (ausentes.length &gt; 0) {</pre></details>
+  <details><summary>Diff proposto · CHG-002</summary><pre class="diff"><span class="hdr">--- a/extension/src/content/index.ts</span>
+<span class="hdr">+++ b/extension/src/content/index.ts</span>
+<span class="hdr">@@ -4,7 +4,7 @@</span>
+ import { ArmazenamentoChrome } from &#x27;../adaptadores/armazenamento-chrome.ts&#x27;;
+ import { NucleoDeTranscricao } from &#x27;../dominio/nucleo.ts&#x27;;
+ import { CONFIGURACAO_ESTRUTURAS } from &#x27;./configuracao-estruturas.ts&#x27;;
+<span class="del">-import { observarMensagensDeAudio, injetarBotaoNaMensagem } from &#x27;./detector-mensagens.ts&#x27;;</span>
+<span class="add">+import { observarMensagensDeAudio, injetarBotaoNaMensagem, type MensagemDetectada } from &#x27;./detector-mensagens.ts&#x27;;</span>
+ import { atualizarEstadoBotao } from &#x27;./botao-transcricao.ts&#x27;;
+ 
+ export const adaptador = new AdaptadorWhatsAppWeb();
+<span class="hdr">@@ -19,38 +19,60 @@</span>
+   janelas.atualizarAncora(ancora);
+ });
+ 
+<span class="del">-function inicializar(): void {</span>
+<span class="del">-  nucleo.inicializar().catch((err) =&gt; {</span>
+<span class="del">-    console.warn(&#x27;[Whispper] Falha ao inicializar o núcleo de transcrição:&#x27;, err);</span>
+<span class="add">+function aoDetectarMensagem(mensagem: MensagemDetectada): void {</span>
+<span class="add">+  adaptador.registrarMensagem(mensagem);</span>
+<span class="add">+</span>
+<span class="add">+  // Escuta reprodução nativa para alimentar os contadores anônimos de qualidade/adoção (RF-12, RF-13)</span>
+<span class="add">+  const audioEl = mensagem.elementoBalao.querySelector&lt;HTMLAudioElement&gt;(&#x27;audio&#x27;);</span>
+<span class="add">+  if (audioEl) {</span>
+<span class="add">+    audioEl.addEventListener(&#x27;play&#x27;, () =&gt; {</span>
+<span class="add">+      adaptador.notificarReproducao(mensagem.idAudio);</span>
+<span class="add">+    });</span>
+<span class="add">+  }</span>
+<span class="add">+</span>
+<span class="add">+  const botao = injetarBotaoNaMensagem(mensagem, (idAudio) =&gt; {</span>
+<span class="add">+    adaptador.solicitarTranscricaoManual(idAudio);</span>
+   });
+<span class="add">+}</span>
+ 
+<span class="add">+// O WhatsApp Web carrega sem conversa aberta e recria o painel a cada conversa escolhida: a observação</span>
+<span class="add">+// das mensagens acompanha o painel da vez, e a saúde é reavaliada a cada painel novo (RF-11).</span>
+<span class="add">+let painelObservado: HTMLElement | null | undefined;</span>
+<span class="add">+let observadorDoPainel: MutationObserver | null = null;</span>
+<span class="add">+let avisouDegradacao = false;</span>
+<span class="add">+</span>
+<span class="add">+function acompanharConversaAberta(): void {</span>
+<span class="add">+  const painel = document.querySelector&lt;HTMLElement&gt;(CONFIGURACAO_ESTRUTURAS.seletores.containerConversa);</span>
+<span class="add">+  // Painel já observado não pede nada; painel degradado é reavaliado a cada mutação, porque a página</span>
+<span class="add">+  // pode montá-lo aos poucos.</span>
+<span class="add">+  if (painel === painelObservado &amp;&amp; (observadorDoPainel || !painel)) return;</span>
+<span class="add">+</span>
+<span class="add">+  observadorDoPainel?.disconnect();</span>
+<span class="add">+  observadorDoPainel = null;</span>
+<span class="add">+  painelObservado = painel;</span>
+<span class="add">+</span>
+   const saude = adaptador.verificarSaude();
+   if (saude.status === &#x27;degradada&#x27;) {
+<span class="del">-    console.warn(&#x27;[Whispper] Adaptador em estado degradado. Estruturas ausentes:&#x27;, saude.estruturasAusentes);</span>
+<span class="add">+    if (!avisouDegradacao) {</span>
+<span class="add">+      console.warn(&#x27;[Whispper] Adaptador em estado degradado. Estruturas ausentes:&#x27;, saude.estruturasAusentes.join(&#x27;, &#x27;));</span>
+<span class="add">+      avisouDegradacao = true;</span>
+<span class="add">+    }</span>
+     return;
+   }
+<span class="add">+  avisouDegradacao = false;</span>
+ 
+<span class="del">-  const container = document.querySelector&lt;HTMLElement&gt;(CONFIGURACAO_ESTRUTURAS.seletores.containerConversa);</span>
+<span class="del">-  if (!container) {</span>
+<span class="del">-    setTimeout(inicializar, 1000);</span>
+<span class="del">-    return;</span>
+<span class="add">+  if (painel) {</span>
+<span class="add">+    observadorDoPainel = observarMensagensDeAudio(painel, aoDetectarMensagem);</span>
+   }
+<span class="add">+}</span>
+ 
+<span class="del">-  observarMensagensDeAudio(container, (mensagem) =&gt; {</span>
+<span class="del">-    adaptador.registrarMensagem(mensagem);</span>
+<span class="del">-</span>
+<span class="del">-    // Escuta reprodução nativa para alimentar os contadores anônimos de qualidade/adoção (RF-12, RF-13)</span>
+<span class="del">-    const audioEl = mensagem.elementoBalao.querySelector&lt;HTMLAudioElement&gt;(&#x27;audio&#x27;);</span>
+<span class="del">-    if (audioEl) {</span>
+<span class="del">-      audioEl.addEventListener(&#x27;play&#x27;, () =&gt; {</span>
+<span class="del">-        adaptador.notificarReproducao(mensagem.idAudio);</span>
+<span class="del">-      });</span>
+<span class="del">-    }</span>
+<span class="del">-</span>
+<span class="del">-    const botao = injetarBotaoNaMensagem(mensagem, (idAudio) =&gt; {</span>
+<span class="del">-      adaptador.solicitarTranscricaoManual(idAudio);</span>
+<span class="del">-    });</span>
+<span class="add">+function inicializar(): void {</span>
+<span class="add">+  nucleo.inicializar().catch((err) =&gt; {</span>
+<span class="add">+    console.warn(&#x27;[Whispper] Falha ao inicializar o núcleo de transcrição:&#x27;, err);</span>
+   });
+<span class="add">+</span>
+<span class="add">+  acompanharConversaAberta();</span>
+<span class="add">+  new MutationObserver(acompanharConversaAberta).observe(document.body, { childList: true, subtree: true });</span>
+ }
+ 
+ if (typeof document !== &#x27;undefined&#x27;) {</pre></details>
+  <details><summary>Diff proposto · testes (CHG-003 a CHG-005)</summary><pre class="diff"><span class="hdr">--- a/extension/test/monitor-degradacao.test.ts</span>
+<span class="hdr">+++ b/extension/test/monitor-degradacao.test.ts</span>
+<span class="hdr">@@ -1,29 +1,40 @@</span>
+ import assert from &#x27;node:assert/strict&#x27;;
+ import { test } from &#x27;node:test&#x27;;
+<span class="add">+import { CONFIGURACAO_ESTRUTURAS } from &#x27;../src/content/configuracao-estruturas.ts&#x27;;</span>
+ import { avaliarSaudeDasEstruturas } from &#x27;../src/content/monitor-degradacao.ts&#x27;;
+ import { calcularCoordenadasAncora } from &#x27;../src/content/rastreador-ancora.ts&#x27;;
+ 
+<span class="del">-test(&#x27;avaliarSaudeDasEstruturas retorna ativa quando seletores essenciais estão presentes&#x27;, () =&gt; {</span>
+<span class="del">-  const docSimulado = {</span>
+<span class="del">-    querySelector: (sel: string) =&gt; {</span>
+<span class="del">-      if (sel === &#x27;#main&#x27;) return {};</span>
+<span class="del">-      return null;</span>
+<span class="del">-    }</span>
+<span class="add">+const { containerConversa, containerMensagens } = CONFIGURACAO_ESTRUTURAS.seletores;</span>
+<span class="add">+</span>
+<span class="add">+// Documento com a conversa aberta (#main), com ou sem a lista de mensagens dentro dela.</span>
+<span class="add">+function docComConversa(comListaDeMensagens: boolean): Document {</span>
+<span class="add">+  const painel = {</span>
+<span class="add">+    querySelector: (sel: string) =&gt; (sel === containerMensagens &amp;&amp; comListaDeMensagens ? {} : null)</span>
+<span class="add">+  };</span>
+<span class="add">+  return {</span>
+<span class="add">+    querySelector: (sel: string) =&gt; (sel === containerConversa ? painel : null)</span>
+   } as unknown as Document;
+<span class="add">+}</span>
+ 
+<span class="del">-  const resultado = avaliarSaudeDasEstruturas(docSimulado);</span>
+<span class="add">+test(&#x27;avaliarSaudeDasEstruturas retorna ativa quando a conversa aberta tem a lista de mensagens&#x27;, () =&gt; {</span>
+<span class="add">+  const resultado = avaliarSaudeDasEstruturas(docComConversa(true));</span>
+   assert.equal(resultado.status, &#x27;ativa&#x27;);
+ });
+ 
+<span class="del">-test(&#x27;avaliarSaudeDasEstruturas retorna degradada quando container essencial estiver ausente&#x27;, () =&gt; {</span>
+<span class="del">-  const docVazio = {</span>
+<span class="add">+test(&#x27;avaliarSaudeDasEstruturas não acusa degradação sem conversa aberta (EC-10, BUG-20261001-GAOZ)&#x27;, () =&gt; {</span>
+<span class="add">+  const docSemConversa = {</span>
+     querySelector: () =&gt; null
+   } as unknown as Document;
+ 
+<span class="del">-  const resultado = avaliarSaudeDasEstruturas(docVazio);</span>
+<span class="add">+  const resultado = avaliarSaudeDasEstruturas(docSemConversa);</span>
+<span class="add">+  assert.equal(resultado.status, &#x27;ativa&#x27;);</span>
+<span class="add">+});</span>
+<span class="add">+</span>
+<span class="add">+test(&#x27;avaliarSaudeDasEstruturas acusa degradação quando a conversa aberta não tem a lista de mensagens (RF-11)&#x27;, () =&gt; {</span>
+<span class="add">+  const resultado = avaliarSaudeDasEstruturas(docComConversa(false));</span>
+   assert.equal(resultado.status, &#x27;degradada&#x27;);
+   if (resultado.status === &#x27;degradada&#x27;) {
+<span class="del">-    assert.ok(resultado.estruturasAusentes.includes(&#x27;containerConversa&#x27;));</span>
+<span class="add">+    assert.deepEqual(resultado.estruturasAusentes, [&#x27;containerMensagens&#x27;]);</span>
+   }
+ });
+ 
+<span class="hdr">--- a/extension/test/suporte/navegador-cdp.ts</span>
+<span class="hdr">+++ b/extension/test/suporte/navegador-cdp.ts</span>
+<span class="hdr">@@ -119,6 +119,8 @@</span>
+ 
+ export class Pagina {
+   readonly dialogos: string[] = [];
+<span class="add">+  readonly console: string[] = [];</span>
+<span class="add">+  readonly mundosIsolados: string[] = [];</span>
+   private readonly navegador: Navegador;
+   private readonly sessao: string;
+ 
+<span class="hdr">@@ -137,6 +139,30 @@</span>
+     return result.value as T;
+   }
+ 
+<span class="add">+  // Navega até `url` servindo `html` no lugar da rede: o script de conteúdo de uma extensão entra</span>
+<span class="add">+  // numa cópia controlada de um site de terceiros, sem conta nem rede. Anota o console da página,</span>
+<span class="add">+  // inclusive o dos scripts de conteúdo, e o nome de cada mundo isolado que uma extensão abre nela.</span>
+<span class="add">+  async navegarSimulado(url: string, html: string): Promise&lt;void&gt; {</span>
+<span class="add">+    this.navegador.ouvir((m) =&gt; {</span>
+<span class="add">+      if (m.sessionId !== this.sessao) return;</span>
+<span class="add">+      if (m.method === &quot;Fetch.requestPaused&quot;) {</span>
+<span class="add">+        void this.navegador.enviar(&quot;Fetch.fulfillRequest&quot;, {</span>
+<span class="add">+          requestId: m.params.requestId,</span>
+<span class="add">+          responseCode: 200,</span>
+<span class="add">+          responseHeaders: [{ name: &quot;Content-Type&quot;, value: &quot;text/html; charset=utf-8&quot; }],</span>
+<span class="add">+          body: Buffer.from(html).toString(&quot;base64&quot;),</span>
+<span class="add">+        }, this.sessao);</span>
+<span class="add">+      } else if (m.method === &quot;Runtime.consoleAPICalled&quot;) {</span>
+<span class="add">+        this.console.push(m.params.args.map((a: any) =&gt; a.value ?? a.description ?? &quot;&quot;).join(&quot; &quot;));</span>
+<span class="add">+      } else if (m.method === &quot;Runtime.executionContextCreated&quot; &amp;&amp; m.params.context.auxData?.type === &quot;isolated&quot;) {</span>
+<span class="add">+        this.mundosIsolados.push(m.params.context.name);</span>
+<span class="add">+      }</span>
+<span class="add">+    });</span>
+<span class="add">+    await this.navegador.enviar(&quot;Runtime.enable&quot;, {}, this.sessao);</span>
+<span class="add">+    await this.navegador.enviar(&quot;Fetch.enable&quot;, { patterns: [{ urlPattern: url, resourceType: &quot;Document&quot; }] }, this.sessao);</span>
+<span class="add">+    await this.navegador.enviar(&quot;Page.navigate&quot;, { url }, this.sessao);</span>
+<span class="add">+  }</span>
+<span class="add">+</span>
+   clicar(id: string): Promise&lt;void&gt; {
+     return this.avaliar(`document.getElementById(${JSON.stringify(id)}).click()`, true);
+   }
+<span class="hdr">--- /dev/null</span>
+<span class="hdr">+++ b/extension/test/integracao-conversa.test.ts</span>
+<span class="hdr">@@ -0,0 +1,136 @@</span>
+<span class="add">+// Integração com a conversa aberta, no navegador (BUG-20261001-GAOZ): o Chrome for Testing carrega</span>
+<span class="add">+// a extensão montada a partir do código-fonte, e uma página falsa responde no lugar de</span>
+<span class="add">+// web.whatsapp.com com a estrutura de conversa inspecionada no WhatsApp Web em 2026-10-01. O</span>
+<span class="add">+// WhatsApp sempre carrega sem conversa aberta e troca o painel #main a cada conversa; é essa</span>
+<span class="add">+// sequência que os testes repetem.</span>
+<span class="add">+//</span>
+<span class="add">+// Sem rede, sem conta e sem efeito fora do diretório temporário. Pulado sem o Chrome for Testing.</span>
+<span class="add">+</span>
+<span class="add">+import assert from &quot;node:assert/strict&quot;;</span>
+<span class="add">+import { copyFileSync, mkdirSync, mkdtempSync, rmSync } from &quot;node:fs&quot;;</span>
+<span class="add">+import { tmpdir } from &quot;node:os&quot;;</span>
+<span class="add">+import { join } from &quot;node:path&quot;;</span>
+<span class="add">+import { test } from &quot;node:test&quot;;</span>
+<span class="add">+import { setTimeout as esperar } from &quot;node:timers/promises&quot;;</span>
+<span class="add">+import { fileURLToPath } from &quot;node:url&quot;;</span>
+<span class="add">+import { build } from &quot;esbuild&quot;;</span>
+<span class="add">+</span>
+<span class="add">+import { localizarNavegador, Navegador, type Pagina } from &quot;./suporte/navegador-cdp.ts&quot;;</span>
+<span class="add">+</span>
+<span class="add">+const EXTENSAO = fileURLToPath(new URL(&quot;..&quot;, import.meta.url));</span>
+<span class="add">+const NOME_DA_EXTENSAO = &quot;whispper-whatsapp-web&quot;;</span>
+<span class="add">+const WHATSAPP = &quot;https://web.whatsapp.com/&quot;;</span>
+<span class="add">+</span>
+<span class="add">+// Balões de voz como no DOM real: linha &gt; conv-msg &gt; msg-container &gt; botão &quot;Reproduzir mensagem de voz&quot;.</span>
+<span class="add">+function painel(ids: string[], comListaDeMensagens = true): string {</span>
+<span class="add">+  const linhas = ids.map((id) =&gt;</span>
+<span class="add">+    `&lt;div role=&quot;row&quot;&gt;&lt;div data-testid=&quot;conv-msg-${id}&quot;&gt;&lt;div data-testid=&quot;msg-container&quot;&gt;&lt;div&gt;` +</span>
+<span class="add">+    `&lt;button aria-label=&quot;Reproduzir mensagem de voz&quot;&gt;&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;`).join(&quot;&quot;);</span>
+<span class="add">+  return comListaDeMensagens ? `&lt;div data-tab=&quot;8&quot; role=&quot;application&quot;&gt;${linhas}&lt;/div&gt;` : linhas;</span>
+<span class="add">+}</span>
+<span class="add">+</span>
+<span class="add">+function pagina(conversaAberta: string | null): string {</span>
+<span class="add">+  const main = conversaAberta === null ? &quot;&quot; : `&lt;div id=&quot;main&quot;&gt;${conversaAberta}&lt;/div&gt;`;</span>
+<span class="add">+  return `&lt;!doctype html&gt;&lt;html&gt;&lt;head&gt;&lt;meta charset=&quot;utf-8&quot;&gt;&lt;title&gt;WhatsApp&lt;/title&gt;&lt;/head&gt;` +</span>
+<span class="add">+    `&lt;body&gt;&lt;div id=&quot;app&quot;&gt;&lt;div id=&quot;side&quot;&gt;&lt;/div&gt;&lt;div id=&quot;painel&quot;&gt;${main}&lt;/div&gt;&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;`;</span>
+<span class="add">+}</span>
+<span class="add">+</span>
+<span class="add">+// Troca o #main inteiro, como o WhatsApp faz, e resolve com os ms até o primeiro ícone na conversa</span>
+<span class="add">+// nova, ou null se nenhum aparecer em 2 s.</span>
+<span class="add">+const abrirConversa = (html: string) =&gt; `new Promise((resolver) =&gt; {</span>
+<span class="add">+  document.querySelector(&quot;#main&quot;)?.remove();</span>
+<span class="add">+  const main = document.createElement(&quot;div&quot;);</span>
+<span class="add">+  main.id = &quot;main&quot;;</span>
+<span class="add">+  main.innerHTML = ${JSON.stringify(html)};</span>
+<span class="add">+  const inicio = performance.now();</span>
+<span class="add">+  const observador = new MutationObserver(() =&gt; {</span>
+<span class="add">+    if (main.querySelector(&quot;.whispper-btn-transcrever&quot;)) { observador.disconnect(); resolver(performance.now() - inicio); }</span>
+<span class="add">+  });</span>
+<span class="add">+  observador.observe(main, { childList: true, subtree: true });</span>
+<span class="add">+  setTimeout(() =&gt; { observador.disconnect(); resolver(null); }, 2000);</span>
+<span class="add">+  document.querySelector(&quot;#painel&quot;).appendChild(main);</span>
+<span class="add">+})`;</span>
+<span class="add">+</span>
+<span class="add">+const iconesPorMensagem = `[...document.querySelectorAll(&#x27;#main [role=&quot;row&quot;]&#x27;)]</span>
+<span class="add">+  .map((linha) =&gt; linha.querySelectorAll(&quot;.whispper-btn-transcrever&quot;).length)`;</span>
+<span class="add">+</span>
+<span class="add">+const avisosDeDegradacao = (p: Pagina) =&gt; p.console.filter((linha) =&gt; linha.includes(&quot;degradado&quot;));</span>
+<span class="add">+</span>
+<span class="add">+async function montarExtensao(destino: string): Promise&lt;void&gt; {</span>
+<span class="add">+  mkdirSync(join(destino, &quot;dist&quot;, &quot;content&quot;), { recursive: true });</span>
+<span class="add">+  copyFileSync(join(EXTENSAO, &quot;manifest.json&quot;), join(destino, &quot;manifest.json&quot;));</span>
+<span class="add">+  await build({</span>
+<span class="add">+    entryPoints: [join(EXTENSAO, &quot;src&quot;, &quot;content&quot;, &quot;index.ts&quot;)],</span>
+<span class="add">+    bundle: true, format: &quot;iife&quot;, outfile: join(destino, &quot;dist&quot;, &quot;content&quot;, &quot;index.js&quot;), logLevel: &quot;warning&quot;,</span>
+<span class="add">+  });</span>
+<span class="add">+  await build({</span>
+<span class="add">+    entryPoints: [join(EXTENSAO, &quot;src&quot;, &quot;background.ts&quot;)],</span>
+<span class="add">+    bundle: true, format: &quot;esm&quot;, outfile: join(destino, &quot;dist&quot;, &quot;background.js&quot;), logLevel: &quot;warning&quot;,</span>
+<span class="add">+  });</span>
+<span class="add">+  for (const css of [&quot;estilos.css&quot;, &quot;janela-flutuante.css&quot;]) {</span>
+<span class="add">+    copyFileSync(join(EXTENSAO, &quot;src&quot;, &quot;content&quot;, css), join(destino, &quot;dist&quot;, &quot;content&quot;, css));</span>
+<span class="add">+  }</span>
+<span class="add">+}</span>
+<span class="add">+</span>
+<span class="add">+const executavel = localizarNavegador();</span>
+<span class="add">+</span>
+<span class="add">+test(&quot;integração com a conversa aberta no WhatsApp Web&quot;, {</span>
+<span class="add">+  skip: executavel ? false : &quot;Chrome for Testing não encontrado: rode npx playwright install chromium ou defina WHISPPER_E2E_NAVEGADOR&quot;,</span>
+<span class="add">+  timeout: 120_000,</span>
+<span class="add">+}, async (t) =&gt; {</span>
+<span class="add">+  const raiz = mkdtempSync(join(tmpdir(), &quot;whispper-conversa-&quot;));</span>
+<span class="add">+  const extensao = join(raiz, &quot;extensao&quot;);</span>
+<span class="add">+  await montarExtensao(extensao);</span>
+<span class="add">+  const navegador = await Navegador.abrir(executavel!, join(raiz, &quot;perfil&quot;), extensao);</span>
+<span class="add">+  t.after(async () =&gt; {</span>
+<span class="add">+    await navegador.fechar();</span>
+<span class="add">+    rmSync(raiz, { recursive: true, force: true });</span>
+<span class="add">+  });</span>
+<span class="add">+</span>
+<span class="add">+  // Devolve a página depois que o script de conteúdo rodou: o mundo isolado da extensão nasce na</span>
+<span class="add">+  // mesma tarefa em que o script executa, então a avaliação seguinte já o encontra inicializado.</span>
+<span class="add">+  async function carregarWhatsApp(conversaAberta: string | null): Promise&lt;Pagina&gt; {</span>
+<span class="add">+    const p = await navegador.abrirPagina(&quot;about:blank&quot;);</span>
+<span class="add">+    await p.navegarSimulado(WHATSAPP, pagina(conversaAberta));</span>
+<span class="add">+    const limite = Date.now() + 10_000;</span>
+<span class="add">+    while (!p.mundosIsolados.includes(NOME_DA_EXTENSAO)) {</span>
+<span class="add">+      assert.ok(Date.now() &lt; limite, &quot;o script de conteúdo não entrou na página em 10 s&quot;);</span>
+<span class="add">+      await esperar(50);</span>
+<span class="add">+    }</span>
+<span class="add">+    await p.avaliar(&quot;0&quot;);</span>
+<span class="add">+    return p;</span>
+<span class="add">+  }</span>
+<span class="add">+</span>
+<span class="add">+  await t.test(&quot;reprodução: a página carrega sem conversa e o ícone aparece em até 500 ms quando a conversa abre (RF-01, RF-03)&quot;, async () =&gt; {</span>
+<span class="add">+    const p = await carregarWhatsApp(null);</span>
+<span class="add">+    const ms = await p.avaliar&lt;number | null&gt;(abrirConversa(painel([&quot;A&quot;])));</span>
+<span class="add">+    assert.notEqual(ms, null, `nenhum ícone em 2 s depois de abrir a conversa; console: ${JSON.stringify(p.console)}`);</span>
+<span class="add">+    assert.ok(ms! &lt;= 500, `o ícone levou ${ms} ms`);</span>
+<span class="add">+    assert.deepEqual(await p.avaliar(iconesPorMensagem), [1]);</span>
+<span class="add">+  });</span>
+<span class="add">+</span>
+<span class="add">+  await t.test(&quot;trocar de conversa e voltar mantém exatamente um ícone por mensagem de voz (RF-02, RF-11)&quot;, async () =&gt; {</span>
+<span class="add">+    const p = await carregarWhatsApp(painel([&quot;A&quot;]));</span>
+<span class="add">+    assert.deepEqual(await p.avaliar(iconesPorMensagem), [1], &quot;a conversa aberta no carregamento ficou sem ícone&quot;);</span>
+<span class="add">+    for (const [conversa, ids] of [[&quot;B&quot;, [&quot;B1&quot;, &quot;B2&quot;]], [&quot;A de volta&quot;, [&quot;A&quot;]]] as const) {</span>
+<span class="add">+      const ms = await p.avaliar&lt;number | null&gt;(abrirConversa(painel([...ids])));</span>
+<span class="add">+      assert.notEqual(ms, null, `a conversa ${conversa} ficou sem ícone`);</span>
+<span class="add">+      assert.ok(ms! &lt;= 500, `na conversa ${conversa}, o ícone levou ${ms} ms`);</span>
+<span class="add">+      assert.deepEqual(await p.avaliar(iconesPorMensagem), ids.map(() =&gt; 1), `ícones por mensagem na conversa ${conversa}`);</span>
+<span class="add">+    }</span>
+<span class="add">+  });</span>
+<span class="add">+</span>
+<span class="add">+  await t.test(&quot;sem conversa aberta não há aviso de degradação (EC-10)&quot;, async () =&gt; {</span>
+<span class="add">+    const p = await carregarWhatsApp(null);</span>
+<span class="add">+    assert.deepEqual(avisosDeDegradacao(p), []);</span>
+<span class="add">+  });</span>
+<span class="add">+</span>
+<span class="add">+  await t.test(&quot;conversa sem a lista de mensagens fica degradada e sem ícone, e a seguinte volta a receber (RF-11, RF-12)&quot;, async () =&gt; {</span>
+<span class="add">+    const p = await carregarWhatsApp(null);</span>
+<span class="add">+    assert.equal(await p.avaliar(abrirConversa(painel([&quot;A&quot;], false))), null, &quot;inseriu ícone em estado degradado&quot;);</span>
+<span class="add">+    assert.equal(avisosDeDegradacao(p).length, 1, `avisos: ${JSON.stringify(p.console)}`);</span>
+<span class="add">+    assert.match(avisosDeDegradacao(p)[0]!, /containerMensagens/);</span>
+<span class="add">+    const ms = await p.avaliar&lt;number | null&gt;(abrirConversa(painel([&quot;B&quot;])));</span>
+<span class="add">+    assert.notEqual(ms, null, &quot;a conversa íntegra seguinte ficou sem ícone&quot;);</span>
+<span class="add">+  });</span>
+<span class="add">+});</span></pre></details>
+  <p class="meta">Diffs ensaiados numa cópia da extensão no scratchpad: vermelho com o código atual (7 falhas), verde com a correção (9/9), suíte inteira com 92 aprovados, 0 falhas e 2 pulados, typecheck limpo. Nada foi aplicado ao projeto.</p>
+
+  <h2>5. Testes planejados</h2>
+  <table>
+    <thead><tr><th>Teste</th><th>Papel</th><th>O que prova</th></tr></thead>
+    <tbody>
+      <tr><td><code>integracao-conversa.test.ts</code> · reprodução: a página carrega sem conversa e o ícone aparece em até 500 ms quando a conversa abre</td><td>reprodução</td><td>O defeito relatado (RF-01, RF-03): falha hoje com o mesmo aviso do console.</td></tr>
+      <tr><td><code>integracao-conversa.test.ts</code> · trocar de conversa e voltar mantém exatamente um ícone por mensagem</td><td>regressão</td><td>A causa contribuinte (RF-02, RF-11): carrega com conversa aberta, troca para outra de 2 áudios e volta; 1 ícone por mensagem, em até 500 ms.</td></tr>
+      <tr><td><code>integracao-conversa.test.ts</code> · sem conversa aberta não há aviso de degradação</td><td>regressão</td><td>EC-10 no navegador.</td></tr>
+      <tr><td><code>integracao-conversa.test.ts</code> · conversa sem a lista de mensagens fica degradada e sem ícone, e a seguinte volta a receber</td><td>regressão</td><td>RF-11 e RF-12 continuam valendo: aviso único com <code>containerMensagens</code>, nenhum ícone, e recuperação na conversa íntegra.</td></tr>
+      <tr><td><code>monitor-degradacao.test.ts</code> · não acusa degradação sem conversa aberta</td><td>regressão</td><td>EC-10 na unidade, sem navegador.</td></tr>
+      <tr><td><code>monitor-degradacao.test.ts</code> · acusa degradação quando a conversa aberta não tem a lista de mensagens</td><td>regressão</td><td>RF-11 na unidade, com o nome da estrutura.</td></tr>
+      <tr><td><code>monitor-degradacao.test.ts</code> · retorna ativa quando a conversa aberta tem a lista de mensagens</td><td>guarda</td><td>Caso feliz; já passa hoje.</td></tr>
+    </tbody>
+  </table>
+  <p>Depois do Gate 2, a aceitação inclui conferir no WhatsApp Web real (perfil do usuário, extensão recarregada) que o ícone aparece ao abrir uma conversa e se mantém único após a troca. A conferência lê só estrutura e pede autorização antes.</p>
+
+  <h2>6. Riscos e o que fica de fora</h2>
+  <p><b>change_risk: <span class="alerta">média</span></b></p>
+  <ul>
+    <li>Muda o ciclo de vida do script de conteúdo, do qual toda a integração depende.</li>
+    <li>Muda a semântica de "degradada" lida pelo núcleo em <code>obterStatusGeral</code>, sem mudar o tipo <code>StatusSaudeFonte</code>.</li>
+    <li>Os seletores foram conferidos no DOM real uma única vez; a aceitação final depende da conferência no WhatsApp Web.</li>
+    <li>Sem dados persistidos e sem contrato externo; reversível por <code>git revert</code>.</li>
+  </ul>
+  <p><b>Fora desta correção</b> (registrados nas Agent Notes, candidatos a bug próprio se a conferência os confirmar):</p>
+  <ul>
+    <li><b>Ícone duplicado por seletor aninhado:</b> <code>balaoMensagem</code> (<code>[data-id], div[role="row"]</code>) pode casar a linha e um filho dela na mesma mensagem.</li>
+    <li><b>Player montado depois do balão:</b> o observador só procura balões nos nós adicionados, e não os ancestrais; um player que surja dentro de um balão já presente passaria sem ícone.</li>
+    <li><b>Seletor <code>containerConversa</code> quebrado:</b> passa a ser indistinguível de "sem conversa aberta" (risco residual da escolha EC-10).</li>
+    <li><b>Estado no popup:</b> vem da URL da aba, e não do monitor (achado do RMLU).</li>
+    <li><b>Extração do áudio:</b> é o BUG-20261001-2MOY, próximo da fila.</li>
+  </ul>
+
+  <h2>7. Mini-grafo do bug</h2>
+  <svg viewBox="0 0 640 150" width="640" height="150" role="img" aria-label="Relações do GAOZ">
+    <defs><marker id="seta" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#9e9e9e"/></marker></defs>
+    <line x1="350" y1="66" x2="290" y2="66" stroke="#9e9e9e" stroke-width="1.5" marker-end="url(#seta)"/>
+    <text x="320" y="58" fill="#9e9e9e" font-size="11" text-anchor="middle">blocked-by</text>
+    <text x="320" y="84" fill="#81c784" font-size="10" text-anchor="middle">confirmed</text>
+    <a href="../bug.md"><rect x="20" y="20" width="270" height="96" rx="8" fill="#1e1e1e" stroke="#bb86fc" stroke-width="3"/><text x="30" y="42" fill="#bb86fc" font-size="13" font-weight="bold">#4 · GAOZ (este bug)</text><text x="30" y="62" fill="#e0e0e0" font-size="12">Ícone de transcrição não aparece</text><text x="30" y="80" fill="#9e9e9e" font-size="11">critical · P0</text><text x="30" y="100" fill="#ffb74d" font-size="11">active (awaiting-human)</text></a>
+    <a href="../../BUG-20261001-2MOY-audio-sem-elemento/bug.md"><rect x="350" y="20" width="270" height="96" rx="8" fill="#1e1e1e" stroke="#cf6679" stroke-width="2"/><text x="360" y="42" fill="#bb86fc" font-size="13" font-weight="bold">#5 · 2MOY</text><text x="360" y="62" fill="#e0e0e0" font-size="12">Extração depende de &lt;audio src&gt;</text><text x="360" y="80" fill="#9e9e9e" font-size="11">critical · P0</text><text x="360" y="100" fill="#ef5350" font-size="11">open (triaging)</text></a>
+  </svg>
+
+  <h2>8. Matriz de relações</h2>
+  <table>
+    <thead><tr><th>Origem</th><th>Tipo</th><th>Destino</th><th>Estado</th><th>Evidência</th></tr></thead>
+    <tbody>
+      <tr><td><a href="../../BUG-20261001-2MOY-audio-sem-elemento/bug.md">BUG-20261001-2MOY</a></td><td>blocked-by</td><td><a href="../bug.md">BUG-20261001-GAOZ</a></td><td class="ok">confirmed (promovida nesta investigação; era proposed)</td><td><code>index.ts:51</code> é a única origem de <code>solicitarTranscricaoManual</code>, e <code>nucleo.ts:183</code> só chama <code>obterAudio</code> a partir dela; sem ícone, a extração nunca é acionada (S1).</td></tr>
+    </tbody>
+  </table>
+
+  <h2>9. Ordem de correção</h2>
+  <p>Esta sessão corrige só o GAOZ. Pelo grafo, a causa estrutural vem primeiro: <a href="../bug.md">GAOZ</a> → <a href="../../BUG-20261001-2MOY-audio-sem-elemento/bug.md">2MOY</a>,
+  porque o 2MOY só se exercita com o ícone presente. A fila combinada segue com o 404B (<code>compatibilidade-instalacao</code>) depois.</p>
+</body>
+</html>

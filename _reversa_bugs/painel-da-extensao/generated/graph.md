@@ -1,10 +1,10 @@
-<!-- GENERATED, DO NOT EDIT: regenerado por /reversa-debugger-graph em 2026-10-01T17:17Z a partir de 1 bugs -->
+<!-- GENERATED, DO NOT EDIT: regenerado por /reversa-debugger-graph em 2026-10-01T18:24Z a partir de 1 bugs -->
 
 # Grafo · painel-da-extensao
 
 ```mermaid
 graph LR
-  BUG_20261001_RMLU["#3 BUG-20261001-RMLU · resolved · fixed"]
+  BUG_20261001_RMLU["#3 BUG-20261001-RMLU"]
 ```
 
 Arestas tracejadas são relações `proposed` (hipótese).
@@ -13,7 +13,7 @@ Arestas tracejadas são relações `proposed` (hipótese).
 
 | bug | impact score |
 |---|---|
-| nenhum bug aberto | — |
+| nenhum aberto | |
 
 ## Clusters
 

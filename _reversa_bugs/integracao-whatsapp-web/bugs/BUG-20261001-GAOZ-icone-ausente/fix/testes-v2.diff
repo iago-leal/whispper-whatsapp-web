@@ -1,0 +1,95 @@
+--- a/extension/test/integracao-conversa.test.ts
++++ b/extension/test/integracao-conversa.test.ts
+@@ -1,7 +1,8 @@
+ // Integração com a conversa aberta, no navegador (BUG-20261001-GAOZ): o Chrome for Testing carrega
+ // a extensão montada a partir do código-fonte, e uma página falsa responde no lugar de
+-// web.whatsapp.com com a estrutura de conversa inspecionada no WhatsApp Web em 2026-10-01. O
+-// WhatsApp sempre carrega sem conversa aberta e troca o painel #main a cada conversa; é essa
++// web.whatsapp.com com a estrutura de conversa inspecionada no WhatsApp Web em 2026-10-01
++// (evidence/conferencia-whatsapp-real.md do bug). O WhatsApp sempre carrega sem conversa aberta,
++// troca o painel #main a cada conversa e monta o player de voz depois do balão, dentro dele; é essa
+ // sequência que os testes repetem.
+ //
+ // Sem rede, sem conta e sem efeito fora do diretório temporário. Pulado sem o Chrome for Testing.
+@@ -21,11 +22,14 @@
+ const NOME_DA_EXTENSAO = "whispper-whatsapp-web";
+ const WHATSAPP = "https://web.whatsapp.com/";
+ 
+-// Balões de voz como no DOM real: linha > conv-msg > msg-container > botão "Reproduzir mensagem de voz".
+-function painel(ids: string[], comListaDeMensagens = true): string {
++const PLAYER = `<div><button aria-label="Reproduzir mensagem de voz"></button></div>`;
++
++// Balões de voz como no DOM real: a linha e a mensagem aninhada casam ambas o seletor de balão, e
++// só a mensagem carrega o data-id; o player fica sob o conteúdo virtualizado.
++function painel(ids: string[], { comListaDeMensagens = true, comPlayer = true } = {}): string {
+   const linhas = ids.map((id) =>
+-    `<div role="row"><div data-testid="conv-msg-${id}"><div data-testid="msg-container"><div>` +
+-    `<button aria-label="Reproduzir mensagem de voz"></button></div></div></div></div>`).join("");
++    `<div role="row"><div data-id="${id}" data-testid="conv-msg-${id}"><div data-virtualized="false">` +
++    `<div data-testid="msg-container">${comPlayer ? PLAYER : ""}</div></div></div></div>`).join("");
+   return comListaDeMensagens ? `<div data-tab="8" role="application">${linhas}</div>` : linhas;
+ }
+ 
+@@ -51,9 +55,25 @@
+   document.querySelector("#painel").appendChild(main);
+ })`;
+ 
++// Monta o player dentro de uma mensagem já exibida, como a virtualização do WhatsApp faz, e resolve
++// com os ms até o ícone aparecer nela, ou null se não aparecer em 2 s.
++const montarPlayer = (id: string) => `new Promise((resolver) => {
++  const mensagem = document.querySelector('[data-testid="conv-msg-${id}"]');
++  const inicio = performance.now();
++  const observador = new MutationObserver(() => {
++    if (mensagem.querySelector(".whispper-btn-transcrever")) { observador.disconnect(); resolver(performance.now() - inicio); }
++  });
++  observador.observe(mensagem, { childList: true, subtree: true });
++  setTimeout(() => { observador.disconnect(); resolver(null); }, 2000);
++  mensagem.querySelector('[data-testid="msg-container"]').insertAdjacentHTML("beforeend", ${JSON.stringify(PLAYER)});
++})`;
++
+ const iconesPorMensagem = `[...document.querySelectorAll('#main [role="row"]')]
+   .map((linha) => linha.querySelectorAll(".whispper-btn-transcrever").length)`;
+ 
++// O ícone leva o identificador da mensagem (RF-04): o data-id do balão em que entrou.
++const idsDosIcones = `[...document.querySelectorAll("#main .whispper-btn-transcrever")].map((icone) => icone.getAttribute("data-id"))`;
++
+ const avisosDeDegradacao = (p: Pagina) => p.console.filter((linha) => linha.includes("degradado"));
+ 
+ async function montarExtensao(destino: string): Promise<void> {
+@@ -107,8 +127,19 @@
+     assert.notEqual(ms, null, `nenhum ícone em 2 s depois de abrir a conversa; console: ${JSON.stringify(p.console)}`);
+     assert.ok(ms! <= 500, `o ícone levou ${ms} ms`);
+     assert.deepEqual(await p.avaliar(iconesPorMensagem), [1]);
++    assert.deepEqual(await p.avaliar(idsDosIcones), ["A"]);
+   });
+ 
++  await t.test("reprodução no WhatsApp real: o player montado depois do balão recebe o ícone em até 500 ms (RF-01, RF-03)", async () => {
++    const p = await carregarWhatsApp(null);
++    assert.equal(await p.avaliar(abrirConversa(painel(["A", "B"], { comPlayer: false }))), null, "ícone em mensagem sem player de voz");
++    const ms = await p.avaliar<number | null>(montarPlayer("B"));
++    assert.notEqual(ms, null, "o player montado depois do balão ficou sem ícone");
++    assert.ok(ms! <= 500, `o ícone levou ${ms} ms`);
++    assert.deepEqual(await p.avaliar(iconesPorMensagem), [0, 1]);
++    assert.deepEqual(await p.avaliar(idsDosIcones), ["B"]);
++  });
++
+   await t.test("trocar de conversa e voltar mantém exatamente um ícone por mensagem de voz (RF-02, RF-11)", async () => {
+     const p = await carregarWhatsApp(painel(["A"]));
+     assert.deepEqual(await p.avaliar(iconesPorMensagem), [1], "a conversa aberta no carregamento ficou sem ícone");
+@@ -117,6 +148,7 @@
+       assert.notEqual(ms, null, `a conversa ${conversa} ficou sem ícone`);
+       assert.ok(ms! <= 500, `na conversa ${conversa}, o ícone levou ${ms} ms`);
+       assert.deepEqual(await p.avaliar(iconesPorMensagem), ids.map(() => 1), `ícones por mensagem na conversa ${conversa}`);
++      assert.deepEqual(await p.avaliar(idsDosIcones), [...ids], `identificadores na conversa ${conversa}`);
+     }
+   });
+ 
+@@ -127,7 +159,7 @@
+ 
+   await t.test("conversa sem a lista de mensagens fica degradada e sem ícone, e a seguinte volta a receber (RF-11, RF-12)", async () => {
+     const p = await carregarWhatsApp(null);
+-    assert.equal(await p.avaliar(abrirConversa(painel(["A"], false))), null, "inseriu ícone em estado degradado");
++    assert.equal(await p.avaliar(abrirConversa(painel(["A"], { comListaDeMensagens: false }))), null, "inseriu ícone em estado degradado");
+     assert.equal(avisosDeDegradacao(p).length, 1, `avisos: ${JSON.stringify(p.console)}`);
+     assert.match(avisosDeDegradacao(p)[0]!, /containerMensagens/);
+     const ms = await p.avaliar<number | null>(abrirConversa(painel(["B"])));

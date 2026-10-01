@@ -1,0 +1,146 @@
+# Gate 1 · vermelho · 2026-10-01 14:41 -0300 · commit base 9dbd731 com os testes aplicados e o código intocado
+$ node --test --test-reporter=spec test/monitor-degradacao.test.ts test/integracao-conversa.test.ts
+▶ integração com a conversa aberta no WhatsApp Web
+  ✖ reprodução: a página carrega sem conversa e o ícone aparece em até 500 ms quando a conversa abre (RF-01, RF-03) (2993.704208ms)
+  ✖ trocar de conversa e voltar mantém exatamente um ícone por mensagem de voz (RF-02, RF-11) (2112.787167ms)
+  ✖ sem conversa aberta não há aviso de degradação (EC-10) (103.314333ms)
+  ✖ conversa sem a lista de mensagens fica degradada e sem ícone, e a seguinte volta a receber (RF-11, RF-12) (2084.897666ms)
+✖ integração com a conversa aberta no WhatsApp Web (9067.063292ms)
+✔ avaliarSaudeDasEstruturas retorna ativa quando a conversa aberta tem a lista de mensagens (0.667917ms)
+✖ avaliarSaudeDasEstruturas não acusa degradação sem conversa aberta (EC-10, BUG-20261001-GAOZ) (0.91475ms)
+✖ avaliarSaudeDasEstruturas acusa degradação quando a conversa aberta não tem a lista de mensagens (RF-11) (0.118333ms)
+✔ calcularCoordenadasAncora extrai retângulo e visibilidade do elemento (0.112958ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 2
+ℹ fail 7
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14169.276333
+
+✖ failing tests:
+
+test at test/integracao-conversa.test.ts:104:11
+✖ reprodução: a página carrega sem conversa e o ícone aparece em até 500 ms quando a conversa abre (RF-01, RF-03) (2993.704208ms)
+  AssertionError [ERR_ASSERTION]: nenhum ícone em 2 s depois de abrir a conversa; console: ["[Whispper] Adaptador em estado degradado. Estruturas ausentes: Array(1)"]
+      at TestContext.<anonymous> (extension/test/integracao-conversa.test.ts:107:12)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async TestContext.<anonymous> (extension/test/integracao-conversa.test.ts:104:3)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: null,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at test/integracao-conversa.test.ts:112:11
+✖ trocar de conversa e voltar mantém exatamente um ícone por mensagem de voz (RF-02, RF-11) (2112.787167ms)
+  AssertionError [ERR_ASSERTION]: a conversa B ficou sem ícone
+      at TestContext.<anonymous> (extension/test/integracao-conversa.test.ts:117:14)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async TestContext.<anonymous> (extension/test/integracao-conversa.test.ts:112:3)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: null,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at test/integracao-conversa.test.ts:123:11
+✖ sem conversa aberta não há aviso de degradação (EC-10) (103.314333ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + [
+  +   '[Whispper] Adaptador em estado degradado. Estruturas ausentes: Array(1)'
+  + ]
+  - []
+  
+      at TestContext.<anonymous> (extension/test/integracao-conversa.test.ts:125:12)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async TestContext.<anonymous> (extension/test/integracao-conversa.test.ts:123:3)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ '[Whispper] Adaptador em estado degradado. Estruturas ausentes: Array(1)' ],
+    expected: [],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at test/integracao-conversa.test.ts:128:11
+✖ conversa sem a lista de mensagens fica degradada e sem ícone, e a seguinte volta a receber (RF-11, RF-12) (2084.897666ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /containerMensagens/. Input:
+  
+  '[Whispper] Adaptador em estado degradado. Estruturas ausentes: Array(1)'
+  
+      at TestContext.<anonymous> (extension/test/integracao-conversa.test.ts:132:12)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async TestContext.<anonymous> (extension/test/integracao-conversa.test.ts:128:3)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '[Whispper] Adaptador em estado degradado. Estruturas ausentes: Array(1)',
+    expected: /containerMensagens/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at test/monitor-degradacao.test.ts:24:1
+✖ avaliarSaudeDasEstruturas não acusa degradação sem conversa aberta (EC-10, BUG-20261001-GAOZ) (0.91475ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'degradada'
+  - 'ativa'
+  
+      at TestContext.<anonymous> (extension/test/monitor-degradacao.test.ts:30:10)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'degradada',
+    expected: 'ativa',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/monitor-degradacao.test.ts:33:1
+✖ avaliarSaudeDasEstruturas acusa degradação quando a conversa aberta não tem a lista de mensagens (RF-11) (0.118333ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'ativa'
+  - 'degradada'
+  
+      at TestContext.<anonymous> (extension/test/monitor-degradacao.test.ts:35:10)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'ativa',
+    expected: 'degradada',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+exit=1
+
+$ npx tsc -p tsconfig.test.json
+typecheck: limpo

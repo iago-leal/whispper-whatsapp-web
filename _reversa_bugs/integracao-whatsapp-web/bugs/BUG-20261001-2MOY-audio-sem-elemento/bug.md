@@ -8,7 +8,7 @@ phase: triaging
 severity: critical
 priority: P0
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-01T14:32-03:00
 
 origin:
   type: inspection
@@ -31,8 +31,10 @@ blocking: []
 relationships:
   - bug: BUG-20261001-GAOZ
     type: blocked-by
-    state: proposed
-    evidence: []
+    state: confirmed   # promovida pelo /reversa-debugger-fix do GAOZ em 2026-10-01
+    evidence:
+      - "extension/src/content/index.ts:51 é a única chamada de solicitarTranscricaoManual; nucleo.ts:183 só pede obterAudio a partir desse evento"
+      - "../BUG-20261001-GAOZ-icone-ausente/evidence/reproduction.md S1: nenhum ícone é injetado, logo a extração nunca é acionada pela interface"
 
 traceability:
   specs:

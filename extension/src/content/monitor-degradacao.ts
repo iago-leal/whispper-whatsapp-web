@@ -2,15 +2,16 @@ import type { StatusSaudeFonte } from '../dominio/fonte-de-audio.ts';
 import { CONFIGURACAO_ESTRUTURAS } from './configuracao-estruturas.ts';
 
 /**
- * Avalia se os seletores essenciais para a operação do adaptador estão disponíveis na página.
+ * Avalia se as estruturas de que o adaptador depende existem na conversa aberta.
+ * Sem conversa aberta não há o que conferir: o WhatsApp Web sempre carrega assim, e isso não é
+ * degradação (EC-10).
  */
 export function avaliarSaudeDasEstruturas(raiz: Document | HTMLElement = document): StatusSaudeFonte {
   const ausentes: string[] = [];
 
-  // Seletor crítico: painel de conversa principal
-  const container = raiz.querySelector(CONFIGURACAO_ESTRUTURAS.seletores.containerConversa);
-  if (!container) {
-    ausentes.push('containerConversa');
+  const conversa = raiz.querySelector(CONFIGURACAO_ESTRUTURAS.seletores.containerConversa);
+  if (conversa && !conversa.querySelector(CONFIGURACAO_ESTRUTURAS.seletores.containerMensagens)) {
+    ausentes.push('containerMensagens');
   }
 
   if (ausentes.length > 0) {

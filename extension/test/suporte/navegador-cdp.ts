@@ -119,6 +119,8 @@ export class Navegador {
 
 export class Pagina {
   readonly dialogos: string[] = [];
+  readonly console: string[] = [];
+  readonly mundosIsolados: string[] = [];
   private readonly navegador: Navegador;
   private readonly sessao: string;
 
@@ -135,6 +137,30 @@ export class Pagina {
     );
     if (exceptionDetails) throw new Error(`${expressao}: ${exceptionDetails.exception?.description ?? exceptionDetails.text}`);
     return result.value as T;
+  }
+
+  // Navega até `url` servindo `html` no lugar da rede: o script de conteúdo de uma extensão entra
+  // numa cópia controlada de um site de terceiros, sem conta nem rede. Anota o console da página,
+  // inclusive o dos scripts de conteúdo, e o nome de cada mundo isolado que uma extensão abre nela.
+  async navegarSimulado(url: string, html: string): Promise<void> {
+    this.navegador.ouvir((m) => {
+      if (m.sessionId !== this.sessao) return;
+      if (m.method === "Fetch.requestPaused") {
+        void this.navegador.enviar("Fetch.fulfillRequest", {
+          requestId: m.params.requestId,
+          responseCode: 200,
+          responseHeaders: [{ name: "Content-Type", value: "text/html; charset=utf-8" }],
+          body: Buffer.from(html).toString("base64"),
+        }, this.sessao);
+      } else if (m.method === "Runtime.consoleAPICalled") {
+        this.console.push(m.params.args.map((a: any) => a.value ?? a.description ?? "").join(" "));
+      } else if (m.method === "Runtime.executionContextCreated" && m.params.context.auxData?.type === "isolated") {
+        this.mundosIsolados.push(m.params.context.name);
+      }
+    });
+    await this.navegador.enviar("Runtime.enable", {}, this.sessao);
+    await this.navegador.enviar("Fetch.enable", { patterns: [{ urlPattern: url, resourceType: "Document" }] }, this.sessao);
+    await this.navegador.enviar("Page.navigate", { url }, this.sessao);
   }
 
   clicar(id: string): Promise<void> {

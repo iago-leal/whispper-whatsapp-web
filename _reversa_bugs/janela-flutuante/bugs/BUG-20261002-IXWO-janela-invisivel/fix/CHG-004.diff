@@ -1,0 +1,18 @@
+diff --git a/extension/src/adaptadores/adaptador-whatsapp-web.ts b/extension/src/adaptadores/adaptador-whatsapp-web.ts
+index a393051..a5d2b9d 100644
+--- a/extension/src/adaptadores/adaptador-whatsapp-web.ts
++++ b/extension/src/adaptadores/adaptador-whatsapp-web.ts
+@@ -119,6 +119,13 @@ export class AdaptadorWhatsAppWeb implements FonteDeAudio {
+     return this.rastreadorAncoras.aoMudarAncora(callback);
+   }
+ 
++  /**
++   * Retângulo e visibilidade atuais do balão da mensagem, ou null se ela não foi detectada.
++   */
++  obterAncora(idAudio: string): CoordenadasAncora | null {
++    return this.rastreadorAncoras.obterAncora(idAudio);
++  }
++
+   verificarSaude(): StatusSaudeFonte {
+     return avaliarSaudeDasEstruturas();
+   }

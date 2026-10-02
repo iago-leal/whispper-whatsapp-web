@@ -1,0 +1,40 @@
+diff --git a/extension/test/gerenciador-janelas.test.ts b/extension/test/gerenciador-janelas.test.ts
+index ec478b4..c740d85 100644
+--- a/extension/test/gerenciador-janelas.test.ts
++++ b/extension/test/gerenciador-janelas.test.ts
+@@ -1,6 +1,8 @@
+ import assert from 'node:assert/strict';
+ import { test } from 'node:test';
+ import { GerenciadorDeJanelas } from '../src/content/gerenciador-janelas.ts';
++import { CronometroDeEspera } from '../src/content/cronometro-espera.ts';
++import type { CoordenadasAncora } from '../src/dominio/fonte-de-audio.ts';
+ 
+ test('GerenciadorDeJanelas abre janela e atualiza estados corretamente', () => {
+   const gerenciador = new GerenciadorDeJanelas();
+@@ -41,3 +43,26 @@ test('GerenciadorDeJanelas respeita limite máximo de 20 janelas', () => {
+ 
+   assert.equal(gerenciador.totalAbertas(), 20);
+ });
++
++// BUG-20261002-IXWO: a âncora só chegava por scroll ou resize, e a janela aberta sem rolagem ficava
++// oculta. A abertura lê a âncora corrente antes de a janela existir: lida depois, com a janela já na
++// página, a transição do transform a faria deslizar do canto da tela até o balão.
++test('GerenciadorDeJanelas lê a âncora da mensagem ao abrir, antes de a janela existir', () => {
++  const ancora: CoordenadasAncora = { idAudio: 'audio-1', x: 40, y: 120, largura: 300, altura: 60, visivel: true };
++  const consultas: Array<{ idAudio: string; janelaJaExistia: boolean }> = [];
++  const gerenciador: GerenciadorDeJanelas = new GerenciadorDeJanelas(new CronometroDeEspera(), (idAudio) => {
++    consultas.push({ idAudio, janelaJaExistia: gerenciador.temJanelaAberta(idAudio) });
++    return idAudio === 'audio-1' ? ancora : null;
++  });
++
++  gerenciador.abrir('audio-1');
++  assert.deepEqual(consultas, [{ idAudio: 'audio-1', janelaJaExistia: false }]);
++
++  // Reabrir uma janela existente só a destaca, sem nova leitura
++  gerenciador.abrir('audio-1');
++  assert.equal(consultas.length, 1);
++
++  // A âncora que vem no pedido prevalece sobre a leitura
++  gerenciador.abrir('audio-2', 'enviado', { ...ancora, idAudio: 'audio-2' });
++  assert.equal(consultas.length, 1);
++});

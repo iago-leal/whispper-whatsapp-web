@@ -1,0 +1,68 @@
+✔ GerenciadorDeJanelas abre janela e atualiza estados corretamente (3.964375ms)
+✔ GerenciadorDeJanelas respeita limite máximo de 20 janelas (0.791083ms)
+✖ GerenciadorDeJanelas lê a âncora da mensagem ao abrir, antes de a janela existir (1.710333ms)
+▶ integração com a conversa aberta no WhatsApp Web
+  ✔ reprodução: a página carrega sem conversa e o ícone aparece em até 500 ms quando a conversa abre (RF-01, RF-03) (654.438667ms)
+  ✔ reprodução no WhatsApp real: o player montado depois do balão recebe o ícone em até 500 ms (RF-01, RF-03) (2135.32225ms)
+  ✔ trocar de conversa e voltar mantém exatamente um ícone por mensagem de voz (RF-02, RF-11) (120.517917ms)
+  ✔ sem conversa aberta não há aviso de degradação (EC-10) (91.667541ms)
+  ✔ conversa sem a lista de mensagens fica degradada e sem ícone, e a seguinte volta a receber (RF-11, RF-12) (2094.98675ms)
+  ✔ o clique faz o ícone pulsar com contador e, sem motor, passa ao erro sem contador (RF-01, RF-02 da feature 006) (126.263ms)
+  ✔ em 20 cliques, ao menos 95% dos ícones pulsam em até 100 ms (RF-01 da feature 006) (127.547542ms)
+  ✖ reprodução: sem rolagem, a janela fica visível junto ao balão em até 150 ms do clique e mostra o erro quando o ícone o indica (RF-01, RF-06 e RNF-01 da janela) (111.086959ms)
+  ✔ rolar a conversa leva a janela junto, oculta-a com o balão fora da tela e a reexibe com o mesmo texto ao voltar (RF-03 da janela) (621.733625ms)
+✖ integração com a conversa aberta no WhatsApp Web (7749.197792ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 10
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 12965.07125
+
+✖ failing tests:
+
+test at test/gerenciador-janelas.test.ts:50:1
+✖ GerenciadorDeJanelas lê a âncora da mensagem ao abrir, antes de a janela existir (1.710333ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   {
+  -     idAudio: 'audio-1',
+  -     janelaJaExistia: false
+  -   }
+  - ]
+  
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/gerenciador-janelas.test.ts:59:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ { idAudio: 'audio-1', janelaJaExistia: false } ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at test/integracao-conversa.test.ts:343:11
+✖ reprodução: sem rolagem, a janela fica visível junto ao balão em até 150 ms do clique e mostra o erro quando o ícone o indica (RF-01, RF-06 e RNF-01 da janela) (111.086959ms)
+  AssertionError [ERR_ASSERTION]: a janela não ficou visível sem rolagem: [{"ms":1,"icone":"transcrevendo","existe":true,"visivel":false,"junto":null,"texto":"WHISPPER\n×\nTranscrevendo…\n0 s\nTranscrição na fila"},{"ms":10,"icone":"erro","existe":true,"visivel":false,"junto":null,"texto":"WHISPPER\n×\nErro: MOTOR_INDISPONIVEL\nFalhou após 0 s\nTentar de novo\nErro na transcrição"}]
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/integracao-conversa.test.ts:350:12)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/integracao-conversa.test.ts:343:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: -1,
+    expected: -1,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }

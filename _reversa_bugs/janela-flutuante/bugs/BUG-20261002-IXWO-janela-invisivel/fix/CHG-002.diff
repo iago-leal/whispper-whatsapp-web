@@ -1,0 +1,137 @@
+diff --git a/extension/test/integracao-conversa.test.ts b/extension/test/integracao-conversa.test.ts
+index 180b386..d79df2f 100644
+--- a/extension/test/integracao-conversa.test.ts
++++ b/extension/test/integracao-conversa.test.ts
+@@ -25,12 +25,16 @@ const WHATSAPP = "https://web.whatsapp.com/";
+ const PLAYER = `<div><button aria-label="Reproduzir mensagem de voz"></button></div>`;
+ 
+ // Balões de voz como no DOM real: a linha e a mensagem aninhada casam ambas o seletor de balão, e
+-// só a mensagem carrega o data-id; o player fica sob o conteúdo virtualizado.
+-function painel(ids: string[], { comListaDeMensagens = true, comPlayer = true } = {}): string {
++// só a mensagem carrega o data-id; o player fica sob o conteúdo virtualizado. A lista rolável tem
++// altura própria e espaço abaixo das mensagens, como a do WhatsApp.
++function painel(ids: string[], { comListaDeMensagens = true, comPlayer = true, rolavel = false } = {}): string {
+   const linhas = ids.map((id) =>
+     `<div role="row"><div data-id="${id}" data-testid="conv-msg-${id}"><div data-virtualized="false">` +
+     `<div data-testid="msg-container">${comPlayer ? PLAYER : ""}</div></div></div></div>`).join("");
+-  return comListaDeMensagens ? `<div data-tab="8" role="application">${linhas}</div>` : linhas;
++  const lista = rolavel
++    ? `<div data-tab="8" role="application" style="height:300px;overflow-y:auto">${linhas}<div style="height:2000px"></div></div>`
++    : `<div data-tab="8" role="application">${linhas}</div>`;
++  return comListaDeMensagens ? lista : linhas;
+ }
+ 
+ function pagina(conversaAberta: string | null): string {
+@@ -143,6 +147,57 @@ const todosEmErro = `new Promise((resolver) => {
+ 
+ const FORMATO_DO_CONTADOR = /^\d+ s$/;
+ 
++// Leitura da janela de um áudio como o usuário a vê (BUG-20261002-IXWO). Visível: sem a classe que
++// a oculta, com a posição aplicada e dentro da tela. Junto ao balão: a 8 px dele, à direita ou à
++// esquerda com os topos alinhados, ou logo abaixo (RF-01 e RF-02 da janela), com tolerância de 4 px.
++interface LeituraDaJanela {
++  existe: boolean;
++  visivel: boolean;
++  junto: "direita" | "esquerda" | "abaixo" | null;
++  texto: string;
++}
++
++const lerJanela = `(id) => {
++  const janela = document.querySelector('.whispper-janela[aria-label="Transcrição do áudio ' + id + '"]');
++  if (!janela) return { existe: false, visivel: false, junto: null, texto: "" };
++  const j = janela.getBoundingClientRect();
++  const b = document.querySelector('#main [data-id="' + id + '"]').getBoundingClientRect();
++  const perto = (a, c) => Math.abs(a - c) <= 4;
++  const junto = perto(j.top, b.top) && perto(j.left, b.right + 8) ? "direita"
++    : perto(j.top, b.top) && perto(j.right, b.left - 8) ? "esquerda"
++    : perto(j.top, b.bottom + 8) ? "abaixo" : null;
++  return {
++    existe: true,
++    visivel: !janela.classList.contains("whispper-janela-oculta") && janela.style.transform !== "" && j.bottom > 0 && j.top < innerHeight,
++    junto,
++    texto: janela.innerText,
++  };
++}`;
++
++const janelaJuntoAoBalao = (id: string) => `(() => { const j = (${lerJanela})("${id}"); return j.visivel && j.junto !== null; })()`;
++
++// Clica no ícone e acompanha a janela do áudio até o ícone indicar erro. Devolve as leituras
++// distintas da janela, cada uma com o estado do ícone no mesmo instante e a primeira feita na mesma
++// tarefa do clique, ou null se o erro não vier em 15 s.
++const clicarEAcompanharJanela = (id: string) => `new Promise((resolver) => {
++  const ler = ${lerJanela};
++  const botao = document.querySelector('#main .whispper-btn-transcrever[data-id="${id}"]');
++  const leituras = [];
++  let inicio = 0;
++  const anotar = () => {
++    const leitura = { ms: Math.round(performance.now() - inicio), icone: botao.getAttribute("data-whispper-estado"), ...ler("${id}") };
++    const anterior = leituras.at(-1);
++    if (!anterior || ["icone", "visivel", "junto", "texto"].some((campo) => anterior[campo] !== leitura[campo])) leituras.push(leitura);
++    if (leitura.icone === "erro") { observador.disconnect(); resolver(leituras); }
++  };
++  const observador = new MutationObserver(anotar);
++  observador.observe(document.body, { attributes: true, childList: true, characterData: true, subtree: true });
++  setTimeout(() => { observador.disconnect(); resolver(null); }, 15000);
++  inicio = performance.now();
++  botao.click();
++  anotar();
++})`;
++
+ async function montarExtensao(destino: string): Promise<void> {
+   mkdirSync(join(destino, "dist", "content"), { recursive: true });
+   copyFileSync(join(EXTENSAO, "manifest.json"), join(destino, "manifest.json"));
+@@ -281,4 +336,54 @@ test("integração com a conversa aberta no WhatsApp Web", {
+     const estados = await p.avaliar<string[]>(todosEmErro);
+     assert.deepEqual(estados, ids.map(() => "erro"), "pedidos que não terminaram no indicador de erro");
+   });
++
++  // BUG-20261002-IXWO: a janela nascia sem âncora e só aparecia na primeira rolagem. A aba vai para o
++  // primeiro plano, como a do usuário: em segundo plano a página não dispara scroll nem resize, e o
++  // teste não separaria a falta de rolagem da falta de quadros.
++  await t.test("reprodução: sem rolagem, a janela fica visível junto ao balão em até 150 ms do clique e mostra o erro quando o ícone o indica (RF-01, RF-06 e RNF-01 da janela)", async () => {
++    const p = await carregarWhatsApp(painel(["A"]));
++    await p.trazerParaFrente();
++    const leituras = await p.avaliar<Array<LeituraDaJanela & { ms: number; icone: string | null }> | null>(clicarEAcompanharJanela("A"));
++    assert.notEqual(leituras, null, `o ícone não chegou ao indicador de erro em 15 s; console: ${JSON.stringify(p.console)}`);
++
++    const primeiraVisivel = leituras!.findIndex((leitura) => leitura.visivel);
++    assert.notEqual(primeiraVisivel, -1, `a janela não ficou visível sem rolagem: ${JSON.stringify(leituras)}`);
++    const aberta = leituras![primeiraVisivel]!;
++    assert.ok(aberta.ms <= 150, `a janela levou ${aberta.ms} ms para ficar visível`);
++    assert.match(aberta.texto, /na fila|transcrevendo/i, "a janela não mostrou a espera antes do erro");
++
++    // Do primeiro instante ao erro, em todos os estados, a janela fica visível e junto ao balão
++    for (const leitura of leituras!.slice(primeiraVisivel)) {
++      assert.ok(leitura.visivel, `a janela sumiu sem rolagem: ${JSON.stringify(leitura)}`);
++      assert.notEqual(leitura.junto, null, `a janela ficou longe do balão: ${JSON.stringify(leitura)}`);
++    }
++
++    // O ícone indica o erro no mesmo instante em que o erro está legível na janela
++    const noErro = leituras!.at(-1)!;
++    assert.ok(noErro.visivel, "o ícone indicou erro com a janela oculta");
++    assert.match(noErro.texto, /erro/i);
++    assert.match(noErro.texto, /tentar de novo/i);
++  });
++
++  // RF-03 da janela: a rolagem continua levando a janela junto ao balão depois que a abertura passou
++  // a ler a âncora (BUG-20261002-IXWO). Rolar exige a aba em primeiro plano.
++  await t.test("rolar a conversa leva a janela junto, oculta-a com o balão fora da tela e a reexibe com o mesmo texto ao voltar (RF-03 da janela)", async () => {
++    const p = await carregarWhatsApp(painel(["A"], { rolavel: true }));
++    await p.trazerParaFrente();
++    await p.avaliar(clicar("A"));
++    assert.deepEqual(await p.avaliar(todosEmErro), ["erro"], "o pedido não terminou no indicador de erro");
++    const rolarPara = (topo: number) => p.avaliar(`document.querySelector('#main [role="application"]').scrollTop = ${topo}`);
++    const lerA = () => p.avaliar<LeituraDaJanela>(`(${lerJanela})("A")`);
++
++    await rolarPara(10);
++    await p.aguardar(janelaJuntoAoBalao("A"), 2000, "a janela acompanhar o balão na rolagem");
++    const texto = (await lerA()).texto;
++
++    await rolarPara(1000);
++    await p.aguardar(`!(${lerJanela})("A").visivel`, 2000, "a janela se ocultar com o balão fora da tela");
++
++    await rolarPara(0);
++    await p.aguardar(janelaJuntoAoBalao("A"), 2000, "a janela reaparecer junto ao balão");
++    assert.equal((await lerA()).texto, texto, "a janela voltou com outro conteúdo");
++  });
+ });

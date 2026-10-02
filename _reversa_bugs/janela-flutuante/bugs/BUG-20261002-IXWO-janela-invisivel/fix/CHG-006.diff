@@ -1,0 +1,14 @@
+diff --git a/extension/src/content/index.ts b/extension/src/content/index.ts
+index 316697a..3936779 100644
+--- a/extension/src/content/index.ts
++++ b/extension/src/content/index.ts
+@@ -10,7 +10,8 @@ import { CronometroDeEspera } from './cronometro-espera.ts';
+ // Um só cronômetro conta o tempo nos ícones e nas janelas, no mesmo relógio do núcleo (feature 006)
+ export const cronometro = new CronometroDeEspera();
+ export const adaptador = new AdaptadorWhatsAppWeb(cronometro);
+-export const janelas = new GerenciadorDeJanelas(cronometro);
++// A janela lê a âncora do balão ao abrir; daí em diante, a rolagem a atualiza pelo aoMudarAncora
++export const janelas = new GerenciadorDeJanelas(cronometro, (idAudio) => adaptador.obterAncora(idAudio));
+ export const motor = new MotorClienteContent();
+ export const armazenamento = new ArmazenamentoChrome();
+ 

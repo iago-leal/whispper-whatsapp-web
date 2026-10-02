@@ -1,0 +1,151 @@
+VISIBILIDADE hidden foco=false rAF não disparou em 1 s
+APÓS bringToFront visible rAF disparou
+INICIAL {
+ "icone": {
+  "estado": null,
+  "classes": "whispper-btn-transcrever",
+  "contador": "",
+  "rect": {
+   "x": 346,
+   "y": 154,
+   "width": 26,
+   "height": 26,
+   "top": 154,
+   "right": 372,
+   "bottom": 180,
+   "left": 346
+  },
+  "pai": "<div data-id=\"A\" data-testid=\"conv-msg-A\" style=\"width:360px;margin-left:40px;background:#fff\" data-whispper-injetado=\"t"
+ },
+ "plays": 0,
+ "topoNoPlay": "BUTTON",
+ "container": {
+  "rect": {
+   "x": 0,
+   "y": 0,
+   "width": 756,
+   "height": 413,
+   "top": 0,
+   "right": 756,
+   "bottom": 413,
+   "left": 0
+  },
+  "pe": "none",
+  "filhos": 0
+ },
+ "janelas": []
+}
+PLAY ANTES DO CLIQUE NO ÍCONE, plays = 1
+150 ms APÓS O CLIQUE {
+ "icone": {
+  "estado": "erro",
+  "classes": "whispper-btn-transcrever whispper-erro",
+  "contador": "",
+  "rect": {
+   "x": 344.9673767089844,
+   "y": 152.96737670898438,
+   "width": 28.06524658203125,
+   "height": 28.06524658203125,
+   "top": 152.96737670898438,
+   "right": 373.0326232910156,
+   "bottom": 181.03262329101562,
+   "left": 344.9673767089844
+  },
+  "pai": "<div data-id=\"A\" data-testid=\"conv-msg-A\" style=\"width:360px;margin-left:40px;background:#fff\" data-whispper-injetado=\"t"
+ },
+ "plays": 1,
+ "topoNoPlay": "BUTTON",
+ "container": {
+  "rect": {
+   "x": 0,
+   "y": 0,
+   "width": 756,
+   "height": 413,
+   "top": 0,
+   "right": 756,
+   "bottom": 413,
+   "left": 0
+  },
+  "pe": "none",
+  "filhos": 1
+ },
+ "janelas": [
+  {
+   "classes": "whispper-janela whispper-janela-oculta",
+   "transform": "",
+   "rect": {
+    "x": 0,
+    "y": 0,
+    "width": 322,
+    "height": 118.296875,
+    "top": 0,
+    "right": 322,
+    "bottom": 118.296875,
+    "left": 0
+   },
+   "visivel": "flex/visible/0",
+   "texto": "WHISPPER\n×\nErro: MOTOR_INDISPONIVEL\nFalhou após 0 s\nTentar de novo\nErro na transcrição"
+  }
+ ]
+}
+3 s APÓS O CLIQUE {
+ "icone": {
+  "estado": "erro",
+  "classes": "whispper-btn-transcrever whispper-erro",
+  "contador": "",
+  "rect": {
+   "x": 344.9599914550781,
+   "y": 152.95999145507812,
+   "width": 28.08001708984375,
+   "height": 28.08001708984375,
+   "top": 152.95999145507812,
+   "right": 373.0400085449219,
+   "bottom": 181.04000854492188,
+   "left": 344.9599914550781
+  },
+  "pai": "<div data-id=\"A\" data-testid=\"conv-msg-A\" style=\"width:360px;margin-left:40px;background:#fff\" data-whispper-injetado=\"t"
+ },
+ "plays": 1,
+ "topoNoPlay": "BUTTON",
+ "container": {
+  "rect": {
+   "x": 0,
+   "y": 0,
+   "width": 756,
+   "height": 413,
+   "top": 0,
+   "right": 756,
+   "bottom": 413,
+   "left": 0
+  },
+  "pe": "none",
+  "filhos": 1
+ },
+ "janelas": [
+  {
+   "classes": "whispper-janela whispper-janela-oculta",
+   "transform": "",
+   "rect": {
+    "x": 0,
+    "y": 0,
+    "width": 322,
+    "height": 118.296875,
+    "top": 0,
+    "right": 322,
+    "bottom": 118.296875,
+    "left": 0
+   },
+   "visivel": "flex/visible/0",
+   "texto": "WHISPPER\n×\nErro: MOTOR_INDISPONIVEL\nFalhou após 0 s\nTentar de novo\nErro na transcrição"
+  }
+ ]
+}
+APÓS RESIZE REAL 1 [
+ {
+  "classes": "whispper-janela",
+  "transform": "translate3d(12px, 120px, 0px)",
+  "opacidade": "flex/visible/1"
+ }
+]
+PLAY DEPOIS, plays = 2
+CONSOLE []

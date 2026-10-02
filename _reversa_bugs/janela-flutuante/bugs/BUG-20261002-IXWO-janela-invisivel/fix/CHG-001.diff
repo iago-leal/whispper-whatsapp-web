@@ -1,0 +1,17 @@
+diff --git a/extension/test/suporte/navegador-cdp.ts b/extension/test/suporte/navegador-cdp.ts
+index f744219..3c83c3a 100644
+--- a/extension/test/suporte/navegador-cdp.ts
++++ b/extension/test/suporte/navegador-cdp.ts
+@@ -167,6 +167,12 @@ export class Pagina {
+     return this.avaliar(`document.getElementById(${JSON.stringify(id)}).click()`, true);
+   }
+ 
++  // Põe a aba em primeiro plano. A aba aberta por Target.createTarget nasce em segundo plano e não
++  // desenha quadros, e sem quadro a página não dispara scroll, resize nem requestAnimationFrame.
++  trazerParaFrente(): Promise<void> {
++    return this.navegador.enviar("Page.bringToFront", {}, this.sessao);
++  }
++
+   async aguardar(expressao: string, prazoMs: number, oQue: string): Promise<void> {
+     const limite = Date.now() + prazoMs;
+     while (!(await this.avaliar<boolean>(expressao).catch(() => false))) {

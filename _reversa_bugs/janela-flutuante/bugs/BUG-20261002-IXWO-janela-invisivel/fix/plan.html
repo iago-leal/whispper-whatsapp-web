@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plano de correção · #6 BUG-20261002-IXWO</title>
+  <style>
+body { background-color: #121212; color: #e0e0e0; font-family: sans-serif; padding: 20px; max-width: 1100px; margin: 0 auto; line-height: 1.5; }
+a { color: #bb86fc; text-decoration: none; } a:hover { text-decoration: underline; }
+table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+th, td { border: 1px solid #333; padding: 8px 10px; text-align: left; vertical-align: top; }
+th { background-color: #1e1e1e; }
+.card { background-color: #1e1e1e; padding: 12px 16px; border-radius: 8px; margin: 0 12px 12px 0; display: inline-block; min-width: 120px; }
+.card b { display: block; font-size: 1.3em; }
+.meta { color: #9e9e9e; font-size: 0.9em; }
+.tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 0.85em; background: #2a2a2a; border: 1px solid #444; }
+.ok { color: #81c784; } .alerta { color: #ffb74d; } .erro { color: #ef5350; } .novo { color: #64b5f6; }
+.aviso { background: #2a2210; border-left: 4px solid #ffb74d; padding: 10px 14px; border-radius: 6px; }
+code { background: #1e1e1e; padding: 1px 5px; border-radius: 4px; }
+ol li, ul li { margin-bottom: 4px; }
+svg { background: #181818; border-radius: 8px; max-width: 100%; }
+pre.bloco { background: #0d0d0d; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.82em; line-height: 1.35; }
+  </style>
+</head>
+<body>
+  <h1>Plano de correção · #6 BUG-20261002-IXWO</h1>
+  <p class="meta">Contexto <code>janela-flutuante</code> · 2026-10-02 · gerado por /reversa-debugger-fix antes de qualquer alteração no projeto · <a href="../bug.md">bug.md</a></p>
+  <div>
+    <div class="card"><b class="erro">critical</b>Severidade</div>
+    <div class="card"><b class="erro">P0</b>Prioridade</div>
+    <div class="card"><b class="ok">confirmed</b>Causa raiz</div>
+    <div class="card"><b class="ok">baixa</b>Risco da mudança</div>
+    <div class="card"><b>3/3</b>Reprodução</div>
+    <div class="card"><b>local-software</b>Closure policy</div>
+  </div>
+
+  <h2>1. Defeito</h2>
+  <p>Ao clicar no ícone de transcrição, a janela flutuante é criada, mas fica invisível (classe <code>whispper-janela-oculta</code>, opacidade 0, sem <code>transform</code>) até o usuário rolar a conversa ou redimensionar o navegador. Ficam ocultos a espera, o texto concluído e o erro. Como o contador do ícone para quando o texto é escrito na janela, e a janela só aparece na rolagem seguinte, o cronômetro parece errado ao usuário.</p>
+  <p>Spec efetiva violada: <code>janela-flutuante.md</code> RF-01 (abrir ao lado do balão quando o núcleo pedir), RF-06 (exibir os quatro estados), RNF-01 (≤ 150 ms do pedido à janela visível); <code>integracao-whatsapp-web.md</code> RF-10 (fornecer à janela a âncora de cada mensagem).</p>
+
+  <h2>2. Causa raiz <span class="tag ok">confirmed</span></h2>
+  <ol>
+    <li><code>NucleoDeTranscricao.processarSolicitacao</code> chama <code>exibicao.abrir(idAudio)</code>; por desenho, a porta não leva âncora.</li>
+    <li><code>GerenciadorDeJanelas.abrir</code> grava a janela com <code>ancora: undefined</code>. <code>RastreadorDeAncoras.obterAncora</code> existe, mas ninguém o consulta.</li>
+    <li><code>calcularPosicoesJanelas</code> devolve <code>visivel: false</code> para requisição sem âncora, e o gerenciador aplica a classe oculta.</li>
+    <li>O rastreador só empurra a âncora no <code>registrar</code> da mensagem, antes de a janela existir (o gerenciador a descarta), e em <code>scroll</code>/<code>resize</code>.</li>
+    <li>Sem rolagem, a âncora nunca chega: a janela fica oculta em todos os estados.</li>
+  </ol>
+  <p><b>Evidências:</b></p>
+  <ul>
+    <li><a href="../evidence/reproduction.md">evidence/reproduction.md</a>: 3/3 execuções com a janela oculta e sem <code>transform</code> 150 ms e 3 s após o clique.</li>
+    <li><a href="../evidence/experimento-causa-aba-visivel.saida.txt">evidence/experimento-causa-aba-visivel.saida.txt</a>: a aba do navegador de teste nasce em segundo plano e não desenha quadros, o que tornava o primeiro diagnóstico ambíguo. Com a aba em primeiro plano, a janela segue oculta; um <code>resize</code> real, sem outra mudança, a exibe com <code>translate3d(12px, 120px, 0px)</code>. O insumo que faltava era só a âncora.</li>
+    <li><a href="../evidence/desempenho-motor-20261002-1222.tsv">evidence/desempenho-motor-20261002-1222.tsv</a>: no WhatsApp real, as transcrições terminaram <code>ok</code>; o texto existia.</li>
+  </ul>
+  <p>Origem: <code>bab1e53</code> (primeira implementação). A feature 006 não tocou esse caminho; não há commit bom conhecido, e o <code>git bisect</code> não se aplica.</p>
+
+  <h2>3. Estratégia: correção direta</h2>
+  <p>O gerenciador passa a <b>ler a âncora corrente da mensagem no momento de abrir</b>, por uma função injetada no construtor; a composição em <code>index.ts</code> liga essa função ao rastreador do adaptador. A leitura acontece <b>antes</b> de a janela entrar no DOM: lida depois, o <code>getBoundingClientRect</code> do balão forçaria o cálculo de estilo da janela recém-inserida sem <code>transform</code>, e a transição de 0,12 s a faria deslizar do canto da tela até o balão.</p>
+  <p>Por que assim: a porta de domínio <code>ExibicaoDeTranscricao</code> e o núcleo ficam intactos (geometria é assunto do script de conteúdo), o caminho de rolagem segue igual, e a abertura deixa de depender de um evento que pode não vir. Escolhida pelo usuário entre correção direta e debate; escopo restrito ao IXWO.</p>
+
+  <h2>4. Correction Change Set proposto</h2>
+  <table>
+    <thead><tr><th>CHG</th><th>Tipo</th><th>Artefato</th><th>Propósito</th><th>Gate</th></tr></thead>
+    <tbody>
+      <tr><td>CHG-001</td><td>test</td><td><code>extension/test/suporte/navegador-cdp.ts</code></td><td><code>Pagina.trazerParaFrente()</code>: põe a aba em primeiro plano, pois aba de fundo não desenha quadros nem dispara <code>scroll</code></td><td>1</td></tr>
+      <tr><td>CHG-002</td><td>test</td><td><code>extension/test/integracao-conversa.test.ts</code></td><td>reprodução no navegador (visível sem rolagem, ≤ 150 ms, erro visível quando o ícone o indica) e regressão da rolagem (RF-03)</td><td>1</td></tr>
+      <tr><td>CHG-003</td><td>test</td><td><code>extension/test/gerenciador-janelas.test.ts</code></td><td>regressão unitária: a abertura lê a âncora antes de a janela existir; âncora explícita prevalece; reabrir não relê</td><td>1</td></tr>
+      <tr><td>CHG-004</td><td>code</td><td><code>extension/src/adaptadores/adaptador-whatsapp-web.ts</code></td><td><code>obterAncora(idAudio)</code> público, delegando ao rastreador</td><td>2</td></tr>
+      <tr><td>CHG-005</td><td>code</td><td><code>extension/src/content/gerenciador-janelas.ts</code></td><td>construtor aceita a fonte de âncoras; <code>abrir</code> a consulta antes de criar o elemento quando nenhuma âncora vem no pedido</td><td>2</td></tr>
+      <tr><td>CHG-006</td><td>code</td><td><code>extension/src/content/index.ts</code></td><td>liga o gerenciador a <code>adaptador.obterAncora</code></td><td>2</td></tr>
+    </tbody>
+  </table>
+  <p class="meta">Sem <code>data-repair</code>: nada é persistido; a janela vive só na aba.</p>
+
+  <h2>5. Testes planejados</h2>
+  <table>
+    <thead><tr><th>Teste</th><th>Tipo</th><th>O que prova</th><th>Hoje</th></tr></thead>
+    <tbody>
+      <tr><td>Navegador: <i>reprodução: sem rolagem, a janela fica visível junto ao balão em até 150 ms do clique e mostra o erro quando o ícone o indica</i></td><td>reprodução</td><td>Critérios 1, 2 (fila, transcrevendo e erro), 3 e 5. Mede no próprio navegador, do clique à primeira leitura com a janela sem a classe oculta, com <code>transform</code> e a 8 px do balão; no instante em que o ícone passa a erro, confere a janela visível com o texto do erro.</td><td class="erro">falha</td></tr>
+      <tr><td>Navegador: <i>rolar a conversa leva a janela junto, oculta-a com o balão fora da tela e a reexibe com o mesmo texto ao voltar (RF-03)</i></td><td>regressão</td><td>Critério 4: o caminho por <code>scroll</code> continua valendo depois que a abertura passa a ler a âncora.</td><td class="ok">passa (guarda)</td></tr>
+      <tr><td>Unitário: <i>o gerenciador lê a âncora da mensagem ao abrir, antes de a janela existir</i></td><td>regressão</td><td>A abertura consulta a fonte de âncoras uma vez, com a janela ainda inexistente (ordem que evita o deslize); âncora explícita prevalece; reabrir só destaca.</td><td class="erro">falha</td></tr>
+    </tbody>
+  </table>
+  <p>Depois do Gate 2: suíte completa (<code>npm test</code>) e <code>npm run typecheck</code> verdes.</p>
+
+  <h2>6. Riscos e o que fica de fora</h2>
+  <p><b>change_risk: baixa.</b> Só o script de conteúdo; sem contrato externo, sem dados, sem concorrência nova (a leitura é síncrona, no mesmo clique); reversível por revert.</p>
+  <div class="aviso">
+    <p><b>Efeito visível esperado:</b> a janela passa a aparecer na hora, mas ainda na posição do <a href="../../BUG-20261002-A4MZ-janela-longe-do-balao/bug.md">BUG-20261002-A4MZ</a> (sobre a lista de conversas, no WhatsApp real) e sobreposta como no <a href="../../BUG-20261002-K3DY-janelas-sobrepostas/bug.md">BUG-20261002-K3DY</a>. Esses dois deixam de depender da rolagem para serem vistos.</p>
+  </div>
+  <p><b>Fora da correção (Agent Notes):</b></p>
+  <ul>
+    <li>Medição do cronômetro: correta, não muda. A queixa "contar até a transcrição aparecer" é coberta pelo critério 3: o núcleo reflete o ícone e define o estado da janela na mesma chamada síncrona, sem quadro entre os dois.</li>
+    <li>Direção do pedido (<code>abrir</code> sem direção) e medida da âncora: pertencem ao A4MZ.</li>
+    <li>Altura fixa de 160 px no posicionador: pertence ao K3DY.</li>
+    <li>Âncora defasada por mudança de layout sem <code>scroll</code> (reação, mensagem expandida acima): fora do relato; a janela fica visível, talvez deslocada, até a próxima rolagem.</li>
+    <li>Estado <i>concluído</i> no navegador: a página falsa não entrega áudio ao motor, então o teste de navegador chega só a fila, transcrevendo e erro. O concluído usa o mesmo caminho (<code>definirEstado</code> com a âncora gravada na abertura); a conferência final é a aceitação manual no WhatsApp real.</li>
+  </ul>
+
+  <h2>7. Mini-grafo do bug</h2>
+  <svg viewBox="0 0 920 230" width="920" height="230" role="img" aria-label="Mini-grafo do BUG-20261002-IXWO">
+    <line x1="330" y1="115" x2="590" y2="66" stroke="#9e9e9e" stroke-width="1.5"/>
+    <text x="460" y="78" fill="#9e9e9e" font-size="11" text-anchor="middle">related-to (supported)</text>
+    <line x1="330" y1="115" x2="590" y2="166" stroke="#9e9e9e" stroke-width="1.5"/>
+    <text x="460" y="162" fill="#9e9e9e" font-size="11" text-anchor="middle">related-to (supported)</text>
+    <a href="../bug.md"><rect x="40" y="65" width="290" height="100" rx="8" fill="#1e1e1e" stroke="#bb86fc" stroke-width="3"/>
+      <text x="52" y="90" fill="#bb86fc" font-size="13" font-weight="bold">#6 BUG-20261002-IXWO</text>
+      <text x="52" y="112" fill="#e0e0e0" font-size="12">Janela invisível até a rolagem</text>
+      <text x="52" y="132" fill="#ef5350" font-size="11">critical · P0 · active</text>
+      <text x="52" y="152" fill="#81c784" font-size="11">causa confirmed · em correção</text></a>
+    <a href="../../BUG-20261002-A4MZ-janela-longe-do-balao/bug.md"><rect x="590" y="20" width="290" height="90" rx="8" fill="#1e1e1e" stroke="#cf6679" stroke-width="2"/>
+      <text x="602" y="45" fill="#bb86fc" font-size="13" font-weight="bold">#7 BUG-20261002-A4MZ</text>
+      <text x="602" y="67" fill="#e0e0e0" font-size="12">Janela longe do balão</text>
+      <text x="602" y="87" fill="#ffb74d" font-size="11">high · P1 · open</text></a>
+    <a href="../../BUG-20261002-K3DY-janelas-sobrepostas/bug.md"><rect x="590" y="122" width="290" height="90" rx="8" fill="#1e1e1e" stroke="#ffb74d" stroke-width="2"/>
+      <text x="602" y="147" fill="#bb86fc" font-size="13" font-weight="bold">#8 BUG-20261002-K3DY</text>
+      <text x="602" y="169" fill="#e0e0e0" font-size="12">Janelas sobrepostas</text>
+      <text x="602" y="189" fill="#ffb74d" font-size="11">medium · P2 · open</text></a>
+  </svg>
+  <p class="meta">Arestas sólidas: relação promovida a <code>supported</code> nesta investigação (antes <code>proposed</code>). Clique nos nós para abrir o <code>bug.md</code>.</p>
+
+  <h2>8. Matriz de relações</h2>
+  <table>
+    <thead><tr><th>Origem</th><th>Tipo</th><th>Destino</th><th>Estado</th><th>Evidência</th></tr></thead>
+    <tbody>
+      <tr><td><a href="../../BUG-20261002-A4MZ-janela-longe-do-balao/bug.md">BUG-20261002-A4MZ</a></td><td>related-to</td><td><a href="../bug.md">BUG-20261002-IXWO</a></td><td class="ok">supported</td><td>A reprodução do A4MZ depende do contorno do IXWO; ao receber a âncora, a janela foi para a esquerda de um balão sem espaço à direita (evidência parcial do mecanismo do A4MZ).</td></tr>
+      <tr><td><a href="../../BUG-20261002-K3DY-janelas-sobrepostas/bug.md">BUG-20261002-K3DY</a></td><td>related-to</td><td><a href="../bug.md">BUG-20261002-IXWO</a></td><td class="ok">supported</td><td>A sobreposição só é vista depois do contorno do IXWO; altura fixa e âncora ausente nascem na mesma montagem de requisições de <code>recalcularPosicoes</code>.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>9. Ordem sugerida para o encadeamento</h2>
+  <ol>
+    <li><a href="../bug.md">BUG-20261002-IXWO</a> (esta sessão): causa estrutural; sem ele, A4MZ e K3DY só são observáveis com rolagem.</li>
+    <li><a href="../../BUG-20261002-A4MZ-janela-longe-do-balao/bug.md">BUG-20261002-A4MZ</a>: direção do pedido e medida da âncora; exige conferência no WhatsApp real.</li>
+    <li><a href="../../BUG-20261002-K3DY-janelas-sobrepostas/bug.md">BUG-20261002-K3DY</a>: altura real da janela na resolução de colisões; depende da posição correta do A4MZ para ser medido.</li>
+  </ol>
+
+  <h2>10. Próximos passos</h2>
+  <ol>
+    <li>Aprovação deste plano.</li>
+    <li>Gate 1: diff dos testes (CHG-001 a CHG-003), aplicação e prova do vermelho.</li>
+    <li>Gate 2: diff da correção (CHG-004 a CHG-006), aplicação e prova do verde, com a suíte completa e o typecheck.</li>
+    <li>Veredito de spec (recomendação prévia: <code>spec-correta</code>, porque RF-01, RNF-01 e RF-10 já descrevem o certo), fechamento pela closure policy e trava <code>DONE.md</code>.</li>
+  </ol>
+</body>
+</html>

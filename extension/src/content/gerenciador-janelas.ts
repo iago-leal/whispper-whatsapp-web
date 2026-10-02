@@ -1,6 +1,6 @@
 import type { ExibicaoDeTranscricao, EstadoExibicao } from '../dominio/exibicao-de-transcricao.ts';
 import type { CoordenadasAncora } from '../dominio/fonte-de-audio.ts';
-import { calcularPosicoesJanelas } from './posicionador-colisoes.ts';
+import { calcularPosicoesJanelas, type FaixaHorizontal } from './posicionador-colisoes.ts';
 import { criarElementoJanela, atualizarConteudoJanela, aplicarDestaqueJanela, liberarContadorJanela } from './janela-elemento.ts';
 import { CronometroDeEspera } from './cronometro-espera.ts';
 
@@ -24,14 +24,20 @@ export class GerenciadorDeJanelas implements ExibicaoDeTranscricao {
 
   private readonly obterAncora: (idAudio: string) => CoordenadasAncora | null;
 
+  private readonly obterAreaConversa: () => FaixaHorizontal | null;
+
   // A âncora só é notificada na rolagem e no redimensionamento; a abertura a lê de obterAncora, senão
-  // a janela nasce oculta até a primeira rolagem (BUG-20261002-IXWO).
+  // a janela nasce oculta até a primeira rolagem (BUG-20261002-IXWO). A área da conversa é lida a cada
+  // posicionamento: sem ela, a janela cabe na tela inteira e pode cobrir a lista de conversas
+  // (BUG-20261002-A4MZ).
   constructor(
     cronometro: CronometroDeEspera = new CronometroDeEspera(),
-    obterAncora: (idAudio: string) => CoordenadasAncora | null = () => null
+    obterAncora: (idAudio: string) => CoordenadasAncora | null = () => null,
+    obterAreaConversa: () => FaixaHorizontal | null = () => null
   ) {
     this.cronometro = cronometro;
     this.obterAncora = obterAncora;
+    this.obterAreaConversa = obterAreaConversa;
     this.garantirContainer();
   }
 
@@ -55,9 +61,10 @@ export class GerenciadorDeJanelas implements ExibicaoDeTranscricao {
       return;
     }
 
-    // Lida antes de a janela entrar na página: depois, a medição do balão calcularia o estilo da
-    // janela ainda sem posição, e a transição do transform a faria deslizar do canto da tela
+    // Lidas antes de a janela entrar na página: depois, a medição do balão ou da área calcularia o
+    // estilo da janela ainda sem posição, e a transição do transform a faria deslizar do canto da tela
     const ancoraAtual = ancora ?? this.obterAncora(idAudio) ?? undefined;
+    const area = this.obterAreaConversa();
 
     // O estado inicial "Na fila" vale só até o núcleo informar o estado do pedido, no mesmo clique
 
@@ -95,7 +102,7 @@ export class GerenciadorDeJanelas implements ExibicaoDeTranscricao {
       ancora: ancoraAtual
     });
 
-    this.recalcularPosicoes();
+    this.recalcularPosicoes(area);
   }
 
   definirEstado(idAudio: string, estado: EstadoExibicao): void {
@@ -160,7 +167,7 @@ export class GerenciadorDeJanelas implements ExibicaoDeTranscricao {
     };
   }
 
-  recalcularPosicoes(): void {
+  recalcularPosicoes(area: FaixaHorizontal | null = this.obterAreaConversa()): void {
     const requisicoes = Array.from(this.janelas.values()).map((reg) => ({
       idAudio: reg.idAudio,
       direcao: reg.direcao,
@@ -169,7 +176,7 @@ export class GerenciadorDeJanelas implements ExibicaoDeTranscricao {
       ancora: reg.ancora
     }));
 
-    const posicoes = calcularPosicoesJanelas(requisicoes);
+    const posicoes = calcularPosicoesJanelas(requisicoes, area?.direita, area?.esquerda);
     for (const pos of posicoes) {
       const reg = this.janelas.get(pos.idAudio);
       if (reg && reg.elemento) {

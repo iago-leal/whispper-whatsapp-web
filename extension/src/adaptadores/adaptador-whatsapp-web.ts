@@ -13,6 +13,8 @@ import { avaliarSaudeDasEstruturas } from '../content/monitor-degradacao.ts';
 import type { MensagemDetectada } from '../content/detector-mensagens.ts';
 import { aplicarEstadoIcone } from '../content/botao-transcricao.ts';
 import { CronometroDeEspera } from '../content/cronometro-espera.ts';
+import { CONFIGURACAO_ESTRUTURAS } from '../content/configuracao-estruturas.ts';
+import type { FaixaHorizontal } from '../content/posicionador-colisoes.ts';
 
 export class AdaptadorWhatsAppWeb implements FonteDeAudio {
   private mensagens = new Map<string, MensagemDetectada>();
@@ -124,6 +126,16 @@ export class AdaptadorWhatsAppWeb implements FonteDeAudio {
    */
   obterAncora(idAudio: string): CoordenadasAncora | null {
     return this.rastreadorAncoras.obterAncora(idAudio);
+  }
+
+  /**
+   * Bordas horizontais da área da conversa aberta na tela, ou null sem conversa aberta.
+   */
+  obterAreaConversa(): FaixaHorizontal | null {
+    const painel = document.querySelector<HTMLElement>(CONFIGURACAO_ESTRUTURAS.seletores.containerConversa);
+    if (!painel) return null;
+    const { left, right } = painel.getBoundingClientRect();
+    return { esquerda: left, direita: right };
   }
 
   verificarSaude(): StatusSaudeFonte {

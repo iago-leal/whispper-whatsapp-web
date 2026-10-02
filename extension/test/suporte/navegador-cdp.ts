@@ -173,6 +173,12 @@ export class Pagina {
     return this.navegador.enviar("Page.bringToFront", {}, this.sessao);
   }
 
+  // Fixa a tela da página em largura × altura px: os testes de posição medem a geometria do WhatsApp
+  // Web sem depender do tamanho padrão do navegador sem interface.
+  definirTamanho(largura: number, altura: number): Promise<void> {
+    return this.navegador.enviar("Emulation.setDeviceMetricsOverride", { width: largura, height: altura, deviceScaleFactor: 1, mobile: false }, this.sessao);
+  }
+
   async aguardar(expressao: string, prazoMs: number, oQue: string): Promise<void> {
     const limite = Date.now() + prazoMs;
     while (!(await this.avaliar<boolean>(expressao).catch(() => false))) {

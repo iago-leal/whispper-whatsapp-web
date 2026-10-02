@@ -66,3 +66,17 @@ test('GerenciadorDeJanelas lê a âncora da mensagem ao abrir, antes de a janela
   gerenciador.abrir('audio-2', 'enviado', { ...ancora, idAudio: 'audio-2' });
   assert.equal(consultas.length, 1);
 });
+
+// BUG-20261002-A4MZ: a área da conversa limita o espaço lateral da janela. Na abertura, é lida uma vez e
+// antes de a janela existir, pelo mesmo motivo da âncora: lida depois, a medida forçaria o estilo da
+// janela ainda sem posição, e a janela deslizaria do canto da tela até o balão.
+test('GerenciadorDeJanelas lê a área da conversa ao abrir, antes de a janela existir', () => {
+  const leituras: boolean[] = [];
+  const gerenciador: GerenciadorDeJanelas = new GerenciadorDeJanelas(new CronometroDeEspera(), () => null, () => {
+    leituras.push(gerenciador.temJanelaAberta('audio-1'));
+    return { esquerda: 488, direita: 1316 };
+  });
+
+  gerenciador.abrir('audio-1');
+  assert.deepEqual(leituras, [false]);
+});

@@ -37,9 +37,32 @@ function painel(ids: string[], { comListaDeMensagens = true, comPlayer = true, r
   return comListaDeMensagens ? lista : linhas;
 }
 
-function pagina(conversaAberta: string | null): string {
+// Áudios na geometria conferida no WhatsApp Web real em 2026-10-02 (BUG-20261002-A4MZ,
+// evidence/conferencia-whatsapp-real.md): a linha e a mensagem ocupam a largura da área da conversa, e o
+// balão visível (msg-container), de 336 px, fica colado à esquerda nos recebidos e à direita nos
+// enviados. Um espaço separa os dois áudios, para a janela de um não empurrar a do outro (K3DY).
+function conversaComGeometriaReal(): string {
+  const linha = (id: string, alinhamento: string) =>
+    `<div role="row"><div data-id="${id}" data-testid="conv-msg-${id}"><div data-virtualized="false">` +
+    `<div style="display:flex;flex-direction:column;align-items:${alinhamento};padding:6px 57px 6px 62px">` +
+    `<div data-testid="msg-container" style="width:336px;height:62px">${PLAYER}</div></div></div></div></div>`;
+  return `<div data-tab="8" role="application" style="padding-top:60px">` +
+    linha("R", "flex-start") + `<div style="height:240px"></div>` + linha("E", "flex-end") + `</div>`;
+}
+
+// Tela do navegador e largura da lista de conversas, que ocupa a esquerda; a área da conversa fica com o resto.
+interface Tela {
+  largura: number;
+  altura: number;
+  lista: number;
+}
+
+function pagina(conversaAberta: string | null, tela?: Tela): string {
   const main = conversaAberta === null ? "" : `<div id="main">${conversaAberta}</div>`;
-  return `<!doctype html><html><head><meta charset="utf-8"><title>WhatsApp</title></head>` +
+  const estilo = tela
+    ? `<style>body{margin:0}#app{display:flex;height:100vh}#side{flex:none;width:${tela.lista}px}#painel{flex:1;min-width:0}</style>`
+    : "";
+  return `<!doctype html><html><head><meta charset="utf-8"><title>WhatsApp</title>${estilo}</head>` +
     `<body><div id="app"><div id="side"></div><div id="painel">${main}</div></div></body></html>`;
 }
 
@@ -148,20 +171,24 @@ const todosEmErro = `new Promise((resolver) => {
 const FORMATO_DO_CONTADOR = /^\d+ s$/;
 
 // Leitura da janela de um áudio como o usuário a vê (BUG-20261002-IXWO). Visível: sem a classe que
-// a oculta, com a posição aplicada e dentro da tela. Junto ao balão: a 8 px dele, à direita ou à
-// esquerda com os topos alinhados, ou logo abaixo (RF-01 e RF-02 da janela), com tolerância de 4 px.
+// a oculta, com a posição aplicada e dentro da tela. Junto ao balão: a 8 px do balão visível
+// (msg-container), à direita ou à esquerda com os topos alinhados, ou logo abaixo (RF-01 e RF-02 da
+// janela), com tolerância de 4 px. A linha da mensagem não serve de medida: ocupa a largura da conversa
+// (BUG-20261002-A4MZ). Cobre a lista: o retângulo da janela cruza o da lista de conversas.
 interface LeituraDaJanela {
   existe: boolean;
   visivel: boolean;
   junto: "direita" | "esquerda" | "abaixo" | null;
+  cobreLista: boolean;
   texto: string;
 }
 
 const lerJanela = `(id) => {
   const janela = document.querySelector('.whispper-janela[aria-label="Transcrição do áudio ' + id + '"]');
-  if (!janela) return { existe: false, visivel: false, junto: null, texto: "" };
+  if (!janela) return { existe: false, visivel: false, junto: null, cobreLista: false, texto: "" };
   const j = janela.getBoundingClientRect();
-  const b = document.querySelector('#main [data-id="' + id + '"]').getBoundingClientRect();
+  const b = document.querySelector('#main [data-id="' + id + '"] [data-testid="msg-container"]').getBoundingClientRect();
+  const l = document.querySelector("#side").getBoundingClientRect();
   const perto = (a, c) => Math.abs(a - c) <= 4;
   const junto = perto(j.top, b.top) && perto(j.left, b.right + 8) ? "direita"
     : perto(j.top, b.top) && perto(j.right, b.left - 8) ? "esquerda"
@@ -170,6 +197,7 @@ const lerJanela = `(id) => {
     existe: true,
     visivel: !janela.classList.contains("whispper-janela-oculta") && janela.style.transform !== "" && j.bottom > 0 && j.top < innerHeight,
     junto,
+    cobreLista: j.left < l.right && j.right > l.left && j.top < l.bottom && j.bottom > l.top,
     texto: janela.innerText,
   };
 }`;
@@ -235,10 +263,12 @@ test("integração com a conversa aberta no WhatsApp Web", {
   });
 
   // Devolve a página depois que o script de conteúdo rodou: o mundo isolado da extensão nasce na
-  // mesma tarefa em que o script executa, então a avaliação seguinte já o encontra inicializado.
-  async function carregarWhatsApp(conversaAberta: string | null): Promise<Pagina> {
+  // mesma tarefa em que o script executa, então a avaliação seguinte já o encontra inicializado. Com a
+  // tela, fixa o tamanho antes de carregar e põe a lista de conversas ao lado da conversa.
+  async function carregarWhatsApp(conversaAberta: string | null, tela?: Tela): Promise<Pagina> {
     const p = await navegador.abrirPagina("about:blank");
-    await p.navegarSimulado(WHATSAPP, pagina(conversaAberta));
+    if (tela) await p.definirTamanho(tela.largura, tela.altura);
+    await p.navegarSimulado(WHATSAPP, pagina(conversaAberta, tela));
     const limite = Date.now() + 10_000;
     while (!p.mundosIsolados.includes(NOME_DA_EXTENSAO)) {
       assert.ok(Date.now() < limite, "o script de conteúdo não entrou na página em 10 s");
@@ -385,5 +415,41 @@ test("integração com a conversa aberta no WhatsApp Web", {
     await rolarPara(0);
     await p.aguardar(janelaJuntoAoBalao("A"), 2000, "a janela reaparecer junto ao balão");
     assert.equal((await lerA()).texto, texto, "a janela voltou com outro conteúdo");
+  });
+
+  // BUG-20261002-A4MZ: a âncora media a linha da mensagem, da largura da conversa, e o espaço livre era
+  // contado da borda da tela; a janela abria à esquerda da linha, sobre a lista de conversas (x = 160 no
+  // print). Tela e lista com as medidas do print do relato.
+  await t.test("reprodução: na geometria do WhatsApp real, a janela abre ao lado do balão visível, dentro da área da conversa: à direita do recebido e à esquerda do enviado (RF-01 da janela)", async () => {
+    const p = await carregarWhatsApp(conversaComGeometriaReal(), { largura: 1316, altura: 806, lista: 488 });
+    await p.trazerParaFrente();
+    const lerJanelaDe = (id: string) => p.avaliar<LeituraDaJanela>(`(${lerJanela})("${id}")`);
+
+    await p.avaliar(clicar("R"));
+    await p.aguardar(`(${lerJanela})("R").visivel`, 2000, "a janela do áudio recebido ficar visível");
+    const recebido = await lerJanelaDe("R");
+    assert.equal(recebido.junto, "direita", `a janela do recebido não abriu à direita do balão: ${JSON.stringify(recebido)}`);
+    assert.equal(recebido.cobreLista, false, "a janela do recebido cobre a lista de conversas");
+
+    await p.avaliar(clicar("E"));
+    await p.aguardar(`(${lerJanela})("E").visivel`, 2000, "a janela do áudio enviado ficar visível");
+    const enviado = await lerJanelaDe("E");
+    assert.equal(enviado.junto, "esquerda", `a janela do enviado não abriu à esquerda do balão: ${JSON.stringify(enviado)}`);
+    assert.equal(enviado.cobreLista, false, "a janela do enviado cobre a lista de conversas");
+  });
+
+  // RF-02 da janela: sem espaço ao lado do balão dentro da área da conversa, a janela abre abaixo dele.
+  // Na área de 600 px do critério de aceite, o espaço que a tela teria à esquerda é o da lista.
+  await t.test("com a área da conversa reduzida a 600 px, a janela abre abaixo do balão, sem cobri-lo nem cobrir a lista de conversas (RF-02 da janela)", async () => {
+    const p = await carregarWhatsApp(conversaComGeometriaReal(), { largura: 488 + 600, altura: 806, lista: 488 });
+    await p.trazerParaFrente();
+
+    for (const id of ["R", "E"]) {
+      await p.avaliar(clicar(id));
+      await p.aguardar(`(${lerJanela})("${id}").visivel`, 2000, `a janela do áudio ${id} ficar visível`);
+      const leitura = await p.avaliar<LeituraDaJanela>(`(${lerJanela})("${id}")`);
+      assert.equal(leitura.junto, "abaixo", `a janela do áudio ${id} não abriu abaixo do balão: ${JSON.stringify(leitura)}`);
+      assert.equal(leitura.cobreLista, false, `a janela do áudio ${id} cobre a lista de conversas`);
+    }
   });
 });

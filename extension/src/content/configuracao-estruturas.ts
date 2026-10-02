@@ -17,6 +17,9 @@ export interface RegrasDeEstrutura {
     containerMensagens: string;
     // Balão individual de mensagem
     balaoMensagem: string;
+    // Contorno visível do balão, dentro dele: o balão ocupa a largura da conversa, e a janela abre ao
+    // lado do contorno (RF-01 da janela)
+    contornoBalao: string;
     // Elemento que caracteriza uma mensagem como sendo de voz/áudio
     elementoMensagemVoz: string;
     // Elemento HTML nativo <audio> embutido no player
@@ -48,12 +51,13 @@ export interface RegrasDeEstrutura {
 }
 
 export const CONFIGURACAO_ESTRUTURAS: RegrasDeEstrutura = {
-  versao: '1.1.0',
-  verificadoEm: '2026-10-01',
+  versao: '1.2.0',
+  verificadoEm: '2026-10-02',
   seletores: {
     containerConversa: '#main',
     containerMensagens: '[role="application"], div[data-tab="8"]',
     balaoMensagem: '[data-id], div[role="row"]',
+    contornoBalao: '[data-testid="msg-container"]',
     // Mensagens de áudio no WhatsApp Web contêm tags <audio> ou botões com controles de áudio
     elementoMensagemVoz: 'audio, [data-testid="audio-player"], button[aria-label*="Reproduzir"], button[aria-label*="Play"]',
     tagAudio: 'audio',

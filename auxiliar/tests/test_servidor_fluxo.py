@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pytest
 
 from whispper_motor import VERSAO_APP

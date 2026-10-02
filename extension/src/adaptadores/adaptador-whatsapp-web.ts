@@ -119,6 +119,13 @@ export class AdaptadorWhatsAppWeb implements FonteDeAudio {
     return this.rastreadorAncoras.aoMudarAncora(callback);
   }
 
+  /**
+   * Retângulo e visibilidade atuais do balão da mensagem, ou null se ela não foi detectada.
+   */
+  obterAncora(idAudio: string): CoordenadasAncora | null {
+    return this.rastreadorAncoras.obterAncora(idAudio);
+  }
+
   verificarSaude(): StatusSaudeFonte {
     return avaliarSaudeDasEstruturas();
   }

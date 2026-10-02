@@ -22,8 +22,16 @@ export class GerenciadorDeJanelas implements ExibicaoDeTranscricao {
 
   private readonly cronometro: CronometroDeEspera;
 
-  constructor(cronometro: CronometroDeEspera = new CronometroDeEspera()) {
+  private readonly obterAncora: (idAudio: string) => CoordenadasAncora | null;
+
+  // A âncora só é notificada na rolagem e no redimensionamento; a abertura a lê de obterAncora, senão
+  // a janela nasce oculta até a primeira rolagem (BUG-20261002-IXWO).
+  constructor(
+    cronometro: CronometroDeEspera = new CronometroDeEspera(),
+    obterAncora: (idAudio: string) => CoordenadasAncora | null = () => null
+  ) {
     this.cronometro = cronometro;
+    this.obterAncora = obterAncora;
     this.garantirContainer();
   }
 
@@ -46,6 +54,10 @@ export class GerenciadorDeJanelas implements ExibicaoDeTranscricao {
       this.destacar(idAudio);
       return;
     }
+
+    // Lida antes de a janela entrar na página: depois, a medição do balão calcularia o estilo da
+    // janela ainda sem posição, e a transição do transform a faria deslizar do canto da tela
+    const ancoraAtual = ancora ?? this.obterAncora(idAudio) ?? undefined;
 
     // O estado inicial "Na fila" vale só até o núcleo informar o estado do pedido, no mesmo clique
 
@@ -80,7 +92,7 @@ export class GerenciadorDeJanelas implements ExibicaoDeTranscricao {
       elemento: el,
       estado: estadoInicial,
       direcao,
-      ancora
+      ancora: ancoraAtual
     });
 
     this.recalcularPosicoes();

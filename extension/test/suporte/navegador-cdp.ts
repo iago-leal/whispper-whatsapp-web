@@ -167,6 +167,12 @@ export class Pagina {
     return this.avaliar(`document.getElementById(${JSON.stringify(id)}).click()`, true);
   }
 
+  // Põe a aba em primeiro plano. A aba aberta por Target.createTarget nasce em segundo plano e não
+  // desenha quadros, e sem quadro a página não dispara scroll, resize nem requestAnimationFrame.
+  trazerParaFrente(): Promise<void> {
+    return this.navegador.enviar("Page.bringToFront", {}, this.sessao);
+  }
+
   async aguardar(expressao: string, prazoMs: number, oQue: string): Promise<void> {
     const limite = Date.now() + prazoMs;
     while (!(await this.avaliar<boolean>(expressao).catch(() => false))) {

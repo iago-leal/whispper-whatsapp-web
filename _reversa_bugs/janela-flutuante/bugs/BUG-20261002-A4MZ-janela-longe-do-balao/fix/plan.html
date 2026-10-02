@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plano de correção · #7 BUG-20261002-A4MZ</title>
+  <style>
+body { background-color: #121212; color: #e0e0e0; font-family: sans-serif; padding: 20px; max-width: 1100px; margin: 0 auto; line-height: 1.5; }
+a { color: #bb86fc; text-decoration: none; } a:hover { text-decoration: underline; }
+table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+th, td { border: 1px solid #333; padding: 8px 10px; text-align: left; vertical-align: top; }
+th { background-color: #1e1e1e; }
+.card { background-color: #1e1e1e; padding: 12px 16px; border-radius: 8px; margin: 0 12px 12px 0; display: inline-block; min-width: 120px; }
+.card b { display: block; font-size: 1.3em; }
+.meta { color: #9e9e9e; font-size: 0.9em; }
+.tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 0.85em; background: #2a2a2a; border: 1px solid #444; }
+.ok { color: #81c784; } .alerta { color: #ffb74d; } .erro { color: #ef5350; } .novo { color: #64b5f6; }
+.aviso { background: #2a2210; border-left: 4px solid #ffb74d; padding: 10px 14px; border-radius: 6px; }
+code { background: #1e1e1e; padding: 1px 5px; border-radius: 4px; }
+ol li, ul li { margin-bottom: 4px; }
+svg { background: #181818; border-radius: 8px; max-width: 100%; }
+pre.bloco { background: #0d0d0d; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.82em; line-height: 1.35; }
+  </style>
+</head>
+<body>
+  <h1>Plano de correção · #7 BUG-20261002-A4MZ</h1>
+  <p class="meta">Contexto <code>janela-flutuante</code> · 2026-10-02 · gerado por /reversa-debugger-fix antes de qualquer alteração no projeto · revisão 2 (leitura da área antes de a janela existir; CHG-004 novo) · <a href="../bug.md">bug.md</a></p>
+  <div>
+    <div class="card"><b class="alerta">high</b>Severidade</div>
+    <div class="card"><b class="alerta">P1</b>Prioridade</div>
+    <div class="card"><b class="ok">confirmed</b>Causa raiz</div>
+    <div class="card"><b class="ok">baixa</b>Risco da mudança</div>
+    <div class="card"><b>3/3</b>Reprodução</div>
+    <div class="card"><b>local-software</b>Closure policy</div>
+  </div>
+
+  <h2>1. Defeito</h2>
+  <p>A janela flutuante não abre ao lado do balão de voz: abre à esquerda da área da conversa, sobre a lista de conversas. No print do usuário (tela de 1316 px), as janelas ficam entre x ≈ 160 e 480 e os balões entre x ≈ 550 e 885. O usuário precisa procurar o texto longe do áudio, e a janela cobre a lista.</p>
+  <p>Spec efetiva violada: <code>janela-flutuante.md</code> RF-01 (ao lado do balão, <i>no espaço livre da área da conversa</i>, a 8 px e com os topos alinhados) e RF-02 (sem espaço lateral, abaixo do balão); <code>integracao-whatsapp-web.md</code> RF-10 (a âncora é o retângulo da mensagem na tela).</p>
+
+  <h2>2. Causa raiz <span class="tag ok">confirmed</span></h2>
+  <p>Duas falhas encadeadas, ambas necessárias para o sintoma.</p>
+  <ol>
+    <li><b>A âncora mede a linha, não o balão.</b> <code>baloesComVoz</code> sobe do player ao <code>conv-msg[data-id]</code>, que carrega o identificador (RF-04) e vira <code>elementoBalao</code>. O rastreador mede esse elemento. No WhatsApp real ele ocupa toda a área da conversa (x 551 a 1624, 1073 de 1073 px); o balão visível é o <code>[data-testid="msg-container"]</code>, de 336 px. A configuração não tem seletor para ele.</li>
+    <li><b>O espaço lateral é medido contra a tela, não contra a área da conversa.</b> Sem espaço à direita da linha, <code>calcularPosicoesJanelas</code> mede o espaço à esquerda a partir de x = 0, contando a lista de conversas como livre, e põe a janela em <code>ancora.x − 320 − 8</code>: 160 no print, 223 na conferência real.</li>
+  </ol>
+  <p>Corrigir só o item 1 não basta: com a área da conversa reduzida a 600 px (critério 3), o recebido não teria 320 px à direita e cairia de novo à esquerda, em x = 613 − 328 = 285, sobre a lista.</p>
+  <p><b>Hipótese refutada como causa:</b> a direção não informada. Com a âncora da linha, o ramo <code>enviado</code> dá o mesmo x; com a âncora no balão e o espaço medido na área, as duas mensagens ficam junto ao balão mesmo com a direção lida como <code>recebido</code>, porque o ramo do lado oposto as acomoda.</p>
+  <p><b>Evidências:</b></p>
+  <ul>
+    <li><a href="../evidence/reproduction.md">evidence/reproduction.md</a>: 3/3 no Chrome for Testing, com a geometria do print, a janela em x 160 a 482 sobre a lista (0 a 488), para o recebido e o enviado.</li>
+    <li><a href="../evidence/conferencia-whatsapp-real.md">evidence/conferencia-whatsapp-real.md</a>: no WhatsApp real, as cinco mensagens de voz visíveis têm <code>conv-msg[data-id]</code> de 551 a 1624 e <code>msg-container</code> de 336 px, colado à esquerda (recebidas) ou à direita (enviada). Leitura só de estrutura, sem texto de mensagem.</li>
+  </ul>
+  <p>Origem: <code>bab1e53</code> (primeira implementação). Não há commit bom conhecido: o <code>git bisect</code> não se aplica. O defeito era mascarado pelo <a href="../../BUG-20261002-IXWO-janela-invisivel/bug.md">IXWO</a> até a rolagem.</p>
+
+  <h2>3. Estratégia: correção direta</h2>
+  <ol>
+    <li><b>Âncora no contorno visível.</b> Seletor novo <code>contornoBalao: '[data-testid="msg-container"]'</code> no módulo de configuração, único lugar que conhece a estrutura do WhatsApp. O rastreador mede esse contorno dentro do balão registrado, buscando-o a cada medida, porque a página recria o conteúdo virtualizado; se o seletor deixar de casar, recua para a medida atual. O <code>elementoBalao</code> continua o <code>conv-msg</code>: identificador, marcador e ponto de injeção do ícone não mudam.</li>
+    <li><b>Espaço lateral dentro da área da conversa.</b> <code>calcularPosicoesJanelas</code> recebe a borda esquerda da área, além da direita, e mede os dois lados e o recuo da posição abaixo entre elas. O adaptador fornece a faixa horizontal do <code>#main</code> (<code>obterAreaConversa</code>); o gerenciador a recebe por função injetada, como já recebe a âncora desde o IXWO, e a lê a cada recálculo, de modo que redimensionar ou abrir o painel lateral do contato atualiza o limite. Na abertura, a área é lida <b>antes</b> de a janela entrar na página, como a âncora: lida depois, a medida forçaria o estilo da janela ainda sem posição, e a transição a faria deslizar do canto da tela até o balão (achado na validação isolada da revisão 1).</li>
+  </ol>
+  <p>Por que assim: as portas de domínio e o núcleo ficam intactos; a geometria continua assunto do script de conteúdo, e a estrutura do WhatsApp continua isolada na configuração. Escolhida pelo usuário entre correção direta e debate.</p>
+
+  <h2>4. Correction Change Set proposto</h2>
+  <table>
+    <thead><tr><th>CHG</th><th>Tipo</th><th>Artefato</th><th>Propósito</th><th>Gate</th></tr></thead>
+    <tbody>
+      <tr><td>CHG-001</td><td>test</td><td><code>extension/test/suporte/navegador-cdp.ts</code></td><td><code>Pagina.definirTamanho(largura, altura)</code>: fixa a tela do navegador de teste, para medir a geometria do print e a área de 600 px</td><td>1</td></tr>
+      <tr><td>CHG-002</td><td>test</td><td><code>extension/test/integracao-conversa.test.ts</code></td><td>página com a geometria real (lista de 488 px, balão de 336 px dentro da linha da largura da conversa); <code>lerJanela</code> passa a medir o balão visível e a dizer se a janela cobre a lista; reprodução (recebido à direita, enviado à esquerda) e regressão do RF-02 (área de 600 px)</td><td>1</td></tr>
+      <tr><td>CHG-003</td><td>test</td><td><code>extension/test/posicionador-colisoes.test.ts</code></td><td>regressão unitária: com a área da conversa limitada, sem espaço lateral dentro dela, a janela abre abaixo do balão e não sai da área</td><td>1</td></tr>
+      <tr><td>CHG-004</td><td>test</td><td><code>extension/test/gerenciador-janelas.test.ts</code></td><td>regressão unitária: a abertura lê a área da conversa uma vez, antes de a janela existir</td><td>1</td></tr>
+      <tr><td>CHG-005</td><td>code</td><td><code>extension/src/content/configuracao-estruturas.ts</code></td><td>seletor <code>contornoBalao</code>; versão 1.2.0, verificada em 2026-10-02</td><td>2</td></tr>
+      <tr><td>CHG-006</td><td>code</td><td><code>extension/src/content/rastreador-ancora.ts</code></td><td><code>obterAncora</code> mede o contorno visível dentro do balão, com recuo ao balão</td><td>2</td></tr>
+      <tr><td>CHG-007</td><td>code</td><td><code>extension/src/content/posicionador-colisoes.ts</code></td><td>tipo <code>FaixaHorizontal</code>; terceiro parâmetro <code>esquerdaDaArea</code> (padrão 0); espaço à esquerda e recuo da posição abaixo medidos a partir dele</td><td>2</td></tr>
+      <tr><td>CHG-008</td><td>code</td><td><code>extension/src/content/gerenciador-janelas.ts</code></td><td>construtor aceita a fonte da área da conversa; <code>abrir</code> a lê antes de criar a janela; <code>recalcularPosicoes</code> a repassa ao posicionador</td><td>2</td></tr>
+      <tr><td>CHG-009</td><td>code</td><td><code>extension/src/adaptadores/adaptador-whatsapp-web.ts</code></td><td><code>obterAreaConversa()</code>: faixa horizontal do <code>containerConversa</code>, ou null sem conversa aberta</td><td>2</td></tr>
+      <tr><td>CHG-010</td><td>code</td><td><code>extension/src/content/index.ts</code></td><td>liga o gerenciador a <code>adaptador.obterAreaConversa</code></td><td>2</td></tr>
+    </tbody>
+  </table>
+  <p class="meta">Sem <code>data-repair</code>: nada é persistido; a janela vive só na aba. Os testes atuais do posicionador não mudam: a assinatura nova é compatível.</p>
+
+  <h2>5. Testes planejados</h2>
+  <table>
+    <thead><tr><th>Teste</th><th>Tipo</th><th>O que prova</th><th>Hoje</th></tr></thead>
+    <tbody>
+      <tr><td>Navegador: <i>reprodução: na geometria do WhatsApp real, a janela abre ao lado do balão visível, dentro da área da conversa: à direita do recebido e à esquerda do enviado</i></td><td>reprodução</td><td>Critérios 1, 2, 4 e 5. Tela de 1316 × 806, lista de 488 px, um recebido e um enviado com balões de 336 px dentro de linhas da largura da conversa, como na conferência. A janela do recebido fica a 8 px à direita do balão visível, a do enviado a 8 px à esquerda, topos alinhados (± 4 px), nenhuma sobre a lista.</td><td class="erro">falha (x = 160)</td></tr>
+      <tr><td>Navegador: <i>com a área da conversa reduzida a 600 px, a janela abre abaixo do balão, sem cobri-lo nem cobrir a lista de conversas (RF-02)</i></td><td>regressão</td><td>Critérios 3 e 4: o limite é a área da conversa, e não a tela; a correção da âncora sozinha não passaria aqui.</td><td class="erro">falha</td></tr>
+      <tr><td>Unitário: <i>calcularPosicoesJanelas mede o espaço lateral dentro da área da conversa</i></td><td>regressão</td><td>O ramo do lado esquerdo não conta a lista como espaço livre, e a posição abaixo fica entre as bordas da área.</td><td class="erro">falha</td></tr>
+      <tr><td>Unitário: <i>o gerenciador lê a área da conversa ao abrir, antes de a janela existir</i></td><td>regressão</td><td>Uma leitura só, com a janela ainda inexistente: a ordem que impede o deslize do canto da tela.</td><td class="erro">falha</td></tr>
+      <tr><td>Navegador: testes do IXWO (visível sem rolagem; rolagem leva a janela junto)</td><td>guarda</td><td>A janela continua junto ao balão na abertura e na rolagem, agora medida contra o balão visível. Ficam vermelhos até o Gate 2, porque hoje a janela se alinha à linha, e não ao balão.</td><td class="erro">falha até o Gate 2</td></tr>
+    </tbody>
+  </table>
+  <p>Depois do Gate 2: suíte completa (<code>npm test</code>) e <code>npm run typecheck</code> verdes. Aceitação no WhatsApp real: um recebido e um enviado, conferidos por você.</p>
+
+  <h2>6. Riscos e o que fica de fora</h2>
+  <p><b>change_risk: baixa.</b> Só o script de conteúdo; sem contrato externo, sem dados, sem concorrência nova; dependência nova da estrutura do WhatsApp isolada na configuração e com recuo; reversível por revert.</p>
+  <div class="aviso">
+    <p><b>Defeito à parte, achado na conferência:</b> o detector procura a classe <code>message-out</code> e o ícone <code>msg-dblcheck</code>, que não existem no DOM atual; toda mensagem é lida como <code>recebido</code>, e o núcleo abre a janela sem direção. Não altera a posição depois desta correção, mas distorce os contadores anônimos por direção. Proposta: registrar como bug próprio no contexto <code>integracao-whatsapp-web</code>.</p>
+  </div>
+  <p><b>Fora da correção (Agent Notes):</b></p>
+  <ul>
+    <li>Direção da mensagem, no detector e no núcleo: bug próprio, como acima.</li>
+    <li>Altura fixa de 160 px na colisão vertical, e colisão aplicada entre janelas de lados opostos, que não se sobrepõem: pertencem ao <a href="../../BUG-20261002-K3DY-janelas-sobrepostas/bug.md">K3DY</a>.</li>
+    <li>A janela desenhada tem 322 px (borda de 1 px fora dos 320 do CSS), e o cálculo usa 320: à esquerda do balão a folga fica em 6 px, dentro da tolerância de 4 px do RF-01.</li>
+    <li>Limite vertical da área da conversa (janela abaixo do último balão passando do rodapé): fora do relato.</li>
+  </ul>
+
+  <h2>7. Mini-grafo do bug</h2>
+  <svg viewBox="0 0 920 230" width="920" height="230" role="img" aria-label="Mini-grafo do BUG-20261002-A4MZ">
+    <line x1="330" y1="115" x2="590" y2="66" stroke="#81c784" stroke-width="2"/>
+    <text x="460" y="78" fill="#81c784" font-size="11" text-anchor="middle">related-to (confirmed)</text>
+    <line x1="330" y1="115" x2="590" y2="166" stroke="#9e9e9e" stroke-width="1.5"/>
+    <text x="460" y="162" fill="#9e9e9e" font-size="11" text-anchor="middle">related-to (supported)</text>
+    <a href="../bug.md"><rect x="40" y="65" width="290" height="100" rx="8" fill="#1e1e1e" stroke="#bb86fc" stroke-width="3"/>
+      <text x="52" y="90" fill="#bb86fc" font-size="13" font-weight="bold">#7 BUG-20261002-A4MZ</text>
+      <text x="52" y="112" fill="#e0e0e0" font-size="12">Janela longe do balão</text>
+      <text x="52" y="132" fill="#ffb74d" font-size="11">high · P1 · active</text>
+      <text x="52" y="152" fill="#81c784" font-size="11">causa confirmed · em correção</text></a>
+    <a href="../../BUG-20261002-IXWO-janela-invisivel/bug.md"><rect x="590" y="20" width="290" height="90" rx="8" fill="#1e1e1e" stroke="#81c784" stroke-width="2"/>
+      <text x="602" y="45" fill="#bb86fc" font-size="13" font-weight="bold">#6 BUG-20261002-IXWO</text>
+      <text x="602" y="67" fill="#e0e0e0" font-size="12">Janela invisível até a rolagem</text>
+      <text x="602" y="87" fill="#81c784" font-size="11">critical · P0 · resolved (travado)</text></a>
+    <a href="../../BUG-20261002-K3DY-janelas-sobrepostas/bug.md"><rect x="590" y="122" width="290" height="90" rx="8" fill="#1e1e1e" stroke="#ffb74d" stroke-width="2"/>
+      <text x="602" y="147" fill="#bb86fc" font-size="13" font-weight="bold">#8 BUG-20261002-K3DY</text>
+      <text x="602" y="169" fill="#e0e0e0" font-size="12">Janelas sobrepostas</text>
+      <text x="602" y="189" fill="#ffb74d" font-size="11">medium · P2 · open</text></a>
+  </svg>
+  <p class="meta">Verde: relação promovida a <code>confirmed</code> nesta investigação. Cinza: relação nova, <code>supported</code>. Clique nos nós para abrir o <code>bug.md</code>.</p>
+
+  <h2>8. Matriz de relações</h2>
+  <table>
+    <thead><tr><th>Origem</th><th>Tipo</th><th>Destino</th><th>Estado</th><th>Evidência</th></tr></thead>
+    <tbody>
+      <tr><td><a href="../bug.md">BUG-20261002-A4MZ</a></td><td>related-to</td><td><a href="../../BUG-20261002-IXWO-janela-invisivel/bug.md">BUG-20261002-IXWO</a></td><td class="ok">confirmed</td><td>Com o IXWO corrigido, a âncora chega na abertura e leva a janela direto para x = 160: o IXWO mascarava o A4MZ, e os dois passam pela âncora lida em <code>recalcularPosicoes</code>.</td></tr>
+      <tr><td><a href="../bug.md">BUG-20261002-A4MZ</a></td><td>related-to</td><td><a href="../../BUG-20261002-K3DY-janelas-sobrepostas/bug.md">BUG-20261002-K3DY</a></td><td class="ok">supported</td><td>Na reprodução, a janela do enviado desce para y = 228 = 60 + 160 + 8, pela altura fixa do K3DY; os dois vivem em <code>calcularPosicoesJanelas</code>, o A4MZ no eixo horizontal e o K3DY no vertical.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>9. Ordem sugerida para o encadeamento</h2>
+  <ol>
+    <li><a href="../../BUG-20261002-IXWO-janela-invisivel/bug.md">BUG-20261002-IXWO</a>: resolvido e travado.</li>
+    <li><a href="../bug.md">BUG-20261002-A4MZ</a> (esta sessão): posição horizontal; o K3DY só se mede direito com as janelas no lugar.</li>
+    <li><a href="../../BUG-20261002-K3DY-janelas-sobrepostas/bug.md">BUG-20261002-K3DY</a>: altura real da janela e colisão só entre janelas que se sobrepõem.</li>
+  </ol>
+
+  <h2>10. Próximos passos</h2>
+  <ol>
+    <li>Aprovação deste plano.</li>
+    <li>Gate 1: diff dos testes (CHG-001 a CHG-004), aplicação e prova do vermelho.</li>
+    <li>Gate 2: diff da correção (CHG-005 a CHG-010), aplicação e prova do verde, com a suíte completa e o typecheck.</li>
+    <li>Aceitação no WhatsApp real, veredito de spec (recomendação prévia: <code>spec-correta</code>, porque RF-01 já diz "no espaço livre da área da conversa"), fechamento pela closure policy e trava <code>DONE.md</code>.</li>
+  </ol>
+</body>
+</html>

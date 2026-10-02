@@ -1,0 +1,50 @@
+--- a/extension/src/content/posicionador-colisoes.ts
++++ b/extension/src/content/posicionador-colisoes.ts
+@@ -8,6 +8,12 @@
+   ancora?: CoordenadasAncora;
+ }
+ 
++// Bordas horizontais, em px da tela, da área em que a janela deve caber
++export interface FaixaHorizontal {
++  esquerda: number;
++  direita: number;
++}
++
+ export interface PosicaoCalculada {
+   idAudio: string;
+   x: number;
+@@ -20,10 +26,13 @@
+ 
+ /**
+  * Calcula as coordenadas de tela para cada janela aberta, resolvendo colisões verticais.
++ * O espaço livre ao lado do balão é medido entre as bordas da área da conversa (RF-01 da janela); sem
++ * elas, vale a tela inteira.
+  */
+ export function calcularPosicoesJanelas(
+   requisicoes: RequisicaoPosicionamento[],
+-  larguraViewport: number = typeof window !== 'undefined' ? window.innerWidth : 1200
++  direitaDaArea: number = typeof window !== 'undefined' ? window.innerWidth : 1200,
++  esquerdaDaArea: number = 0
+ ): PosicaoCalculada[] {
+   // Ordena verticalmente pela posição do balão no documento
+   const ordenadas = [...requisicoes].sort((a, b) => {
+@@ -52,8 +61,8 @@
+     let y = ancora.y;
+ 
+     // Avalia espaço disponível nas laterais
+-    const espacoDireita = larguraViewport - (ancora.x + ancora.largura + GAP);
+-    const espacoEsquerda = ancora.x - GAP;
++    const espacoDireita = direitaDaArea - (ancora.x + ancora.largura + GAP);
++    const espacoEsquerda = ancora.x - GAP - esquerdaDaArea;
+ 
+     if (direcao === 'recebido' && espacoDireita >= largura) {
+       x = ancora.x + ancora.largura + GAP;
+@@ -65,7 +74,7 @@
+       x = ancora.x - largura - GAP;
+     } else {
+       // Fallback: abaixo do balão sem sobrepor
+-      x = Math.max(GAP, Math.min(ancora.x, larguraViewport - largura - GAP));
++      x = Math.max(esquerdaDaArea + GAP, Math.min(ancora.x, direitaDaArea - largura - GAP));
+       y = ancora.y + ancora.altura + GAP;
+     }
+ 

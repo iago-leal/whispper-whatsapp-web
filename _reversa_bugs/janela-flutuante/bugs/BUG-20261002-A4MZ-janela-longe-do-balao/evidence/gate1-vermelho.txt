@@ -1,0 +1,141 @@
+✔ GerenciadorDeJanelas abre janela e atualiza estados corretamente (1.761333ms)
+✔ GerenciadorDeJanelas respeita limite máximo de 20 janelas (0.373333ms)
+✔ GerenciadorDeJanelas lê a âncora da mensagem ao abrir, antes de a janela existir (0.835583ms)
+✖ GerenciadorDeJanelas lê a área da conversa ao abrir, antes de a janela existir (0.732666ms)
+▶ integração com a conversa aberta no WhatsApp Web
+  ✔ reprodução: a página carrega sem conversa e o ícone aparece em até 500 ms quando a conversa abre (RF-01, RF-03) (563.541459ms)
+  ✔ reprodução no WhatsApp real: o player montado depois do balão recebe o ícone em até 500 ms (RF-01, RF-03) (2162.300375ms)
+  ✔ trocar de conversa e voltar mantém exatamente um ícone por mensagem de voz (RF-02, RF-11) (97.90025ms)
+  ✔ sem conversa aberta não há aviso de degradação (EC-10) (96.097208ms)
+  ✔ conversa sem a lista de mensagens fica degradada e sem ícone, e a seguinte volta a receber (RF-11, RF-12) (2107.069ms)
+  ✔ o clique faz o ícone pulsar com contador e, sem motor, passa ao erro sem contador (RF-01, RF-02 da feature 006) (143.155541ms)
+  ✔ em 20 cliques, ao menos 95% dos ícones pulsam em até 100 ms (RF-01 da feature 006) (174.676042ms)
+  ✖ reprodução: sem rolagem, a janela fica visível junto ao balão em até 150 ms do clique e mostra o erro quando o ícone o indica (RF-01, RF-06 e RNF-01 da janela) (107.259042ms)
+  ✖ rolar a conversa leva a janela junto, oculta-a com o balão fora da tela e a reexibe com o mesmo texto ao voltar (RF-03 da janela) (2160.688667ms)
+  ✖ reprodução: na geometria do WhatsApp real, a janela abre ao lado do balão visível, dentro da área da conversa: à direita do recebido e à esquerda do enviado (RF-01 da janela) (165.918208ms)
+  ✖ com a área da conversa reduzida a 600 px, a janela abre abaixo do balão, sem cobri-lo nem cobrir a lista de conversas (RF-02 da janela) (125.609916ms)
+✖ integração com a conversa aberta no WhatsApp Web (9419.183458ms)
+✔ calcularPosicoesJanelas posiciona janela ao lado da âncora em espaço suficiente (0.556459ms)
+✔ calcularPosicoesJanelas desloca verticalmente janela para resolver colisão (0.296083ms)
+✔ calcularPosicoesJanelas usa fallback abaixo do balão quando espaço lateral for insuficiente (0.121083ms)
+✖ calcularPosicoesJanelas mede o espaço lateral dentro da área da conversa e, sem ele, abre abaixo do balão (2.290583ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 13
+ℹ fail 7
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14609.091792
+
+✖ failing tests:
+
+test at test/gerenciador-janelas.test.ts:73:1
+✖ GerenciadorDeJanelas lê a área da conversa ao abrir, antes de a janela existir (0.732666ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   false
+  - ]
+  
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/gerenciador-janelas.test.ts:81:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ false ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at test/integracao-conversa.test.ts:373:11
+✖ reprodução: sem rolagem, a janela fica visível junto ao balão em até 150 ms do clique e mostra o erro quando o ícone o indica (RF-01, RF-06 e RNF-01 da janela) (107.259042ms)
+  AssertionError [ERR_ASSERTION]: a janela ficou longe do balão: {"ms":2,"icone":"transcrevendo","existe":true,"visivel":true,"junto":null,"cobreLista":false,"texto":"WHISPPER\n×\nTranscrevendo…\n0 s\nTranscrição na fila"}
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/integracao-conversa.test.ts:388:14)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/integracao-conversa.test.ts:373:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: null,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at test/integracao-conversa.test.ts:400:11
+✖ rolar a conversa leva a janela junto, oculta-a com o balão fora da tela e a reexibe com o mesmo texto ao voltar (RF-03 da janela) (2160.688667ms)
+  Error: 2 s esperando a janela acompanhar o balão na rolagem
+      at Pagina.aguardar (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/suporte/navegador-cdp.ts:186:38)
+      at async TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/integracao-conversa.test.ts:409:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/integracao-conversa.test.ts:400:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at test/integracao-conversa.test.ts:423:11
+✖ reprodução: na geometria do WhatsApp real, a janela abre ao lado do balão visível, dentro da área da conversa: à direita do recebido e à esquerda do enviado (RF-01 da janela) (165.918208ms)
+  AssertionError [ERR_ASSERTION]: a janela do recebido não abriu à direita do balão: {"existe":true,"visivel":true,"junto":null,"cobreLista":true,"texto":"WHISPPER\n×\nErro: MOTOR_INDISPONIVEL\nFalhou após 0 s\nTentar de novo\nErro na transcrição"}
+  
+  null !== 'direita'
+  
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/integracao-conversa.test.ts:431:12)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/integracao-conversa.test.ts:423:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'direita',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/integracao-conversa.test.ts:443:11
+✖ com a área da conversa reduzida a 600 px, a janela abre abaixo do balão, sem cobri-lo nem cobrir a lista de conversas (RF-02 da janela) (125.609916ms)
+  AssertionError [ERR_ASSERTION]: a janela do áudio R não abriu abaixo do balão: {"existe":true,"visivel":true,"junto":null,"cobreLista":true,"texto":"WHISPPER\n×\nErro: MOTOR_INDISPONIVEL\nFalhou após 0 s\nTentar de novo\nErro na transcrição"}
+  
+  null !== 'abaixo'
+  
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/integracao-conversa.test.ts:451:14)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/integracao-conversa.test.ts:443:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'abaixo',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/posicionador-colisoes.test.ts:73:1
+✖ calcularPosicoesJanelas mede o espaço lateral dentro da área da conversa e, sem ele, abre abaixo do balão (2.290583ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  222 !== 550
+  
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/posicionador-colisoes.test.ts:88:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 222,
+    expected: 550,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

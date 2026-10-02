@@ -1,0 +1,70 @@
+ÁUDIO RECEBIDO (R) {
+ "tela": 1316,
+ "side": {
+  "x": 0,
+  "direita": 488,
+  "y": 0,
+  "largura": 488
+ },
+ "convMsgDataId": {
+  "x": 488,
+  "direita": 1316,
+  "y": 60,
+  "largura": 828
+ },
+ "balaoVisivel": {
+  "x": 550,
+  "direita": 885,
+  "y": 66,
+  "largura": 335
+ },
+ "janela": {
+  "x": 160,
+  "direita": 482,
+  "y": 60,
+  "largura": 322,
+  "oculta": false,
+  "transform": "translate3d(160px, 60px, 0px)"
+ },
+ "janelaCobreListaDeConversas": true,
+ "folgaAteBalao": {
+  "aDireita": -725,
+  "aEsquerda": 68,
+  "topos": -6
+ }
+}
+ÁUDIO ENVIADO (E) {
+ "tela": 1316,
+ "side": {
+  "x": 0,
+  "direita": 488,
+  "y": 0,
+  "largura": 488
+ },
+ "convMsgDataId": {
+  "x": 488,
+  "direita": 1316,
+  "y": 160,
+  "largura": 828
+ },
+ "balaoVisivel": {
+  "x": 919,
+  "direita": 1254,
+  "y": 166,
+  "largura": 335
+ },
+ "janela": {
+  "x": 160,
+  "direita": 482,
+  "y": 228,
+  "largura": 322,
+  "oculta": false,
+  "transform": "translate3d(160px, 228px, 0px)"
+ },
+ "janelaCobreListaDeConversas": true,
+ "folgaAteBalao": {
+  "aDireita": -1094,
+  "aEsquerda": 437,
+  "topos": 62
+ }
+}

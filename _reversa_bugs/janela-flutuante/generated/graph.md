@@ -1,4 +1,4 @@
-<!-- GENERATED, DO NOT EDIT: regenerado por /reversa-debugger-graph em 2026-10-02T19:05Z a partir de 3 bugs -->
+<!-- GENERATED, DO NOT EDIT: regenerado por /reversa-debugger-graph em 2026-10-02T19:59Z a partir de 3 bugs -->
 
 # Grafo · janela-flutuante
 
@@ -8,6 +8,7 @@ graph LR
   BUG_20261002_A4MZ["#7 BUG-20261002-A4MZ"]
   BUG_20261002_K3DY["#8 BUG-20261002-K3DY"]
   BUG_20261002_A4MZ ---|related-to| BUG_20261002_IXWO
+  BUG_20261002_A4MZ ---|related-to| BUG_20261002_K3DY
   BUG_20261002_K3DY ---|related-to| BUG_20261002_IXWO
 ```
 
@@ -19,9 +20,8 @@ Só arestas `supported`/`confirmed` contam; relações `proposed` ficam fora.
 
 | bug | impact score |
 |---|---|
-| BUG-20261002-A4MZ | 1 |
-| BUG-20261002-K3DY | 1 |
+| BUG-20261002-K3DY | 2 |
 
 ## Clusters
 
-- 2 bugs abertos (BUG-20261002-A4MZ, BUG-20261002-K3DY) convergem em `gerenciador-janelas.ts`, `posicionador-colisoes.ts`: indício de causa comum. Corrija BUG-20261002-A4MZ primeiro (P1, high).
+Nenhum arquivo afetado é compartilhado por dois ou mais bugs abertos.

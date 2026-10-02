@@ -1,0 +1,27 @@
+--- a/extension/test/posicionador-colisoes.test.ts
++++ b/extension/test/posicionador-colisoes.test.ts
+@@ -67,3 +67,24 @@
+   assert.equal(posicoes[0]?.x, 50);
+   assert.equal(posicoes[0]?.y, 168);
+ });
++
++// BUG-20261002-A4MZ: o espaço livre ao lado do balão é o da área da conversa (RF-01), não o da tela.
++// Contado da borda da tela, o espaço à esquerda incluía a lista de conversas, e a janela abria sobre ela.
++test('calcularPosicoesJanelas mede o espaço lateral dentro da área da conversa e, sem ele, abre abaixo do balão', () => {
++  const reqs: RequisicaoPosicionamento[] = [
++    {
++      idAudio: 'audio-recebido',
++      direcao: 'recebido',
++      largura: 320,
++      altura: 120,
++      ancora: { idAudio: 'audio-recebido', x: 550, y: 66, largura: 336, altura: 62, visivel: true }
++    }
++  ];
++
++  // Área da conversa de 600 px, de x = 488 a 1088: 194 px livres à direita do balão e 54 à esquerda
++  const posicoes = calcularPosicoesJanelas(reqs, 1088, 488);
++  assert.equal(posicoes[0]?.visivel, true);
++  // Abaixo do balão e dentro da área: x = 550, y = 66 + 62 + 8 = 136
++  assert.equal(posicoes[0]?.x, 550);
++  assert.equal(posicoes[0]?.y, 136);
++});

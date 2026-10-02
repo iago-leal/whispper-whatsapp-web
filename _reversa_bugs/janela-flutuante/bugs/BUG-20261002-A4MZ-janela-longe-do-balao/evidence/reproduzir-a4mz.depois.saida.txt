@@ -1,0 +1,72 @@
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/iagoleal/package.json.
+ÁUDIO RECEBIDO (R) {
+ "tela": 1316,
+ "side": {
+  "x": 0,
+  "direita": 488,
+  "y": 0,
+  "largura": 488
+ },
+ "convMsgDataId": {
+  "x": 488,
+  "direita": 1316,
+  "y": 60,
+  "largura": 828
+ },
+ "balaoVisivel": {
+  "x": 550,
+  "direita": 885,
+  "y": 66,
+  "largura": 335
+ },
+ "janela": {
+  "x": 893,
+  "direita": 1215,
+  "y": 66,
+  "largura": 322,
+  "oculta": false,
+  "transform": "translate3d(893px, 66px, 0px)"
+ },
+ "janelaCobreListaDeConversas": false,
+ "folgaAteBalao": {
+  "aDireita": 8,
+  "aEsquerda": -665,
+  "topos": 0
+ }
+}
+ÁUDIO ENVIADO (E) {
+ "tela": 1316,
+ "side": {
+  "x": 0,
+  "direita": 488,
+  "y": 0,
+  "largura": 488
+ },
+ "convMsgDataId": {
+  "x": 488,
+  "direita": 1316,
+  "y": 160,
+  "largura": 828
+ },
+ "balaoVisivel": {
+  "x": 919,
+  "direita": 1254,
+  "y": 166,
+  "largura": 335
+ },
+ "janela": {
+  "x": 591,
+  "direita": 913,
+  "y": 234,
+  "largura": 322,
+  "oculta": false,
+  "transform": "translate3d(591px, 234px, 0px)"
+ },
+ "janelaCobreListaDeConversas": false,
+ "folgaAteBalao": {
+  "aDireita": -663,
+  "aEsquerda": 6,
+  "topos": 68
+ }
+}

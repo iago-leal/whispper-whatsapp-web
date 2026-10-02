@@ -1,0 +1,24 @@
+--- a/extension/src/content/rastreador-ancora.ts
++++ b/extension/src/content/rastreador-ancora.ts
+@@ -1,4 +1,5 @@
+ import type { CoordenadasAncora } from '../dominio/fonte-de-audio.ts';
++import { CONFIGURACAO_ESTRUTURAS } from './configuracao-estruturas.ts';
+ 
+ /**
+  * Calcula o retângulo e o estado de visibilidade de um elemento balão no viewport.
+@@ -88,10 +89,14 @@
+     };
+   }
+ 
++  // A âncora é o contorno visível do balão, e não o balão, que ocupa a largura da conversa
++  // (BUG-20261002-A4MZ). O contorno é buscado a cada medida, porque a página recria o conteúdo
++  // virtualizado; sem ele, mede-se o balão.
+   obterAncora(idAudio: string): CoordenadasAncora | null {
+     const el = this.elementos.get(idAudio);
+     if (!el) return null;
+-    return calcularCoordenadasAncora(idAudio, el);
++    const contorno = el.querySelector<HTMLElement>(CONFIGURACAO_ESTRUTURAS.seletores.contornoBalao);
++    return calcularCoordenadasAncora(idAudio, contorno ?? el);
+   }
+ 
+   destruir(): void {

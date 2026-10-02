@@ -1,4 +1,4 @@
-<!-- GENERATED, DO NOT EDIT: regenerado por /reversa-debugger-graph em 2026-10-02T19:05Z a partir de 10 bugs -->
+<!-- GENERATED, DO NOT EDIT: regenerado por /reversa-debugger-graph em 2026-10-02T19:59Z a partir de 10 bugs -->
 
 # Bugs por artefato de spec
 
@@ -22,14 +22,14 @@ Espelho gerado a partir de `_reversa_bugs/`; o vínculo é registrado aqui, a mu
 - BUG-20261001-GAOZ (resolved/fixed, P0): Ícone de transcrição não aparece: a integração desiste se a página carrega sem conversa aberta · `_reversa_bugs/integracao-whatsapp-web/bugs/BUG-20261001-GAOZ-icone-ausente/`
 - BUG-20261001-2MOY (resolved/fixed, P0): Extração do áudio depende de <audio src>, que o WhatsApp não cria antes da reprodução · `_reversa_bugs/integracao-whatsapp-web/bugs/BUG-20261001-2MOY-audio-sem-elemento/` · adendo `_reversa_sdd/addenda/bug-BUG-20261001-2MOY-v001.md`
 - BUG-20261002-IXWO (resolved/fixed, P0): Janela flutuante fica invisível até a página rolar: a âncora só chega em scroll ou resize · `_reversa_bugs/janela-flutuante/bugs/BUG-20261002-IXWO-janela-invisivel/`
-- BUG-20261002-A4MZ (open, P1): Janela flutuante abre longe do balão, sobre a lista de conversas · `_reversa_bugs/janela-flutuante/bugs/BUG-20261002-A4MZ-janela-longe-do-balao/`
+- BUG-20261002-A4MZ (resolved/fixed, P1): Janela flutuante abre longe do balão, sobre a lista de conversas · `_reversa_bugs/janela-flutuante/bugs/BUG-20261002-A4MZ-janela-longe-do-balao/`
 - BUG-20261002-XDL5 (open, P1): Transcrever de novo um áudio já transcrito falha: o motor recebe o áudio vazio · `_reversa_bugs/integracao-whatsapp-web/bugs/BUG-20261002-XDL5-retranscricao-audio-vazio/`
 - BUG-20261002-YUB4 (open, P1): Botão de reprodução do WhatsApp Web não toca as mensagens de voz · `_reversa_bugs/integracao-whatsapp-web/bugs/BUG-20261002-YUB4-play-nao-toca/`
 
 ## `_reversa_sdd/sdd/janela-flutuante.md`
 
 - BUG-20261002-IXWO (resolved/fixed, P0): Janela flutuante fica invisível até a página rolar: a âncora só chega em scroll ou resize · `_reversa_bugs/janela-flutuante/bugs/BUG-20261002-IXWO-janela-invisivel/`
-- BUG-20261002-A4MZ (open, P1): Janela flutuante abre longe do balão, sobre a lista de conversas · `_reversa_bugs/janela-flutuante/bugs/BUG-20261002-A4MZ-janela-longe-do-balao/`
+- BUG-20261002-A4MZ (resolved/fixed, P1): Janela flutuante abre longe do balão, sobre a lista de conversas · `_reversa_bugs/janela-flutuante/bugs/BUG-20261002-A4MZ-janela-longe-do-balao/`
 - BUG-20261002-K3DY (open, P2): Janelas flutuantes se sobrepõem: o posicionador supõe altura fixa de 160 px · `_reversa_bugs/janela-flutuante/bugs/BUG-20261002-K3DY-janelas-sobrepostas/`
 
 ## `_reversa_sdd/sdd/nucleo-transcricao.md`

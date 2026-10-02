@@ -17,3 +17,8 @@ __pycache__/
 
 # Mensagens de voz reais da prova de conceito: dados pessoais, nunca versionar
 amostras/reais/
+
+# Registro de bugs: prints, vídeos e registros do motor ficam fora (podem mostrar conversas reais)
+_reversa_bugs/**/*.png
+_reversa_bugs/**/*.mov
+_reversa_bugs/**/*.tsv

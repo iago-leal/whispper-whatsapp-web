@@ -76,6 +76,73 @@ const idsDosIcones = `[...document.querySelectorAll("#main .whispper-btn-transcr
 
 const avisosDeDegradacao = (p: Pagina) => p.console.filter((linha) => linha.includes("degradado"));
 
+// Leitura do ícone de uma mensagem como o usuário o vê (feature 006): estado, pulsar, rótulo e contador.
+interface LeituraDoIcone {
+  ms: number;
+  estado: string | null;
+  pulsando: boolean;
+  animacao: string;
+  rotulo: string | null;
+  contador: string;
+  contadorVisivel: boolean;
+}
+
+const lerIcone = `(botao, inicio) => {
+  const contador = botao.querySelector(".whispper-contador");
+  return {
+    ms: Math.round(performance.now() - inicio),
+    estado: botao.getAttribute("data-whispper-estado"),
+    pulsando: botao.classList.contains("whispper-animando"),
+    animacao: getComputedStyle(botao.querySelector(".whispper-icone")).animationName,
+    rotulo: botao.getAttribute("aria-label"),
+    contador: contador.textContent,
+    contadorVisivel: getComputedStyle(contador).display !== "none",
+  };
+}`;
+
+// Clica no ícone da mensagem e acompanha o botão até o indicador de erro. Devolve as leituras
+// distintas, a primeira feita na mesma tarefa do clique, antes de qualquer resposta do motor, ou
+// null se o erro não vier em 15 s (o prazo de verificação do motor é de 10 s).
+const clicarEAcompanhar = (id: string) => `new Promise((resolver) => {
+  const ler = ${lerIcone};
+  const botao = document.querySelector('#main .whispper-btn-transcrever[data-id="${id}"]');
+  const leituras = [];
+  let inicio = 0;
+  const anotar = () => {
+    const leitura = ler(botao, inicio);
+    const anterior = leituras.at(-1);
+    if (!anterior || ["estado", "pulsando", "rotulo", "contador"].some((campo) => anterior[campo] !== leitura[campo])) leituras.push(leitura);
+    if (leitura.estado === "erro") { observador.disconnect(); resolver(leituras); }
+  };
+  const observador = new MutationObserver(anotar);
+  observador.observe(botao, { attributes: true, childList: true, characterData: true, subtree: true });
+  setTimeout(() => { observador.disconnect(); resolver(null); }, 15000);
+  inicio = performance.now();
+  botao.click();
+  anotar();
+})`;
+
+// Clica no ícone e devolve a leitura feita na mesma tarefa do clique.
+const clicar = (id: string) => `(() => {
+  const botao = document.querySelector('#main .whispper-btn-transcrever[data-id="${id}"]');
+  const inicio = performance.now();
+  botao.click();
+  return (${lerIcone})(botao, inicio);
+})()`;
+
+// Resolve quando todos os ícones da conversa estiverem no indicador de erro, ou em 15 s.
+const todosEmErro = `new Promise((resolver) => {
+  const limite = performance.now() + 15000;
+  const conferir = () => {
+    const estados = [...document.querySelectorAll("#main .whispper-btn-transcrever")].map((b) => b.getAttribute("data-whispper-estado"));
+    if (estados.every((estado) => estado === "erro") || performance.now() > limite) resolver(estados);
+    else setTimeout(conferir, 50);
+  };
+  conferir();
+})`;
+
+const FORMATO_DO_CONTADOR = /^\d+ s$/;
+
 async function montarExtensao(destino: string): Promise<void> {
   mkdirSync(join(destino, "dist", "content"), { recursive: true });
   copyFileSync(join(EXTENSAO, "manifest.json"), join(destino, "manifest.json"));
@@ -169,5 +236,49 @@ test("integração com a conversa aberta no WhatsApp Web", {
     assert.match(avisosDeDegradacao(p)[0]!, /containerMensagens/);
     const ms = await p.avaliar<number | null>(abrirConversa(painel(["B"])));
     assert.notEqual(ms, null, "a conversa íntegra seguinte ficou sem ícone");
+  });
+
+  // Feature 006: o pedido acaba em erro qualquer que seja o motor da máquina, porque, se o aplicativo
+  // auxiliar responder no perfil temporário, a página falsa não tem o áudio para entregar.
+  await t.test("o clique faz o ícone pulsar com contador e, sem motor, passa ao erro sem contador (RF-01, RF-02 da feature 006)", async () => {
+    const p = await carregarWhatsApp(painel(["A"]));
+    const leituras = await p.avaliar<LeituraDoIcone[] | null>(clicarEAcompanhar("A"));
+    assert.notEqual(leituras, null, `o ícone não chegou ao indicador de erro em 15 s; console: ${JSON.stringify(p.console)}`);
+
+    const [primeira] = leituras!;
+    assert.ok(primeira!.pulsando && primeira!.estado === "transcrevendo", `o clique não fez o ícone pulsar: ${JSON.stringify(primeira)}`);
+    assert.ok(primeira!.ms <= 100, `o ícone levou ${primeira!.ms} ms para pulsar`);
+    assert.equal(primeira!.rotulo, "Transcrevendo áudio");
+    assert.equal(primeira!.animacao, "whispper-pulsar", "a classe de espera não aplicou a animação da folha de estilos");
+    assert.ok(primeira!.contadorVisivel, "o contador ficou oculto durante a espera");
+
+    const emEspera = leituras!.filter((leitura) => leitura.estado === "transcrevendo");
+    for (const leitura of emEspera) {
+      assert.match(leitura.contador, FORMATO_DO_CONTADOR, `contador fora do formato "7 s": ${JSON.stringify(leitura)}`);
+    }
+
+    const ultima = leituras!.at(-1)!;
+    assert.equal(ultima.estado, "erro");
+    assert.equal(ultima.rotulo, "Erro na transcrição");
+    assert.equal(ultima.pulsando, false);
+    assert.equal(ultima.animacao, "none", "o ícone continuou pulsando no erro");
+    assert.equal(ultima.contador, "", "o contador ficou no ícone em erro");
+    assert.equal(ultima.contadorVisivel, false);
+  });
+
+  await t.test("em 20 cliques, ao menos 95% dos ícones pulsam em até 100 ms (RF-01 da feature 006)", async () => {
+    const ids = Array.from({ length: 20 }, (_, i) => `V${i + 1}`);
+    const p = await carregarWhatsApp(painel(ids));
+    const leituras: LeituraDoIcone[] = [];
+    for (const id of ids) leituras.push(await p.avaliar<LeituraDoIcone>(clicar(id)));
+
+    const naoPulsaram = ids.filter((_, i) => !leituras[i]!.pulsando);
+    assert.deepEqual(naoPulsaram, [], "ícones que não pulsaram na mesma tarefa do clique");
+    const lentos = leituras.filter((leitura) => leitura.ms > 100);
+    assert.ok(lentos.length <= 1, `ícones acima de 100 ms: ${JSON.stringify(lentos.map((leitura) => leitura.ms))}`);
+    for (const leitura of leituras) assert.match(leitura.contador, FORMATO_DO_CONTADOR);
+
+    const estados = await p.avaliar<string[]>(todosEmErro);
+    assert.deepEqual(estados, ids.map(() => "erro"), "pedidos que não terminaram no indicador de erro");
   });
 });

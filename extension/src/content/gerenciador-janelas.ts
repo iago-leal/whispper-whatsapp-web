@@ -14,6 +14,10 @@ interface RegistroJanela {
 
 const LIMITE_MAXIMO_JANELAS = 20;
 
+// Altura suposta da janela que ainda não entrou na página, ou de toda janela sem página, nos testes de
+// unidade; na página, vale a altura desenhada (BUG-20261002-K3DY)
+const ALTURA_SEM_MEDIDA = 160;
+
 export class GerenciadorDeJanelas implements ExibicaoDeTranscricao {
   private janelas = new Map<string, RegistroJanela>();
   private container: HTMLElement | null = null;
@@ -78,7 +82,6 @@ export class GerenciadorDeJanelas implements ExibicaoDeTranscricao {
     let el: HTMLElement | null = null;
 
     if (typeof document !== 'undefined') {
-      const container = this.garantirContainer();
       el = criarElementoJanela(idAudio, {
         aoFechar: (id) => this.fechar(id),
         aoReexecutar: (id) => {
@@ -91,7 +94,6 @@ export class GerenciadorDeJanelas implements ExibicaoDeTranscricao {
           for (const cb of this.ouvintesReexecutar) cb(id);
         }
       }, this.cronometro);
-      container?.appendChild(el);
     }
 
     this.janelas.set(idAudio, {
@@ -102,7 +104,14 @@ export class GerenciadorDeJanelas implements ExibicaoDeTranscricao {
       ancora: ancoraAtual
     });
 
+    // A janela recebe a posição antes de entrar na página e só depois é medida: medida antes, ainda sem
+    // posição, a transição do transform a faria deslizar do canto da tela. Já medida, o segundo cálculo
+    // acomoda à altura dela as janelas de baixo (BUG-20261002-K3DY).
     this.recalcularPosicoes(area);
+    if (el) {
+      this.garantirContainer()?.appendChild(el);
+      this.recalcularPosicoes(area);
+    }
   }
 
   definirEstado(idAudio: string, estado: EstadoExibicao): void {
@@ -168,11 +177,12 @@ export class GerenciadorDeJanelas implements ExibicaoDeTranscricao {
   }
 
   recalcularPosicoes(area: FaixaHorizontal | null = this.obterAreaConversa()): void {
+    // Todas as alturas são lidas antes de qualquer posição ser escrita, numa só medida da página
     const requisicoes = Array.from(this.janelas.values()).map((reg) => ({
       idAudio: reg.idAudio,
       direcao: reg.direcao,
       largura: 320,
-      altura: 160,
+      altura: reg.elemento?.isConnected ? reg.elemento.offsetHeight : ALTURA_SEM_MEDIDA,
       ancora: reg.ancora
     }));
 

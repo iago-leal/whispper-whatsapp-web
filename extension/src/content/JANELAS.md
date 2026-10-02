@@ -16,7 +16,7 @@ src/content/
 Para evitar sobreposição entre áudios enviados em sequência:
 1. As mensagens são ordenadas pela posição vertical (`y`) de seus balões.
 2. Cada janela recebe sua coordenada ideal adjacente ao balão.
-3. Se o topo de uma janela interceptar a anterior, ela é empurrada para baixo com um espaçamento mínimo de 8 px.
+3. Se o topo de uma janela invadir uma janela acima que cruze a sua faixa horizontal, ela é empurrada para baixo dessa janela, com um espaçamento mínimo de 8 px. Vale a altura desenhada da janela, lida a cada cálculo; janelas que não se cruzam na horizontal, como as de lados opostos numa conversa larga, não se empurram.
 4. Caso a largura disponível lateralmente seja inferior a 320 px, a janela posiciona-se logo abaixo do balão.
 
 ## Acessibilidade e Teclado

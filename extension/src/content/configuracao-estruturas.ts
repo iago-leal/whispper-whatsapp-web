@@ -47,6 +47,8 @@ export interface RegrasDeEstrutura {
     colecoes: string;
     // Download e decifração de mídia da própria página
     gerenciadorDeDownload: string;
+    // Cache persistente de mídia da página, cuja chave é o filehash da mensagem (BUG-20261002-XDL5)
+    cacheDeMidia: string;
   };
 }
 
@@ -73,6 +75,7 @@ export const CONFIGURACAO_ESTRUTURAS: RegrasDeEstrutura = {
   },
   modulosDaPagina: {
     colecoes: 'WAWebCollections',
-    gerenciadorDeDownload: 'WAWebDownloadManager'
+    gerenciadorDeDownload: 'WAWebDownloadManager',
+    cacheDeMidia: 'WAWebMediaStore'
   }
 };

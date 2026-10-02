@@ -37,6 +37,10 @@ interface GerenciadorDeDownload {
   downloadAndMaybeDecrypt(pedido: Record<string, unknown>): Promise<ArrayBuffer>;
 }
 
+interface CacheDeMidiaDaPagina {
+  LruMediaStore?: { del(chave: string): Promise<unknown> };
+}
+
 interface AudioDaPagina {
   bytes: ArrayBuffer;
   tipoDeMidia: string;
@@ -84,31 +88,54 @@ export async function obterAudioDaPagina(pagina: PaginaComModulos, idMensagem: s
     throw new FalhaNaPagina('mensagem-ausente', `mensagem ${idMensagem} fora das mensagens carregadas`);
   }
 
-  let bytes: ArrayBuffer;
-  try {
-    bytes = await download.downloadAndMaybeDecrypt({
-      directPath: mensagem.directPath,
-      encFilehash: mensagem.encFilehash,
-      filehash: mensagem.filehash,
-      mediaKey: mensagem.mediaKey,
-      mediaKeyTimestamp: mensagem.mediaKeyTimestamp,
-      type: mensagem.type,
-      // Sem o mimetype, a página recusa o pedido com InvalidMediaFileType
-      mimetype: mensagem.mimetype,
-      signal: new AbortController().signal,
-      downloadQpl: TELEMETRIA_INERTE
-    });
-  } catch (erro) {
-    throw new FalhaNaPagina('download', erro instanceof Error ? `${erro.name}: ${erro.message}` : String(erro));
-  }
+  const baixar = async (): Promise<ArrayBuffer> => {
+    try {
+      return await download.downloadAndMaybeDecrypt({
+        directPath: mensagem.directPath,
+        encFilehash: mensagem.encFilehash,
+        filehash: mensagem.filehash,
+        mediaKey: mensagem.mediaKey,
+        mediaKeyTimestamp: mensagem.mediaKeyTimestamp,
+        type: mensagem.type,
+        // Sem o mimetype, a página recusa o pedido com InvalidMediaFileType
+        mimetype: mensagem.mimetype,
+        signal: new AbortController().signal,
+        downloadQpl: TELEMETRIA_INERTE
+      });
+    } catch (erro) {
+      throw new FalhaNaPagina('download', erro instanceof Error ? `${erro.name}: ${erro.message}` : String(erro));
+    }
+  };
+
+  // A página devolve do seu cache de mídia a cópia que achar lá, mesmo vazia, sem baixar de novo; apagar só a entrada
+  // vazia a faz baixar o áudio outra vez (BUG-20261002-XDL5).
+  let bytes = await baixar();
+  if (bytes.byteLength === 0 && (await apagarCopiaVazia(pagina, mensagem.filehash))) bytes = await baixar();
+  if (bytes.byteLength === 0) throw new FalhaNaPagina('download', 'o WhatsApp Web entregou o áudio vazio');
 
   return { bytes, tipoDeMidia: mensagem.mimetype, duracaoSeg: Number(mensagem.duration) || 0 };
+}
+
+async function apagarCopiaVazia(pagina: PaginaComModulos, filehash: string): Promise<boolean> {
+  try {
+    const cache = (pagina.require?.(CONFIGURACAO_ESTRUTURAS.modulosDaPagina.cacheDeMidia) as CacheDeMidiaDaPagina | undefined)
+      ?.LruMediaStore;
+    if (typeof cache?.del !== 'function') return false;
+    await cache.del(filehash);
+    return true;
+  } catch {
+    // Módulo ausente ou mudado nesta versão da página: sem cura, a obtenção termina em falha legível
+    return false;
+  }
 }
 
 async function atender(pagina: PaginaComModulos, porta: MessagePort, { pedido, idMensagem }: PedidoDeAudio): Promise<void> {
   try {
     const audio = await obterAudioDaPagina(pagina, idMensagem);
-    porta.postMessage({ tipo: 'audio', pedido, ...audio } satisfies RespostaDaPonte, [audio.bytes]);
+    // Só uma cópia atravessa a porta: a página grava no cache de mídia o buffer que devolveu, depois de devolvê-lo, e
+    // transferi-lo o esvaziaria antes disso (BUG-20261002-XDL5).
+    const bytes = audio.bytes.slice(0);
+    porta.postMessage({ tipo: 'audio', pedido, ...audio, bytes } satisfies RespostaDaPonte, [bytes]);
   } catch (erro) {
     const falha = erro instanceof FalhaNaPagina ? erro.falha : 'download';
     const detalhe = erro instanceof Error ? erro.message : String(erro);

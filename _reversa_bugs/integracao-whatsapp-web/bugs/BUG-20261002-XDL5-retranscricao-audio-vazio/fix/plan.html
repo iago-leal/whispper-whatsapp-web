@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plano de correção · #9 XDL5</title>
+  <style>
+body { background-color: #121212; color: #e0e0e0; font-family: sans-serif; padding: 20px; max-width: 1100px; margin: 0 auto; line-height: 1.5; }
+a { color: #bb86fc; text-decoration: none; } a:hover { text-decoration: underline; }
+table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+th, td { border: 1px solid #333; padding: 8px 10px; text-align: left; vertical-align: top; }
+th { background-color: #1e1e1e; }
+.card { background-color: #1e1e1e; padding: 12px 16px; border-radius: 8px; margin: 0 12px 12px 0; display: inline-block; min-width: 120px; }
+.card b { display: block; font-size: 1.3em; }
+.meta { color: #9e9e9e; font-size: 0.9em; }
+.tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 0.85em; background: #2a2a2a; border: 1px solid #444; }
+.ok { color: #81c784; } .alerta { color: #ffb74d; } .erro { color: #ef5350; } .novo { color: #64b5f6; }
+.aviso { background: #2a2210; border-left: 4px solid #ffb74d; padding: 10px 14px; border-radius: 6px; }
+.decisao { background: #10221a; border-left: 4px solid #81c784; padding: 10px 14px; border-radius: 6px; }
+code { background: #1e1e1e; padding: 1px 5px; border-radius: 4px; }
+ol li, ul li { margin-bottom: 4px; }
+svg { background: #181818; border-radius: 8px; max-width: 100%; height: auto; }
+pre.bloco { background: #0d0d0d; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.82em; line-height: 1.35; }
+h2 { margin-top: 32px; }
+  </style>
+</head>
+<body>
+  <h1>Plano de correção · #9 BUG-20261002-XDL5</h1>
+  <p class="meta">Contexto <code>integracao-whatsapp-web</code> · 2026-10-02 20:05 -03 · gerado por /reversa-debugger-fix · <a href="../bug.md">bug.md</a></p>
+  <div>
+    <div class="card"><b class="erro">high</b>severidade</div>
+    <div class="card"><b>P1</b>prioridade</div>
+    <div class="card"><b class="ok">confirmed</b>causa raiz</div>
+    <div class="card"><b class="alerta">média</b>risco da mudança</div>
+    <div class="card"><b>5</b>itens no change set</div>
+  </div>
+
+  <h2>1. Defeito</h2>
+  <p><b>Transcrever de novo um áudio já transcrito falha: o motor recebe o áudio vazio.</b> Depois de recarregar a página
+  (Command R) ou numa aba nova, o clique no ícone de um áudio que a extensão já obteve uma vez termina em
+  <code>FALHA_NA_TRANSCRICAO</code>, "Falhou após 0 s". Áudios nunca obtidos funcionam, o que fazia a falha parecer
+  intermitente.</p>
+  <div class="decisao"><b>Escopo decidido por iago (19:55):</b> o clique volta a produzir texto depois de recarregar. O texto
+  anterior não reaparece sozinho: o cache de texto vive na memória da aba (RF-06), e guardá-lo entre recargas é feature à
+  parte, que conflita com o RF-14 do núcleo.</div>
+
+  <h2>2. Causa raiz <span class="tag ok">confirmed</span></h2>
+  <p>A ponte da extensão, no mundo da página, transfere ao script de conteúdo o <b>próprio</b> <code>ArrayBuffer</code> que
+  <code>downloadAndMaybeDecrypt</code> devolve. O WhatsApp Web grava esse mesmo objeto no seu cache persistente de mídia
+  depois de pelo menos um <code>await</code>; a transferência o desanexa antes, e o cache guarda 0 bytes, para sempre.</p>
+  <ol>
+    <li><code>pagina/ponte-audio.ts</code>, <code>atender</code>: <code>porta.postMessage({ ...audio }, [audio.bytes])</code>, linha nascida em <code>c76605f</code> (CHG-001 do 2MOY).</li>
+    <li>WhatsApp, <code>WAWebMediaStoreLruImpl.doPut</code>: enfileira a gravação, grava os metadados no IndexedDB e só então
+      <code>WAWebKeyValueCacheStore</code> faz <code>cache.put(chave, new Response(buffer))</code>, no Cache Storage
+      <code>lru-media-array-buffer-cache</code>, com o buffer já vazio.</li>
+    <li>WhatsApp, <code>doGet</code>: devolve o buffer do cache sempre que não é nulo (0 bytes não é nulo) e o regrava; a página não baixa de novo, nem depois de recarregar.</li>
+    <li><code>content/extrator-audio.ts</code> aceita 0 bytes; o motor recusa por "áudio ilegível" antes do ffmpeg, com duração 0,0 em 0 a 5 ms.</li>
+  </ol>
+  <p><b>Evidências</b> (<a href="../evidence/reproduction.md">evidence/reproduction.md</a>, WhatsApp real, só leitura):</p>
+  <table>
+    <thead><tr><th>Medida</th><th>Resultado</th></tr></thead>
+    <tbody>
+      <tr><td>Entradas do <code>lru-media-array-buffer-cache</code></td><td><b class="erro">31 de 283 com 0 bytes</b></td></tr>
+      <tr><td>CC7A32, entregue pela ponte na inspeção do registro</td><td>cache com 0 bytes; download da página devolve <b class="erro">0 bytes em 2 ms</b></td></tr>
+      <tr><td>5A33F0 e 6B700B, transcritos pela extensão</td><td>cache com 0 bytes</td></tr>
+      <tr><td>D36320, pedido só diretamente, sem a ponte</td><td class="ok">íntegro: 24.574 bytes <code>OggS</code></td></tr>
+      <tr><td>Código do WhatsApp (bundle carregado)</td><td>chave do cache = <code>filehash</code>; <code>LruMediaStore</code> expõe <code>get</code>, <code>has</code>, <code>put</code> e <code>del</code></td></tr>
+    </tbody>
+  </table>
+
+  <h2>3. Estratégia: correção direta</h2>
+  <p>Escolhida por iago às 20:02, sem debate: a causa está confirmada no código da página, sem hipóteses concorrentes.</p>
+  <ol>
+    <li><b>Parar de esvaziar:</b> a ponte entrega uma <b>cópia</b> do buffer (<code>bytes.slice(0)</code>) e transfere a cópia; o buffer da página fica intacto para o cache dela.</li>
+    <li><b>Curar a entrada vazia:</b> se a página devolver 0 bytes, a ponte apaga <b>só aquela</b> entrada do cache de mídia (<code>LruMediaStore.del(filehash)</code>) e pede o áudio de novo, uma vez; a página baixa do servidor e grava a cópia íntegra.</li>
+    <li><b>Nunca mandar vazio ao motor:</b> se ainda vier vazio, ou se o módulo do cache mudou, a obtenção termina em <code>AUDIO_INDISPONIVEL</code> com "Não foi possível baixar o áudio do WhatsApp Web (…áudio vazio)"; o extrator confere de novo, como segunda barreira.</li>
+    <li><b>Reparo dos dados</b> (decisão de iago às 20:02: cura e varredura): uma varredura única no seu WhatsApp Web apaga as entradas de 0 bytes que já existem, depois que a extensão corrigida estiver carregada.</li>
+  </ol>
+
+  <h2>4. Correction Change Set proposto</h2>
+  <table>
+    <thead><tr><th>CHG</th><th>Tipo</th><th>Artefato</th><th>Propósito</th></tr></thead>
+    <tbody>
+      <tr><td>CHG-001</td><td>test</td><td><code>extension/test/extrator-audio.test.ts</code></td><td>A página falsa ganha um cache de mídia como o <code>LruMediaStore</code> (grava o buffer devolvido depois de um <code>await</code>; <code>del</code>); testes de reprodução e de regressão da seção 5</td></tr>
+      <tr><td>CHG-002</td><td>code</td><td><code>extension/src/pagina/ponte-audio.ts</code></td><td>Cópia em vez de transferência; cura da entrada vazia com um novo pedido; falha legível se continuar vazio</td></tr>
+      <tr><td>CHG-003</td><td>configuration</td><td><code>extension/src/content/configuracao-estruturas.ts</code></td><td>Nome do módulo do cache de mídia da página (<code>WAWebMediaStore</code>), junto dos outros módulos</td></tr>
+      <tr><td>CHG-004</td><td>code</td><td><code>extension/src/content/extrator-audio.ts</code></td><td>Resposta de 0 bytes vira <code>AUDIO_INDISPONIVEL</code>, sem ir ao motor (segunda barreira)</td></tr>
+      <tr><td>CHG-005</td><td>data-repair</td><td>Cache Storage <code>lru-media-array-buffer-cache</code> do WhatsApp Web do usuário</td><td>Varredura única: dry-run com a contagem, chaves guardadas fora do git, <code>LruMediaStore.del</code> só das entradas de 0 bytes, conferência depois</td></tr>
+    </tbody>
+  </table>
+  <p class="meta">Sem mudança no protocolo da ponte nem no do motor; o motivo de falha reusa o <code>download</code> existente, com detalhe próprio.</p>
+
+  <h2>5. Testes planejados</h2>
+  <table>
+    <thead><tr><th>Teste</th><th>Intenção</th><th>O que prova</th><th>No código atual</th></tr></thead>
+    <tbody>
+      <tr><td>O mesmo áudio pedido duas vezes entrega os mesmos bytes nas duas, com a página guardando a cópia depois de um <code>await</code></td><td>reprodução</td><td>Critério 1 do bug (a segunda obtenção não recebe vazio)</td><td class="erro">falha: a segunda entrega 0 bytes</td></tr>
+      <tr><td>A obtenção não esvazia a cópia da página: a entrada no cache segue com o tamanho do áudio</td><td>reprodução</td><td>Critério 2 e o mecanismo da causa</td><td class="erro">falha: a entrada fica com 0 bytes</td></tr>
+      <tr><td>O áudio com a cópia vazia no cache é baixado de novo: só aquela entrada é apagada, e os bytes chegam</td><td>reprodução</td><td>A cura dos áudios já atingidos (o caso relatado depois de recarregar)</td><td class="erro">falha: entrega 0 bytes, sem apagar</td></tr>
+      <tr><td>Se a página devolve 0 bytes mesmo depois de apagar a entrada, termina em <code>AUDIO_INDISPONIVEL</code> com motivo legível</td><td>regressão</td><td>Critério 3: vazio nunca vai ao motor</td><td class="erro">falha: devolve áudio vazio</td></tr>
+      <tr><td>Sem o módulo do cache de mídia, o áudio vazio termina em <code>AUDIO_INDISPONIVEL</code>, sem quebrar as obtenções íntegras</td><td>regressão</td><td>Degradação segura se o WhatsApp mudar</td><td class="erro">falha</td></tr>
+      <tr><td>Bytes íntegros não apagam nada nem pedem de novo: um único download por obtenção</td><td>regressão</td><td>A cura não toca entradas boas (RF-07)</td><td class="ok">passa</td></tr>
+      <tr><td>Os 5 testes atuais do extrator (RF-05, RF-06, RF-07, EC-01, EC-03, EC-06)</td><td>regressão</td><td>Nada do 2MOY volta</td><td class="ok">passam</td></tr>
+    </tbody>
+  </table>
+  <p class="meta">Os testes rodam com o <code>MessageChannel</code> real do Node, cuja transferência desanexa o <code>ArrayBuffer</code> como no navegador, e com os scripts do mundo da página carregados a partir do manifesto, como já faz o arquivo.</p>
+
+  <h2>6. Riscos e o que fica de fora</h2>
+  <p><b>change_risk: <span class="alerta">média</span></b></p>
+  <ul>
+    <li>A ponte é o caminho de toda transcrição: um erro aqui para todas. Mitigado pelos testes atuais do extrator e pelos novos.</li>
+    <li>Dependência nova de um módulo interno do WhatsApp (<code>WAWebMediaStore.LruMediaStore.del</code>). Se mudar, a cura não roda e o áudio vazio vira falha legível, nunca ida ao motor.</li>
+    <li>A extensão passa a escrever no armazenamento da página, mas só para apagar entrada provadamente vazia, que a própria página recria.</li>
+    <li>A cópia dobra a memória do áudio por instantes (áudios de voz: dezenas a centenas de KB).</li>
+    <li>Reparo de dados (CHG-005): apaga até 31 entradas vazias; nada de valor se perde. O backup das chaves permite recriá-las, embora isso só traga o defeito de volta. Roda depois de a extensão corrigida estar carregada, senão novas transcrições voltariam a esvaziar entradas.</li>
+    <li>Áudio antigo, já expirado no servidor do WhatsApp: depois de apagada a entrada vazia, a página pode não conseguir baixar; aí vale o EC-02 ("Este áudio não está mais disponível no WhatsApp"), não "Falhou após 0 s".</li>
+  </ul>
+  <div class="aviso"><b>Fora desta correção:</b> o texto que reaparece sozinho depois de recarregar (feature à parte, RF-14);
+  o BUG-20261002-YUB4 (▶ do WhatsApp não toca), cuja relação com este é só <code>proposed</code>: a varredura deve devolver ao
+  player os áudios esvaziados, o que será conferido, mas o YUB4 relata falha também em áudios nunca obtidos pela ponte.</div>
+
+  <h2>7. Mini-grafo do bug</h2>
+  <svg viewBox="0 0 900 230" width="900" height="230" role="img" aria-label="Mini-grafo do XDL5">
+    <line x1="300" y1="115" x2="350" y2="115" stroke="#9e9e9e" stroke-width="1.5"/>
+    <text x="325" y="100" fill="#9e9e9e" font-size="11" text-anchor="middle">related-to</text>
+    <text x="325" y="140" fill="#81c784" font-size="11" text-anchor="middle">confirmed</text>
+    <line x1="550" y1="115" x2="600" y2="115" stroke="#9e9e9e" stroke-width="1.5" stroke-dasharray="6 4"/>
+    <text x="575" y="100" fill="#9e9e9e" font-size="11" text-anchor="middle">related-to</text>
+    <text x="575" y="140" fill="#ffb74d" font-size="11" text-anchor="middle">proposed</text>
+    <a href="../../BUG-20261001-2MOY-audio-sem-elemento/bug.md"><rect x="20" y="65" width="280" height="100" rx="8" fill="#1e1e1e" stroke="#cf6679" stroke-width="2"/><text x="30" y="88" fill="#bb86fc" font-size="13" font-weight="bold">#5 · 2MOY (travado)</text><text x="30" y="108" fill="#e0e0e0" font-size="12">Extração do áudio depende de &lt;audio src&gt;</text><text x="30" y="128" fill="#9e9e9e" font-size="11">critical · P0 · ponte nasceu no CHG-001</text><text x="30" y="150" fill="#81c784" font-size="11">resolved · fixed</text></a>
+    <a href="../bug.md"><rect x="350" y="55" width="200" height="120" rx="8" fill="#26203a" stroke="#bb86fc" stroke-width="3"/><text x="362" y="80" fill="#bb86fc" font-size="14" font-weight="bold">#9 · XDL5</text><text x="362" y="100" fill="#e0e0e0" font-size="12">Retranscrição recebe</text><text x="362" y="116" fill="#e0e0e0" font-size="12">o áudio vazio</text><text x="362" y="138" fill="#9e9e9e" font-size="11">high · P1</text><text x="362" y="160" fill="#ffd54f" font-size="11">active (planning)</text></a>
+    <a href="../../BUG-20261002-YUB4-play-nao-toca/bug.md"><rect x="600" y="65" width="280" height="100" rx="8" fill="#1e1e1e" stroke="#cf6679" stroke-width="2"/><text x="610" y="88" fill="#bb86fc" font-size="13" font-weight="bold">#10 · YUB4</text><text x="610" y="108" fill="#e0e0e0" font-size="12">▶ do WhatsApp Web não toca</text><text x="610" y="128" fill="#9e9e9e" font-size="11">high · P1</text><text x="610" y="150" fill="#ef5350" font-size="11">open (triaging)</text></a>
+  </svg>
+
+  <h2>8. Matriz de relações</h2>
+  <table>
+    <thead><tr><th>Origem</th><th>Tipo</th><th>Destino</th><th>Estado</th><th>Evidência</th></tr></thead>
+    <tbody>
+      <tr><td><a href="../bug.md">BUG-20261002-XDL5</a></td><td>related-to</td><td><a href="../../BUG-20261001-2MOY-audio-sem-elemento/bug.md">BUG-20261001-2MOY</a></td><td class="ok">confirmed</td><td>a transferência nasceu no CHG-001 do 2MOY (<code>c76605f</code>); defeito novo no código daquela correção, não regressão do mesmo defeito</td></tr>
+      <tr><td><a href="../bug.md">BUG-20261002-XDL5</a></td><td>related-to</td><td><a href="../../BUG-20261002-YUB4-play-nao-toca/bug.md">BUG-20261002-YUB4</a></td><td class="alerta">proposed</td><td>o player lê o mesmo cache; não medido no player</td></tr>
+      <tr><td><a href="../../BUG-20261002-YUB4-play-nao-toca/bug.md">BUG-20261002-YUB4</a></td><td>related-to</td><td><a href="../bug.md">BUG-20261002-XDL5</a></td><td class="alerta">proposed</td><td>registrada no YUB4</td></tr>
+    </tbody>
+  </table>
+
+  <h2>9. Ordem</h2>
+  <p>Um bug nesta sessão. Depois dele, o YUB4 começa conferindo, com a varredura já feita, se o ▶ volta a tocar os áudios
+  esvaziados e se ainda falha nos nunca obtidos, com a extensão ativa e desativada.</p>
+
+  <h2>10. Próximos passos</h2>
+  <ol>
+    <li>Aprovação deste plano.</li>
+    <li>Gate 1: diff do CHG-001, aplicação e prova de que os testes novos falham.</li>
+    <li>Gate 2: diffs dos CHG-002 a 004 e o roteiro do CHG-005 com dry-run; aplicação, suíte verde, build; você recarrega a extensão; varredura; aceitação no WhatsApp real: um áudio já atingido volta a transcrever depois de recarregar, duas vezes.</li>
+    <li>Veredito de spec, fechamento e views.</li>
+  </ol>
+</body>
+</html>

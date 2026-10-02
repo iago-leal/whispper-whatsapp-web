@@ -1,0 +1,177 @@
+# Gate 1 do BUG-20261002-XDL5: testes aplicados (CHG-001), código ainda original
+# 2026-10-02 20:11 -0300 · commit base 4d892ea · node v26.10.0
+# comando: node --test --test-reporter=tap test/extrator-audio.test.ts
+
+TAP version 13
+# Subtest: reprodução: balão sem <audio>, como no WhatsApp real, entrega bytes, tipo e duração pelo download da própria página (RF-06, EC-01)
+ok 1 - reprodução: balão sem <audio>, como no WhatsApp real, entrega bytes, tipo e duração pelo download da própria página (RF-06, EC-01)
+  ---
+  duration_ms: 21.571291
+  type: 'test'
+  ...
+# Subtest: a obtenção não toca nem altera a mensagem: só o download decifrado é pedido à página (RF-05, RF-07)
+ok 2 - a obtenção não toca nem altera a mensagem: só o download decifrado é pedido à página (RF-05, RF-07)
+  ---
+  duration_ms: 0.499167
+  type: 'test'
+  ...
+# Subtest: o pedido à página leva o mimetype e os campos de mídia do próprio modelo (sem mimetype, a página recusa)
+ok 3 - o pedido à página leva o mimetype e os campos de mídia do próprio modelo (sem mimetype, a página recusa)
+  ---
+  duration_ms: 0.5505
+  type: 'test'
+  ...
+# Subtest: mensagem que a página já descartou termina em AUDIO_INDISPONIVEL com "Abra a conversa e tente de novo" (EC-06)
+ok 4 - mensagem que a página já descartou termina em AUDIO_INDISPONIVEL com "Abra a conversa e tente de novo" (EC-06)
+  ---
+  duration_ms: 0.5065
+  type: 'test'
+  ...
+# Subtest: download sem conclusão em 30 s termina em AUDIO_INDISPONIVEL com "Falha ao baixar o áudio; verifique a conexão" (EC-03)
+ok 5 - download sem conclusão em 30 s termina em AUDIO_INDISPONIVEL com "Falha ao baixar o áudio; verifique a conexão" (EC-03)
+  ---
+  duration_ms: 0.622209
+  type: 'test'
+  ...
+# Subtest: reprodução (XDL5): o mesmo áudio pedido duas vezes entrega os mesmos bytes nas duas, com a página guardando no cache de mídia o buffer que devolveu
+not ok 6 - reprodução (XDL5): o mesmo áudio pedido duas vezes entrega os mesmos bytes nas duas, com a página guardando no cache de mídia o buffer que devolveu
+  ---
+  duration_ms: 1.708875
+  type: 'test'
+  location: '/Users/iagoleal/dev/whispper-whatsapp-web/extension/test/extrator-audio.test.ts:260:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    a segunda obtenção do mesmo áudio não recebeu os bytes dele
+    + actual - expected
+    
+    + []
+    - [
+    -   79,
+    -   103,
+    -   103,
+    -   83,
+    -   0,
+    -   2
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 79
+    1: 103
+    2: 103
+    3: 83
+    4: 0
+    5: 2
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/extrator-audio.test.ts:267:10)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: reprodução (XDL5): a obtenção não esvazia a cópia da página: a entrada do áudio no cache de mídia segue com o tamanho dele
+not ok 7 - reprodução (XDL5): a obtenção não esvazia a cópia da página: a entrada do áudio no cache de mídia segue com o tamanho dele
+  ---
+  duration_ms: 0.687209
+  type: 'test'
+  location: '/Users/iagoleal/dev/whispper-whatsapp-web/extension/test/extrator-audio.test.ts:270:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    a cópia da página no cache ficou vazia
+    
+    0 !== 6
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 6
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/extrator-audio.test.ts:274:10)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: reprodução (XDL5): o áudio cuja cópia no cache da página já está vazia é baixado de novo: só aquela entrada é apagada, e os bytes chegam
+not ok 8 - reprodução (XDL5): o áudio cuja cópia no cache da página já está vazia é baixado de novo: só aquela entrada é apagada, e os bytes chegam
+  ---
+  duration_ms: 0.479458
+  type: 'test'
+  location: '/Users/iagoleal/dev/whispper-whatsapp-web/extension/test/extrator-audio.test.ts:277:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   79,
+    -   103,
+    -   103,
+    -   83,
+    -   0,
+    -   2
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 79
+    1: 103
+    2: 103
+    3: 83
+    4: 0
+    5: 2
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/extrator-audio.test.ts:283:10)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: regressão (XDL5): se a página devolve 0 bytes mesmo depois de apagar a entrada, a obtenção termina em AUDIO_INDISPONIVEL com motivo legível, e o núcleo não recebe áudio vazio
+not ok 9 - regressão (XDL5): se a página devolve 0 bytes mesmo depois de apagar a entrada, a obtenção termina em AUDIO_INDISPONIVEL com motivo legível, e o núcleo não recebe áudio vazio
+  ---
+  duration_ms: 0.434458
+  type: 'test'
+  location: '/Users/iagoleal/dev/whispper-whatsapp-web/extension/test/extrator-audio.test.ts:291:1'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected rejection (semConteudo).'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    async TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/extrator-audio.test.ts:296:5)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: regressão (XDL5): sem o módulo do cache de mídia, a cópia vazia termina em AUDIO_INDISPONIVEL, e os áudios íntegros continuam a ser entregues
+not ok 10 - regressão (XDL5): sem o módulo do cache de mídia, a cópia vazia termina em AUDIO_INDISPONIVEL, e os áudios íntegros continuam a ser entregues
+  ---
+  duration_ms: 0.745833
+  type: 'test'
+  location: '/Users/iagoleal/dev/whispper-whatsapp-web/extension/test/extrator-audio.test.ts:304:1'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected rejection (semConteudo).'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    async TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/extrator-audio.test.ts:311:5)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: regressão (XDL5): bytes íntegros não apagam nada do cache da página nem pedem o áudio de novo
+ok 11 - regressão (XDL5): bytes íntegros não apagam nada do cache da página nem pedem o áudio de novo
+  ---
+  duration_ms: 0.311208
+  type: 'test'
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 6
+# fail 5
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 217.286917
+# exit 1

@@ -1,0 +1,127 @@
+--- a/extension/test/extrator-audio.test.ts
++++ b/extension/test/extrator-audio.test.ts
+@@ -30,6 +30,16 @@
+ let concluirDownload: (pedido: Pedido) => Promise<ArrayBuffer> = async () => new Uint8Array(OGG).buffer;
+ const modelos: object[] = [];
+ 
++// Cache de mídia da página, como o LruMediaStore do WhatsApp Web (evidence/reproduction.md do BUG-20261002-XDL5): a
++// chave é o filehash; o download devolve dele o buffer guardado, mesmo vazio, e o regrava; o buffer devolvido só é
++// gravado depois dos metadados, quando a página já o entregou a quem pediu, e gravar um buffer desanexado guarda 0 bytes,
++// como new Response(buffer) no Cache Storage.
++const cacheDeMidia = new Map<string, ArrayBuffer>();
++const apagadasDoCache: string[] = [];
++function guardarNoCache(chave: string, buffer: ArrayBuffer): void {
++  setImmediate(() => cacheDeMidia.set(chave, buffer.byteLength > 0 ? buffer.slice(0) : new ArrayBuffer(0)));
++}
++
+ // Modelo de uma mensagem de voz recebida e nunca tocada, com os campos lidos na prova de conceito.
+ function mensagemDeVoz(id: string): object {
+   const alvo: Record<string, unknown> = {
+@@ -75,10 +85,21 @@
+           erro.name = 'InvalidMediaFileType';
+           throw erro;
+         }
+-        return concluirDownload(pedido);
++        const chave = String(pedido.filehash);
++        const buffer = cacheDeMidia.get(chave) ?? (await concluirDownload(pedido));
++        guardarNoCache(chave, buffer);
++        return buffer;
+       },
+     },
+   },
++  WAWebMediaStore: {
++    LruMediaStore: {
++      async del(chave: string): Promise<void> {
++        apagadasDoCache.push(chave);
++        cacheDeMidia.delete(chave);
++      },
++    },
++  },
+ };
+ 
+ type Ouvinte = (evento: { data: unknown; origin: string; source: unknown; ports: MessagePort[] }) => void;
+@@ -151,6 +172,7 @@
+   registro.chamadasNoModelo.length = 0;
+   registro.escritasNoModelo.length = 0;
+   registro.elementosCriados.length = 0;
++  apagadasDoCache.length = 0;
+ }
+ 
+ // Balão como no WhatsApp real antes da reprodução: só o botão do player, nenhum <audio>.
+@@ -228,3 +250,76 @@
+     concluirDownload = async () => new Uint8Array(OGG).buffer;
+   }
+ });
++
++// BUG-20261002-XDL5: a ponte transferia o próprio buffer que a página guarda no cache de mídia; a cópia da página ficava
++// com 0 bytes, e todo pedido seguinte daquele áudio, mesmo depois de recarregar, entregava 0 bytes ao motor.
++
++const semConteudo = (erro: Error) =>
++  indisponivelCom('Não foi possível baixar o áudio do WhatsApp Web')(erro) && erro.message.includes('vazio');
++
++test('reprodução (XDL5): o mesmo áudio pedido duas vezes entrega os mesmos bytes nas duas, com a página guardando no cache de mídia o buffer que devolveu', async () => {
++  mensagemDeVoz('E');
++  const adaptador = adaptadorCom('E');
++  const primeira = await adaptador.obterAudio('E');
++  await ateQue(() => cacheDeMidia.has('hash-E'));
++  const segunda = await adaptador.obterAudio('E');
++  assert.deepEqual([...primeira.bytes], OGG);
++  assert.deepEqual([...segunda.bytes], OGG, 'a segunda obtenção do mesmo áudio não recebeu os bytes dele');
++});
++
++test('reprodução (XDL5): a obtenção não esvazia a cópia da página: a entrada do áudio no cache de mídia segue com o tamanho dele', async () => {
++  mensagemDeVoz('F');
++  await adaptadorCom('F').obterAudio('F');
++  await ateQue(() => cacheDeMidia.has('hash-F'));
++  assert.equal(cacheDeMidia.get('hash-F')?.byteLength, OGG.length, 'a cópia da página no cache ficou vazia');
++});
++
++test('reprodução (XDL5): o áudio cuja cópia no cache da página já está vazia é baixado de novo: só aquela entrada é apagada, e os bytes chegam', async () => {
++  mensagemDeVoz('G');
++  cacheDeMidia.set('hash-G', new ArrayBuffer(0));
++  cacheDeMidia.set('hash-vizinho', new Uint8Array(OGG).buffer);
++  limparRegistro();
++  const audio = await adaptadorCom('G').obterAudio('G');
++  assert.deepEqual([...audio.bytes], OGG);
++  assert.deepEqual(apagadasDoCache, ['hash-G']);
++  assert.equal(registro.downloads.length, 2, 'esperado um pedido que devolve o vazio e outro depois de apagá-lo');
++  await ateQue(() => (cacheDeMidia.get('hash-G')?.byteLength ?? 0) > 0);
++  assert.equal(cacheDeMidia.get('hash-G')?.byteLength, OGG.length, 'a página não regravou a cópia íntegra');
++  assert.equal(cacheDeMidia.get('hash-vizinho')?.byteLength, OGG.length);
++});
++
++test('regressão (XDL5): se a página devolve 0 bytes mesmo depois de apagar a entrada, a obtenção termina em AUDIO_INDISPONIVEL com motivo legível, e o núcleo não recebe áudio vazio', async () => {
++  mensagemDeVoz('H');
++  limparRegistro();
++  concluirDownload = async () => new ArrayBuffer(0);
++  try {
++    await assert.rejects(adaptadorCom('H').obterAudio('H'), semConteudo);
++    assert.deepEqual(apagadasDoCache, ['hash-H']);
++    assert.equal(registro.downloads.length, 2, 'a página deve ser consultada de novo uma vez, não em laço');
++  } finally {
++    concluirDownload = async () => new Uint8Array(OGG).buffer;
++  }
++});
++
++test('regressão (XDL5): sem o módulo do cache de mídia, a cópia vazia termina em AUDIO_INDISPONIVEL, e os áudios íntegros continuam a ser entregues', async () => {
++  mensagemDeVoz('I');
++  mensagemDeVoz('J');
++  cacheDeMidia.set('hash-I', new ArrayBuffer(0));
++  const modulo = MODULOS.WAWebMediaStore;
++  delete MODULOS.WAWebMediaStore;
++  try {
++    await assert.rejects(adaptadorCom('I').obterAudio('I'), semConteudo);
++    const audio = await adaptadorCom('J').obterAudio('J');
++    assert.deepEqual([...audio.bytes], OGG);
++  } finally {
++    MODULOS.WAWebMediaStore = modulo;
++  }
++});
++
++test('regressão (XDL5): bytes íntegros não apagam nada do cache da página nem pedem o áudio de novo', async () => {
++  mensagemDeVoz('K');
++  limparRegistro();
++  await adaptadorCom('K').obterAudio('K');
++  assert.equal(registro.downloads.length, 1);
++  assert.deepEqual(apagadasDoCache, []);
++});

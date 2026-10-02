@@ -1,0 +1,22 @@
+# npm run build · 2026-10-02 20:16 -0300 · 4d892ea + CHG-001 a 003 do XDL5 (árvore não commitada)
+
+> whispper-whatsapp-web-extensao@0.1.0 build
+> tsc -p tsconfig.json && esbuild src/content/index.ts --bundle --format=iife --outfile=dist/content/index.js && esbuild src/pagina/ponte-audio.ts --bundle --format=iife --outfile=dist/pagina/ponte-audio.js && mkdir -p dist/diagnostico dist/content dist/popup dist/onboarding && cp ../amostras/sinteticas/fala-pt.ogg dist/diagnostico/ && cp src/content/estilos.css dist/content/ && cp src/content/janela-flutuante.css dist/content/ && cp popup/index.html dist/popup/ && cp popup/popup.css dist/popup/ && cp onboarding/index.html dist/onboarding/ && cp onboarding/onboarding.css dist/onboarding/ && npm run build:instalador
+
+
+  dist/content/index.js  71.1kb
+
+⚡ Done in 4ms
+
+  dist/pagina/ponte-audio.js  5.0kb
+
+⚡ Done in 1ms
+
+> whispper-whatsapp-web-extensao@0.1.0 build:instalador
+> test $(uname) != Darwin || bash ../auxiliar/ferramentas/gerar_pkg.sh
+
+Instalador gerado em /Users/iagoleal/dev/whispper-whatsapp-web/extension/dist/instaladores/whispper-macos-apple-silicon.pkg
+# exit 0
+-rw-r--r--@ 1 iagoleal  staff  5137  2 out 20:16 dist/pagina/ponte-audio.js
+1
+1

@@ -1,0 +1,20 @@
+--- a/extension/src/content/configuracao-estruturas.ts
++++ b/extension/src/content/configuracao-estruturas.ts
+@@ -47,6 +47,8 @@
+     colecoes: string;
+     // Download e decifração de mídia da própria página
+     gerenciadorDeDownload: string;
++    // Cache persistente de mídia da página, cuja chave é o filehash da mensagem (BUG-20261002-XDL5)
++    cacheDeMidia: string;
+   };
+ }
+ 
+@@ -73,6 +75,7 @@
+   },
+   modulosDaPagina: {
+     colecoes: 'WAWebCollections',
+-    gerenciadorDeDownload: 'WAWebDownloadManager'
++    gerenciadorDeDownload: 'WAWebDownloadManager',
++    cacheDeMidia: 'WAWebMediaStore'
+   }
+ };

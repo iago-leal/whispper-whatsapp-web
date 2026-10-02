@@ -2,7 +2,8 @@
 // Testing com a folha de estilos real, numa página neutra, sem o WhatsApp. Só ali a janela tem altura,
 // a do texto até 240 px (RF-07), e a posição de cada janela depende da altura das de cima (RF-05). As
 // âncoras simulam balões de voz recebidos de 336 × 62 px, a 70 px um do outro, na área da conversa do
-// print do BUG-20261002-A4MZ (x de 488 a 1316).
+// print do BUG-20261002-A4MZ (x de 488 a 1316). Os testes do BUG-20261002-HVT4 usam a geometria do WhatsApp
+// real, com a altura da área das mensagens (evidence/estrutura-vertical-whatsapp-real.md do bug).
 //
 // Sem rede, sem conta e sem efeito fora do diretório temporário. Pulado sem o Chrome for Testing.
 
@@ -48,7 +49,67 @@ const AJUDANTES = `
   function novoGerenciador(ids) {
     return new W.GerenciadorDeJanelas(new W.CronometroDeEspera(), function (id) { return ancora(id, ids.indexOf(id)); }, function () { return AREA; });
   }
+  // Geometria do WhatsApp real (BUG-20261002-HVT4), numa tela de 1624 × 907: área da conversa de x = 551 a
+  // 1624, mensagens de y = 64 (fim do cabeçalho) a 844 (começo da caixa de escrita), balões de voz recebidos
+  // de 336 × 68 px em x = 613
+  var AREA_REAL = { esquerda: 551, direita: 1624, topo: 64, fundo: 844 };
+  var ERRO = { tipo: "erro", mensagem: "O motor não conseguiu transcrever este áudio.", motivo: "FALHA_NA_TRANSCRICAO", falhouAposMs: 0 };
+  function balao(id, y) { return { idAudio: id, x: 613, y: y, largura: 336, altura: 68, visivel: true }; }
+  // Gerenciador com o balão de cada id no y dado
+  function gerenciadorReal(ysDosBaloes) {
+    return new W.GerenciadorDeJanelas(new W.CronometroDeEspera(), function (id) { return balao(id, ysDosBaloes[id]); }, function () { return AREA_REAL; });
+  }
+  // Seta da janela (BUG-20261002-OW7G), lida do traçado-alvo, que não depende da transição: a linha vai da
+  // cauda, na lateral da janela, ao trilho, sobe ou desce até a altura da ponta e entra no balão
+  // (M cauda H trilho V ponta H ponta); o triângulo da ponta começa no bico.
+  function seta(id) {
+    var g = document.querySelector('.whispper-setas [data-whispper-seta-de="' + id + '"]');
+    if (!g) return null;
+    var numeros = function (d) { return (d.match(/-?[0-9.]+/g) || []).map(Number); };
+    var linha = numeros(g.querySelector(".whispper-seta-linha").style.d);
+    var bico = numeros(g.querySelector(".whispper-seta-ponta").style.d);
+    return { id: id, caudaX: linha[0], caudaY: linha[1], trilho: linha[2], pontaY: linha[3], pontaX: linha[4],
+             bico: [bico[0], bico[1]], oculta: getComputedStyle(g).display === "none" };
+  }
 `;
+
+interface SetaLida {
+  id: string;
+  caudaX: number;
+  caudaY: number;
+  trilho: number;
+  pontaY: number;
+  pontaX: number;
+  bico: [number, number];
+  oculta: boolean;
+}
+
+// A seta de cada janela aponta para o seu balão: bico e ponta na borda direita do balão (x = 949), à
+// altura dele; cauda na borda esquerda da janela, à altura dela; todo o traçado no corredor entre os dois,
+// sem cobrir balão nem janela. E nenhum par de setas se cruza nem corre no mesmo trilho.
+function conferirSetas(setas: Array<SetaLida | null>, alvos: Retangulo[], ysDosBaloes: number[]): void {
+  setas.forEach((seta, i) => {
+    const contexto = JSON.stringify({ seta, janela: alvos[i], balao: ysDosBaloes[i] });
+    assert.ok(seta && !seta.oculta, `a janela ${alvos[i]!.id} não tem seta visível: ${contexto}`);
+    assert.ok(Math.abs(seta.pontaX - 949) <= 0.5 && seta.pontaY >= ysDosBaloes[i]! && seta.pontaY <= ysDosBaloes[i]! + 68, `a ponta não está no balão: ${contexto}`);
+    assert.deepEqual(seta.bico, [seta.pontaX, seta.pontaY], `o bico não está na ponta: ${contexto}`);
+    assert.ok(Math.abs(seta.caudaX - alvos[i]!.x) <= 0.5 && seta.caudaY >= alvos[i]!.y && seta.caudaY <= alvos[i]!.y + alvos[i]!.altura, `a cauda não está na janela: ${contexto}`);
+    assert.ok(seta.trilho >= 949 && seta.trilho <= alvos[i]!.x, `o traçado sai do corredor: ${contexto}`);
+  });
+  const entre = (v: number, a: number, b: number) => v > Math.min(a, b) && v < Math.max(a, b);
+  for (const a of setas as SetaLida[]) {
+    for (const b of setas as SetaLida[]) {
+      if (a === b) continue;
+      const atravessa = [[a.caudaY, a.caudaX], [a.pontaY, a.pontaX]].some(([y, x]) => entre(b.trilho, x!, a.trilho) && entre(y!, b.caudaY, b.pontaY));
+      const mesmoTrilho = a.trilho === b.trilho && Math.min(Math.max(a.caudaY, a.pontaY), Math.max(b.caudaY, b.pontaY)) > Math.max(Math.min(a.caudaY, a.pontaY), Math.min(b.caudaY, b.pontaY));
+      assert.ok(!atravessa && !mesmoTrilho, `as setas de ${a.id} e ${b.id} se cruzam: ${JSON.stringify([a, b])}`);
+    }
+  }
+}
+
+// Tela do WhatsApp real nas aceitações do A4MZ e do K3DY
+const TELA_REAL = { largura: 1624, altura: 907 };
+const MENSAGENS = { topo: 64, fundo: 844 };
 
 interface Retangulo {
   id: string;
@@ -107,9 +168,9 @@ test("janelas flutuantes no navegador, com a altura desenhada", {
   });
 
   // Uma página por teste, na tela do print e em primeiro plano: em segundo plano, a transição não anda
-  async function abrirPagina(): Promise<Pagina> {
+  async function abrirPagina(tela = { largura: 1316, altura: 806 }): Promise<Pagina> {
     const p = await navegador.abrirPagina("about:blank");
-    await p.definirTamanho(1316, 806);
+    await p.definirTamanho(tela.largura, tela.altura);
     await p.navegarSimulado("https://exemplo.test/", html);
     await p.aguardar("typeof W !== 'undefined' && typeof novoGerenciador === 'function'", 10_000, "o gerenciador carregar");
     await p.trazerParaFrente();
@@ -187,5 +248,143 @@ test("janelas flutuantes no navegador, com a altura desenhada", {
       assert.equal(transicoes, 0, `a janela ${id} abriu com transição em curso`);
       assert.deepEqual([Math.round(desenhado.x), Math.round(desenhado.y)], [alvo.x, alvo.y], `a janela ${id} não abriu no destino`);
     }
+  });
+
+  // BUG-20261002-HVT4: a janela do último áudio começava no topo do balão e descia sobre a caixa de
+  // escrita e além da tela (739 a 981 no WhatsApp real); "Copiar" e o resumo ficavam abaixo da tela.
+  await t.test("reprodução: a janela do último áudio, no pé da conversa, fica inteira na área das mensagens, com \"Copiar\" visível (critérios 1 e 2 do HVT4)", async () => {
+    const p = await abrirPagina(TELA_REAL);
+    const { janela, fimDoCopiar } = await p.avaliar<{ janela: Retangulo; fimDoCopiar: number }>(`(() => {
+      const g = gerenciadorReal({ P: 739 });
+      g.abrir("P");
+      g.definirEstado("P", concluido(T.longo));
+      const a = alvo("P");
+      const copiar = [...janela("P").querySelectorAll("button")].find((b) => b.textContent === "Copiar");
+      return { janela: a, fimDoCopiar: a.y + copiar.offsetTop + copiar.offsetHeight };
+    })()`);
+
+    assert.ok(janela.altura >= 240, `a janela não chegou ao limite do RF-07: ${JSON.stringify(janela)}`);
+    assert.ok(janela.y >= MENSAGENS.topo, `a janela começa sob o cabeçalho: ${JSON.stringify(janela)}`);
+    assert.ok(janela.y + janela.altura <= MENSAGENS.fundo - 8, `a janela passa do fim da área das mensagens: ${JSON.stringify(janela)}`);
+    assert.ok(fimDoCopiar <= MENSAGENS.fundo, `"Copiar" termina em ${fimDoCopiar}, sob a caixa de escrita`);
+
+    // Ao fim da transição, a tela também a mostra inteira
+    await p.aguardar(`janela("P").getAnimations().length === 0`, 5_000, "a janela terminar de subir");
+    const [desenhada] = await p.avaliar<Retangulo[]>(`["P"].map(desenhado)`);
+    assert.ok(desenhada!.y + desenhada!.altura <= MENSAGENS.fundo, `na tela, a janela passa do fim da área: ${JSON.stringify(desenhada)}`);
+  });
+
+  await t.test("reprodução: quatro áudios no pé da conversa empilham-se dentro da área das mensagens, sem sobreposição (EC-05, RF-05)", async () => {
+    const p = await abrirPagina(TELA_REAL);
+    const alvos = await p.avaliar<Retangulo[]>(`(() => {
+      const ids = ["Q1", "Q2", "Q3", "Q4"];
+      const g = gerenciadorReal({ Q1: 434, Q2: 529, Q3: 624, Q4: 719 });
+      for (const id of ids) g.abrir(id);
+      [ERRO, concluido(T.longo), ERRO, ERRO].forEach((estado, i) => g.definirEstado(ids[i], estado));
+      return ids.map(alvo);
+    })()`);
+
+    for (const a of alvos) {
+      assert.ok(a.y >= MENSAGENS.topo && a.y + a.altura <= MENSAGENS.fundo - 8, `janela fora da área das mensagens: ${JSON.stringify(alvos)}`);
+    }
+    assert.deepEqual(cruzamentos(alvos), [], `janelas sobrepostas: ${JSON.stringify(alvos)}`);
+  });
+
+  // A subida faz a posição da janela nova depender da altura dela: no pé da conversa, o primeiro cálculo
+  // do abrir (altura suposta de 160 px) e o segundo (a medida) a põem em lugares diferentes, e a janela
+  // recém-entrada deslizaria entre eles. O balão vai de 780 a 848, em parte sob a caixa de escrita. Guarda:
+  // passa sem a subida, em que a janela fica no topo do balão; a subida é provada pelos testes acima.
+  await t.test("a janela nova aberta no pé da conversa entra na página já no lugar, sem deslizar (RF-01; lição do K3DY)", async () => {
+    const p = await abrirPagina(TELA_REAL);
+    const { transicoes, janela, desenhada } = await p.avaliar<{ transicoes: number; janela: Retangulo; desenhada: Retangulo }>(`(() => {
+      const g = gerenciadorReal({ N: 780 });
+      g.abrir("N");
+      return { transicoes: janela("N").getAnimations().length, janela: alvo("N"), desenhada: desenhado("N") };
+    })()`);
+
+    assert.equal(transicoes, 0, `a janela abriu com transição em curso: ${JSON.stringify(janela)}`);
+    assert.deepEqual([Math.round(desenhada.x), Math.round(desenhada.y)], [janela.x, janela.y], "a janela não abriu no destino");
+  });
+
+  // BUG-20261002-OW7G: as janelas deslocadas ficavam abaixo dos seus balões sem nada que as ligasse a eles.
+  // O critério do RF-05, com cinco áudios na geometria do WhatsApp real: a pilha sobe para caber, as duas
+  // primeiras ficam à altura dos balões (seta reta) e as três últimas, abaixo deles (cotovelo).
+  const CINCO = `var ids = ["S1", "S2", "S3", "S4", "S5"];
+    var ys = { S1: 149, S2: 244, S3: 339, S4: 434, S5: 529 };
+    var g = gerenciadorReal(ys);
+    for (const id of ids) g.abrir(id);
+    [ERRO, concluido(T.medio), ERRO, ERRO, concluido(T.curto)].forEach((estado, i) => g.definirEstado(ids[i], estado));`;
+
+  await t.test("reprodução: cinco áudios consecutivos resultam em cinco janelas, nenhuma sobreposta, cada seta apontando para o balão correto (critério do RF-05)", async () => {
+    const p = await abrirPagina(TELA_REAL);
+    const { alvos, setas } = await p.avaliar<{ alvos: Retangulo[]; setas: Array<SetaLida | null> }>(`(() => {
+      ${CINCO}
+      return { alvos: ids.map(alvo), setas: ids.map(seta) };
+    })()`);
+
+    assert.deepEqual(cruzamentos(alvos), [], `janelas sobrepostas: ${JSON.stringify(alvos)}`);
+    conferirSetas(setas, alvos, [149, 244, 339, 434, 529]);
+    assert.equal(setas[0]!.caudaY, setas[0]!.pontaY, `a janela à altura do balão não tem seta reta: ${JSON.stringify(setas[0])}`);
+    assert.ok(setas.slice(2).every((seta) => seta!.caudaY !== seta!.pontaY), `as janelas abaixo dos balões não fazem cotovelo: ${JSON.stringify(setas)}`);
+  });
+
+  await t.test("reprodução: na rolagem, cada seta acompanha o seu balão e a sua janela (RF-03, critério 1 do OW7G)", async () => {
+    const p = await abrirPagina(TELA_REAL);
+    const { alvos, setas } = await p.avaliar<{ alvos: Retangulo[]; setas: Array<SetaLida | null> }>(`(() => {
+      ${CINCO}
+      for (const id of ids) g.atualizarAncora(balao(id, ys[id] - 100));
+      return { alvos: ids.map(alvo), setas: ids.map(seta) };
+    })()`);
+
+    conferirSetas(setas, alvos, [49, 144, 239, 334, 429]);
+    // Ao fim da transição, a tela desenha a seta no alvo
+    await p.aguardar(`[...document.querySelectorAll(".whispper-setas path")].every((d) => d.getAnimations().length === 0)`, 5_000, "as setas terminarem de andar");
+    const desenhadas = await p.avaliar<boolean>(`[...document.querySelectorAll(".whispper-setas path")].every((d) => getComputedStyle(d).d === d.style.d)`);
+    assert.ok(desenhadas, "ao fim da transição, alguma seta não está no alvo");
+  });
+
+  await t.test("a seta não rouba cliques e fica por trás das janelas (critério 3 do OW7G)", async () => {
+    const p = await abrirPagina(TELA_REAL);
+    const leitura = await p.avaliar<{ primeira: boolean; eventos: string; noTrilho: string | null; seta: SetaLida | null }>(`(() => {
+      const g = gerenciadorReal({ K1: 149, K2: 244 });
+      g.abrir("K1");
+      g.abrir("K2");
+      g.definirEstado("K1", concluido(T.longo));
+      const camada = document.querySelector(".whispper-setas");
+      const s = seta("K2");
+      const ponto = s && document.elementFromPoint(s.trilho, (s.caudaY + s.pontaY) / 2);
+      return {
+        primeira: !!camada && document.getElementById("whispper-janelas-container").firstElementChild === camada,
+        eventos: camada ? getComputedStyle(camada).pointerEvents : "",
+        noTrilho: ponto ? (ponto.closest(".whispper-setas") ? "seta" : ponto.tagName) : null,
+        seta: s,
+      };
+    })()`);
+
+    assert.ok(leitura.seta && leitura.seta.caudaY !== leitura.seta.pontaY, `a janela deslocada não tem cotovelo: ${JSON.stringify(leitura)}`);
+    assert.equal(leitura.primeira, true, "a camada das setas não está atrás das janelas");
+    assert.equal(leitura.eventos, "none", "a camada das setas recebe cliques");
+    assert.notEqual(leitura.noTrilho, "seta", "o clique no trilho vai para a seta, e não para a conversa");
+  });
+
+  // Empurrada para baixo de uma janela alta, no pé da conversa, a janela nova sobe pela altura medida (HVT4),
+  // e a cauda da seta, a 10 px do topo dela, vai junto: desenhada antes de a janela entrar na página, a seta
+  // nasceria na posição provisória e deslizaria até a final.
+  await t.test("a seta da janela nova nasce no lugar, mesmo quando a altura medida a move, e fechar a janela leva a seta junto (OW7G)", async () => {
+    const p = await abrirPagina(TELA_REAL);
+    const leitura = await p.avaliar<{ animacoes: number; alvo: string; desenhado: string; restantes: number }>(`(() => {
+      const g = gerenciadorReal({ L1: 560, L2: 600 });
+      g.abrir("L1");
+      g.definirEstado("L1", concluido(T.longo));
+      g.abrir("L2");
+      const linha = document.querySelector('.whispper-setas [data-whispper-seta-de="L2"] .whispper-seta-linha');
+      const r = { animacoes: linha.getAnimations().length, alvo: linha.style.d, desenhado: getComputedStyle(linha).d };
+      g.fechar("L2");
+      return { ...r, restantes: document.querySelectorAll('[data-whispper-seta-de="L2"]').length };
+    })()`);
+
+    assert.equal(leitura.animacoes, 0, `a seta da janela nova abriu com transição: ${JSON.stringify(leitura)}`);
+    assert.equal(leitura.desenhado, leitura.alvo, "a seta da janela nova não nasceu no alvo");
+    assert.equal(leitura.restantes, 0, "a seta ficou na página depois de a janela fechar");
   });
 });

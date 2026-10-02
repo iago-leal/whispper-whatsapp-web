@@ -17,7 +17,9 @@ Para evitar sobreposição entre áudios enviados em sequência:
 1. As mensagens são ordenadas pela posição vertical (`y`) de seus balões.
 2. Cada janela recebe sua coordenada ideal adjacente ao balão.
 3. Se o topo de uma janela invadir uma janela acima que cruze a sua faixa horizontal, ela é empurrada para baixo dessa janela, com um espaçamento mínimo de 8 px. Vale a altura desenhada da janela, lida a cada cálculo; janelas que não se cruzam na horizontal, como as de lados opostos numa conversa larga, não se empurram.
-4. Caso a largura disponível lateralmente seja inferior a 320 px, a janela posiciona-se logo abaixo do balão.
+4. Caso a largura disponível lateralmente seja inferior a 320 px, a janela posiciona-se logo abaixo do balão; no pé da conversa, se ali não couber, logo acima dele.
+5. A janela cabe na parte visível da lista de mensagens, entre o cabeçalho e a caixa de escrita. A que passaria do fim dela sobe até terminar 8 px acima, e a pilha acima sobe junto, mantendo os 8 px entre as janelas; nenhuma sobe além do topo. Só a pilha mais alta que a área volta a passar do fim. A janela se oculta quando o balão sai dessa área, e não só da tela.
+6. Uma seta liga cada janela visível ao seu balão. A ponta fica na borda do balão voltada para a janela, à altura do centro da parte visível dele; a cauda, na borda da janela, a 10 px dos cantos. Com o balão à altura da janela, a seta é reta; senão, faz cotovelo no corredor de 8 px entre os dois, e os cotovelos que se sobrepõem correm em trilhos distintos, sem se cruzar. No modo abaixo do passo 4, a seta é vertical. As setas ficam numa camada atrás das janelas, não recebem cliques e andam com as janelas na rolagem.
 
 ## Acessibilidade e Teclado
 - Foco gerenciável com `tabindex`.

@@ -39,6 +39,35 @@ html[class*="dark"] .whispper-janela {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
+/* Seta que liga cada janela ao balão de origem (RF-05; BUG-20261002-OW7G): atrás das janelas, sem receber
+   cliques; o traçado anda com a janela, na mesma transição de 120 ms */
+.whispper-setas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.whispper-seta-linha {
+  fill: none;
+  stroke: #00a884;
+  stroke-width: 1.5;
+  transition: d 0.12s ease-out;
+}
+
+.whispper-seta-ponta {
+  fill: #00a884;
+  transition: d 0.12s ease-out;
+}
+
+/* A janela que entra na página já no lugar não desliza até ele (BUG-20261002-HVT4) */
+.whispper-janela-entrando {
+  transition: none;
+}
+
 .whispper-janela-oculta {
   opacity: 0;
   pointer-events: none;

@@ -24,17 +24,28 @@ const WHATSAPP = "https://web.whatsapp.com/";
 
 const PLAYER = `<div><button aria-label="Reproduzir mensagem de voz"></button></div>`;
 
+// Moldura vertical da conversa como no WhatsApp real (BUG-20261002-HVT4,
+// evidence/estrutura-vertical-whatsapp-real.md): o #main ocupa a altura da tela, com o cabeçalho de 64 px
+// em cima, a caixa de escrita de 64 px embaixo e, entre os dois, a lista de mensagens rolando dentro de
+// conversation-panel-messages. É ali que termina a área em que a janela deve caber.
+function moldura(conteudo: string): string {
+  const coluna = "flex:1;min-height:0;display:flex;flex-direction:column";
+  return `<header data-testid="conversation-header" style="flex:none;height:64px"></header>` +
+    `<div data-testid="conversation-panel-body" style="${coluna}"><div style="${coluna}"><div style="${coluna}">` +
+    `<div data-testid="conversation-panel-messages" style="flex:1;min-height:0;overflow-y:scroll">${conteudo}</div>` +
+    `</div></div></div>` +
+    `<footer style="flex:none;height:64px"><div data-testid="compose-box"></div></footer>`;
+}
+
 // Balões de voz como no DOM real: a linha e a mensagem aninhada casam ambas o seletor de balão, e
 // só a mensagem carrega o data-id; o player fica sob o conteúdo virtualizado. A lista rolável tem
-// altura própria e espaço abaixo das mensagens, como a do WhatsApp.
+// espaço abaixo das mensagens, como a do WhatsApp.
 function painel(ids: string[], { comListaDeMensagens = true, comPlayer = true, rolavel = false } = {}): string {
   const linhas = ids.map((id) =>
     `<div role="row"><div data-id="${id}" data-testid="conv-msg-${id}"><div data-virtualized="false">` +
     `<div data-testid="msg-container">${comPlayer ? PLAYER : ""}</div></div></div></div>`).join("");
-  const lista = rolavel
-    ? `<div data-tab="8" role="application" style="height:300px;overflow-y:auto">${linhas}<div style="height:2000px"></div></div>`
-    : `<div data-tab="8" role="application">${linhas}</div>`;
-  return comListaDeMensagens ? lista : linhas;
+  const lista = `<div data-tab="8" role="application">${linhas}${rolavel ? `<div style="height:2000px"></div>` : ""}</div>`;
+  return moldura(comListaDeMensagens ? lista : linhas);
 }
 
 // Áudios na geometria conferida no WhatsApp Web real em 2026-10-02 (BUG-20261002-A4MZ,
@@ -46,8 +57,17 @@ function conversaComGeometriaReal(): string {
     `<div role="row"><div data-id="${id}" data-testid="conv-msg-${id}"><div data-virtualized="false">` +
     `<div style="display:flex;flex-direction:column;align-items:${alinhamento};padding:6px 57px 6px 62px">` +
     `<div data-testid="msg-container" style="width:336px;height:62px">${PLAYER}</div></div></div></div></div>`;
-  return `<div data-tab="8" role="application" style="padding-top:60px">` +
-    linha("R", "flex-start") + `<div style="height:240px"></div>` + linha("E", "flex-end") + `</div>`;
+  return moldura(`<div data-tab="8" role="application" style="padding-top:60px">` +
+    linha("R", "flex-start") + `<div style="height:240px"></div>` + linha("E", "flex-end") + `</div>`);
+}
+
+// BUG-20261002-HVT4: a conversa rolada até o fim, com um áudio recebido como última mensagem, no pé da área
+// das mensagens, logo acima da caixa de escrita.
+function conversaNoFim(): string {
+  return moldura(`<div data-tab="8" role="application"><div style="height:2000px"></div>` +
+    `<div role="row"><div data-id="U" data-testid="conv-msg-U"><div data-virtualized="false">` +
+    `<div style="display:flex;flex-direction:column;align-items:flex-start;padding:6px 57px 6px 62px">` +
+    `<div data-testid="msg-container" style="width:336px;height:68px">${PLAYER}</div></div></div></div></div></div>`);
 }
 
 // Tela do navegador e largura da lista de conversas, que ocupa a esquerda; a área da conversa fica com o resto.
@@ -59,9 +79,10 @@ interface Tela {
 
 function pagina(conversaAberta: string | null, tela?: Tela): string {
   const main = conversaAberta === null ? "" : `<div id="main">${conversaAberta}</div>`;
-  const estilo = tela
-    ? `<style>body{margin:0}#app{display:flex;height:100vh}#side{flex:none;width:${tela.lista}px}#painel{flex:1;min-width:0}</style>`
-    : "";
+  // O #main em coluna, da altura da tela, como no WhatsApp real (BUG-20261002-HVT4)
+  const estilo = `<style>body{margin:0}#main{display:flex;flex-direction:column;height:100vh}` + (tela
+    ? `#app{display:flex;height:100vh}#side{flex:none;width:${tela.lista}px}#painel{flex:1;min-width:0}</style>`
+    : `</style>`);
   return `<!doctype html><html><head><meta charset="utf-8"><title>WhatsApp</title>${estilo}</head>` +
     `<body><div id="app"><div id="side"></div><div id="painel">${main}</div></div></body></html>`;
 }
@@ -402,7 +423,7 @@ test("integração com a conversa aberta no WhatsApp Web", {
     await p.trazerParaFrente();
     await p.avaliar(clicar("A"));
     assert.deepEqual(await p.avaliar(todosEmErro), ["erro"], "o pedido não terminou no indicador de erro");
-    const rolarPara = (topo: number) => p.avaliar(`document.querySelector('#main [role="application"]').scrollTop = ${topo}`);
+    const rolarPara = (topo: number) => p.avaliar(`document.querySelector('#main [data-testid="conversation-panel-messages"]').scrollTop = ${topo}`);
     const lerA = () => p.avaliar<LeituraDaJanela>(`(${lerJanela})("A")`);
 
     await rolarPara(10);
@@ -451,5 +472,31 @@ test("integração com a conversa aberta no WhatsApp Web", {
       assert.equal(leitura.junto, "abaixo", `a janela do áudio ${id} não abriu abaixo do balão: ${JSON.stringify(leitura)}`);
       assert.equal(leitura.cobreLista, false, `a janela do áudio ${id} cobre a lista de conversas`);
     }
+  });
+
+  // BUG-20261002-HVT4: a janela do último áudio da conversa começava no topo do balão e descia sobre a caixa
+  // de escrita e além da tela. A área das mensagens sai do adaptador, medida na moldura conferida no
+  // WhatsApp real; a tela e a lista de conversas são as da aceitação do A4MZ.
+  await t.test("reprodução: na geometria do WhatsApp real, a janela do último áudio da conversa fica inteira entre o cabeçalho e a caixa de escrita (critério 1 do HVT4)", async () => {
+    const p = await carregarWhatsApp(conversaNoFim(), { largura: 1624, altura: 907, lista: 551 });
+    await p.trazerParaFrente();
+    await p.avaliar(`document.querySelector('#main [data-testid="conversation-panel-messages"]').scrollTop = 1e6`);
+    await p.avaliar(clicar("U"));
+    assert.deepEqual(await p.avaliar(todosEmErro), ["erro"], "o pedido não terminou no indicador de erro");
+    await p.aguardar(`(() => {
+      const j = document.querySelector('.whispper-janela[aria-label="Transcrição do áudio U"]');
+      return !!j && !j.classList.contains("whispper-janela-oculta") && /erro/i.test(j.innerText) && j.getAnimations().length === 0;
+    })()`, 5_000, "a janela mostrar o erro e parar");
+
+    const medidas = await p.avaliar<{ janela: DOMRect; cabecalho: DOMRect; caixa: DOMRect }>(`(() => {
+      const ret = (el) => el.getBoundingClientRect().toJSON();
+      return {
+        janela: ret(document.querySelector('.whispper-janela[aria-label="Transcrição do áudio U"]')),
+        cabecalho: ret(document.querySelector('#main [data-testid="conversation-header"]')),
+        caixa: ret(document.querySelector('#main [data-testid="compose-box"]').parentElement),
+      };
+    })()`);
+    assert.ok(medidas.janela.bottom <= medidas.caixa.top, `a janela cobre a caixa de escrita: ${JSON.stringify(medidas)}`);
+    assert.ok(medidas.janela.top >= medidas.cabecalho.bottom, `a janela cobre o cabeçalho: ${JSON.stringify(medidas)}`);
   });
 });

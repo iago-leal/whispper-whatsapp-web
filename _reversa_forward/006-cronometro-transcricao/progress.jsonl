@@ -22,3 +22,5 @@
 {"ts": "2026-10-01T21:13:07Z", "action": "T021", "status": "done", "files": ["extension/src/content/estilos.css"]}
 {"ts": "2026-10-01T21:13:07Z", "action": "T023", "status": "done", "files": ["extension/src/content/janela-flutuante.css"]}
 {"ts": "2026-10-01T21:13:07Z", "action": "T024", "status": "done", "files": ["extension/popup/index.html", "extension/src/popup/popup.ts"]}
+{"ts": "2026-10-02T10:53:05Z", "action": "T025", "status": "done", "files": ["extension/test/integracao-conversa.test.ts"]}
+{"ts": "2026-10-02T10:53:37Z", "action": "T026", "status": "done", "files": ["extension/dist/"], "note": "typecheck limpo; npm test 144 aprovados, 0 falhas, 2 pulados; npm run build completo com o instalador .pkg"}

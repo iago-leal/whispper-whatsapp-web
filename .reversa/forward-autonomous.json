@@ -1,7 +1,7 @@
 {
   "schema-version": 1,
   "started-at": "2026-10-01T17:54:43-03:00",
-  "status": "paused",
+  "status": "done",
   "answers": {
     "target": "sync",
     "doubts": "file",
@@ -12,12 +12,15 @@
     {
       "item": "006-cronometro-transcricao",
       "feature-dir": "_reversa_forward/006-cronometro-transcricao",
-      "status": "running",
-      "last-stage": "coding-em-progresso (24/26)",
-      "note": "Pausada a pedido do usuário em 2026-10-01 18:10 para commit e push; faltam T025 e T026, depois o sync."
+      "status": "done",
+      "last-stage": "done (26/26) com adendo vigente",
+      "note": "Concluída em 2026-10-02: T025 e T026, legacy-impact.md, regression-watch.md e adendo _reversa_sdd/addenda/006-cronometro-transcricao.md."
     }
   ],
   "warnings": [
-    "allowLegacyEdits irrestrito (allowedPaths vazio)"
+    "allowLegacyEdits irrestrito (allowedPaths vazio)",
+    "RF-08 da feature (ícone recriado herda o estado) sem teste automático: só aceitação manual, onboarding.md §6.1",
+    "A001 (desempenho com 20 pedidos em espera) e A006 (contraste do contador) sem verificação automática nem manual",
+    "Tipos de impacto do legacy-impact.md e do adendo usam a taxonomia completa, e não só componente-novo, porque a feature evolui código das features 002 a 004"
   ]
 }

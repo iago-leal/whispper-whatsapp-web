@@ -57,17 +57,18 @@ Caminhos relativos a `extension/`.
 | T022 | Janela: contador vivo com `role="timer"` nos estados de espera, resumo final com fila e comparação, "Falhou após", região `aria-live` oculta com anúncio só no início e no fim; gerenciador recebe o cronômetro e o repassa (D-06) | T009, T017 | - | `src/content/janela-elemento.ts`, `src/content/gerenciador-janelas.ts` | 🟢 | [X] |
 | T023 | Estilos da janela: contador, resumo e classe de texto só para leitor de tela | - | `[//]` | `src/content/janela-flutuante.css` | 🟢 | [X] |
 | T024 | Painel: linha "Espera média" com o texto vazio "sem transcrições ainda" (RF-14) | T012 | `[//]` | `popup/index.html`, `src/popup/popup.ts` | 🟢 | [X] |
-| T025 | Teste no navegador: o clique faz o ícone pulsar com contador e, com o motor indisponível no ambiente de teste, passa ao indicador de erro sem contador | T020 | - | `test/integracao-conversa.test.ts` | 🟡 | [ ] |
+| T025 | Teste no navegador: o clique faz o ícone pulsar com contador e, com o motor indisponível no ambiente de teste, passa ao indicador de erro sem contador | T020 | - | `test/integracao-conversa.test.ts` | 🟡 | [X] |
 
 ## Fase 5, Polimento
 
 | ID | Descrição | Dependências | Paralelismo | Arquivo alvo | Confidência | Status |
 |----|-----------|--------------|-------------|--------------|-------------|--------|
-| T026 | Rodar `npm run typecheck`, `npm test` e `npm run build` e corrigir o que falhar | T008, T013, T021, T023, T024, T025 | - | `extension/` | 🟢 | [ ] |
+| T026 | Rodar `npm run typecheck`, `npm test` e `npm run build` e corrigir o que falhar | T008, T013, T021, T023, T024, T025 | - | `extension/` | 🟢 | [X] |
 
 ## Notas de execução
 
 - **2026-10-01 18:10, pausa a pedido do usuário** (fim do expediente), para commit e push. Concluídas T001 a T024; abertas T025 (teste no navegador) e T026 (montagem completa com `npm run build`). Estado no momento da pausa: `npm run typecheck` limpo e `npm test` com 142 aprovados, 0 falhas e os mesmos 2 pulados da linha de base (instalação E2E e motor real).
+- **2026-10-02, retomada:** T025 no Chrome for Testing, com dois casos: o clique faz o ícone pulsar com contador e, sem motor, passa ao erro sem contador; em 20 cliques, o ícone pulsa na mesma tarefa do clique e em até 100 ms, o que cobre o achado A002 da auditoria. Uma mutação no registro do contador deixou o teste vermelho. T026: `npm run typecheck` limpo, `npm test` com 144 aprovados, 0 falhas e 2 pulados, e `npm run build` completo com o instalador `.pkg`.
 - **RF-07 versus RF-04:** o exemplo "Falhou após 61 s" do RF-07 contradiz o RF-04 (a partir de 60 s, "1 min 05 s"). Prevaleceu a regra geral: "Falhou após 1 min 01 s". O teste `test/tempo-de-espera.test.ts` registra a escolha.
 - **Ressalvas do `/reversa-quality`:** Q-003 resolvida pelo RF-04 (tempo final a partir de 60 s em minutos); Q-014 pela D-08 (sem duração, o resumo omite o áudio e o pedido fica fora do acumulado). Q-016 é de redação e não afeta o código.
 - **Achados do `/reversa-audit`:** A003 coberto pelo caso "RF-10" em `test/nucleo-transcricao.test.ts`. A001 e A002 (tarefas longas com 20 pedidos; 100 ms até o pulsar) ficam para T025 e para a aceitação manual (`onboarding.md`).

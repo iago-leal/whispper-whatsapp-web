@@ -1,0 +1,392 @@
+# Gate 1 (BUG-20261002-HVT4 e BUG-20261002-OW7G, plano único): testes aplicados sobre 525ac3b, sem a correção; 2026-10-02 19:15 -0300
+# Diffs aplicados, nesta ordem: HVT4 fix/CHG-001 a 003, OW7G fix/CHG-001 e 002
+# cd extension && node --test test/posicionador-colisoes.test.ts test/janelas-no-navegador.test.ts test/integracao-conversa.test.ts
+# Exit code: 1
+▶ integração com a conversa aberta no WhatsApp Web
+  ✔ reprodução: a página carrega sem conversa e o ícone aparece em até 500 ms quando a conversa abre (RF-01, RF-03) (1884.2305ms)
+  ✔ reprodução no WhatsApp real: o player montado depois do balão recebe o ícone em até 500 ms (RF-01, RF-03) (2240.752125ms)
+  ✔ trocar de conversa e voltar mantém exatamente um ícone por mensagem de voz (RF-02, RF-11) (107.845875ms)
+  ✔ sem conversa aberta não há aviso de degradação (EC-10) (90.979167ms)
+  ✔ conversa sem a lista de mensagens fica degradada e sem ícone, e a seguinte volta a receber (RF-11, RF-12) (2094.349ms)
+  ✔ o clique faz o ícone pulsar com contador e, sem motor, passa ao erro sem contador (RF-01, RF-02 da feature 006) (180.193292ms)
+  ✔ em 20 cliques, ao menos 95% dos ícones pulsam em até 100 ms (RF-01 da feature 006) (187.3415ms)
+  ✔ reprodução: sem rolagem, a janela fica visível junto ao balão em até 150 ms do clique e mostra o erro quando o ícone o indica (RF-01, RF-06 e RNF-01 da janela) (149.044792ms)
+  ✔ rolar a conversa leva a janela junto, oculta-a com o balão fora da tela e a reexibe com o mesmo texto ao voltar (RF-03 da janela) (840.685166ms)
+  ✔ reprodução: na geometria do WhatsApp real, a janela abre ao lado do balão visível, dentro da área da conversa: à direita do recebido e à esquerda do enviado (RF-01 da janela) (126.153292ms)
+  ✔ com a área da conversa reduzida a 600 px, a janela abre abaixo do balão, sem cobri-lo nem cobrir a lista de conversas (RF-02 da janela) (180.540292ms)
+  ✖ reprodução: na geometria do WhatsApp real, a janela do último áudio da conversa fica inteira entre o cabeçalho e a caixa de escrita (critério 1 do HVT4) (141.045459ms)
+✖ integração com a conversa aberta no WhatsApp Web (10832.76225ms)
+▶ janelas flutuantes no navegador, com a altura desenhada
+  ✔ reprodução: cinco áudios consecutivos concluídos, com textos de alturas diferentes e um no limite de 240 px, resultam em cinco janelas sem sobreposição (RF-05, RF-07) (1271.884458ms)
+  ✔ reprodução: quando a janela de cima cresce ao concluir, a de baixo desce e nenhuma se sobrepõe (RF-05) (588.032709ms)
+  ✔ a janela aberta acima de outra já aberta a empurra pela altura desenhada, a 8 px (RF-05) (187.30925ms)
+  ✔ a janela nova entra na página já na posição, sem deslizar do canto da tela (RF-01) (137.645625ms)
+  ✖ reprodução: a janela do último áudio, no pé da conversa, fica inteira na área das mensagens, com "Copiar" visível (critérios 1 e 2 do HVT4) (95.622791ms)
+  ✖ reprodução: quatro áudios no pé da conversa empilham-se dentro da área das mensagens, sem sobreposição (EC-05, RF-05) (101.642208ms)
+  ✔ a janela nova aberta no pé da conversa entra na página já no lugar, sem deslizar (RF-01; lição do K3DY) (189.555791ms)
+  ✖ reprodução: cinco áudios consecutivos resultam em cinco janelas, nenhuma sobreposta, cada seta apontando para o balão correto (critério do RF-05) (124.439ms)
+  ✖ reprodução: na rolagem, cada seta acompanha o seu balão e a sua janela (RF-03, critério 1 do OW7G) (96.071917ms)
+  ✖ a seta não rouba cliques e fica por trás das janelas (critério 3 do OW7G) (119.073666ms)
+  ✖ a seta da janela nova nasce no lugar, mesmo quando a altura medida a move, e fechar a janela leva a seta junto (OW7G) (205.427875ms)
+✖ janelas flutuantes no navegador, com a altura desenhada (5862.156958ms)
+✔ calcularPosicoesJanelas posiciona janela ao lado da âncora em espaço suficiente (0.860375ms)
+✔ calcularPosicoesJanelas desloca verticalmente janela para resolver colisão (3.2935ms)
+✔ calcularPosicoesJanelas usa fallback abaixo do balão quando espaço lateral for insuficiente (0.427375ms)
+✔ calcularPosicoesJanelas mede o espaço lateral dentro da área da conversa e, sem ele, abre abaixo do balão (0.09075ms)
+✔ calcularPosicoesJanelas não desloca a janela que não cruza, na horizontal, a janela de cima (0.10575ms)
+✔ calcularPosicoesJanelas desloca a janela pela de cima que a cruza, mesmo com outra, de lado oposto, entre as duas (0.109458ms)
+✖ calcularPosicoesJanelas sobe a janela que passaria do fim da área das mensagens até terminar 8 px acima dele (0.929458ms)
+✖ calcularPosicoesJanelas sobe em bloco a pilha que passaria do fim da área, mantendo os vãos de 8 px (0.771458ms)
+✖ calcularPosicoesJanelas começa no topo da área a pilha mais alta que ela, sem sobreposição, e só o excesso passa do fim (0.201666ms)
+✔ calcularPosicoesJanelas mantém no topo do balão a janela que cabe na área das mensagens (RF-01) (0.117125ms)
+✖ calcularPosicoesJanelas oculta a janela do balão sob a caixa de escrita ou sob o cabeçalho, e começa no topo da área a do balão em parte sob o cabeçalho (RF-03) (0.117459ms)
+✖ calcularPosicoesJanelas abre acima do balão, sem cobri-lo, a janela do modo abaixo (RF-02) que não cabe abaixo dele no pé da conversa (0.083083ms)
+✖ calcularPosicoesJanelas liga por uma seta reta a janela à altura do seu balão, com a ponta na borda dele, no recebido e no enviado (RF-05, seção 8) (0.088875ms)
+✖ calcularPosicoesJanelas liga a janela deslocada ao centro do seu balão por um cotovelo no corredor, saindo 10 px abaixo do topo da janela (RF-05) (0.093542ms)
+✖ calcularPosicoesJanelas põe em trilhos distintos, sem cruzamento, os cotovelos que se sobrepõem, subindo ou descendo até o balão (0.137791ms)
+✖ calcularPosicoesJanelas liga por uma seta vertical a janela do modo abaixo (RF-02), abaixo ou acima do balão (0.057459ms)
+✖ calcularPosicoesJanelas não dá seta à janela oculta, e a seta da janela do balão em parte sob o cabeçalho mira a parte visível dele (0.115708ms)
+ℹ tests 42
+ℹ suites 0
+ℹ pass 23
+ℹ fail 19
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 16150.39975
+
+✖ failing tests:
+
+test at test/integracao-conversa.test.ts:480:11
+✖ reprodução: na geometria do WhatsApp real, a janela do último áudio da conversa fica inteira entre o cabeçalho e a caixa de escrita (critério 1 do HVT4) (141.045459ms)
+  AssertionError [ERR_ASSERTION]: a janela cobre a caixa de escrita: {"janela":{"x":957,"y":743,"width":322,"height":118.296875,"top":743,"right":1279,"bottom":861.296875,"left":957},"cabecalho":{"x":551,"y":0,"width":1073,"height":64,"top":0,"right":1624,"bottom":64,"left":551},"caixa":{"x":551,"y":843,"width":1073,"height":64,"top":843,"right":1624,"bottom":907,"left":551}}
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/integracao-conversa.test.ts:499:12)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/integracao-conversa.test.ts:480:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at test/janelas-no-navegador.test.ts:255:11
+✖ reprodução: a janela do último áudio, no pé da conversa, fica inteira na área das mensagens, com "Copiar" visível (critérios 1 e 2 do HVT4) (95.622791ms)
+  AssertionError [ERR_ASSERTION]: a janela passa do fim da área das mensagens: {"id":"P","x":957,"y":739,"largura":322,"altura":242}
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/janelas-no-navegador.test.ts:268:12)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/janelas-no-navegador.test.ts:255:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at test/janelas-no-navegador.test.ts:277:11
+✖ reprodução: quatro áudios no pé da conversa empilham-se dentro da área das mensagens, sem sobreposição (EC-05, RF-05) (101.642208ms)
+  AssertionError [ERR_ASSERTION]: janela fora da área das mensagens: [{"id":"Q1","x":957,"y":434,"largura":322,"altura":139},{"id":"Q2","x":957,"y":581,"largura":322,"altura":242},{"id":"Q3","x":957,"y":831,"largura":322,"altura":139},{"id":"Q4","x":957,"y":978,"largura":322,"altura":139}]
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/janelas-no-navegador.test.ts:288:14)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/janelas-no-navegador.test.ts:277:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at test/janelas-no-navegador.test.ts:318:11
+✖ reprodução: cinco áudios consecutivos resultam em cinco janelas, nenhuma sobreposta, cada seta apontando para o balão correto (critério do RF-05) (124.439ms)
+  AssertionError [ERR_ASSERTION]: a janela S1 não tem seta visível: {"seta":null,"janela":{"id":"S1","x":957,"y":149,"largura":322,"altura":139},"balao":149}
+      at file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/janelas-no-navegador.test.ts:93:12
+      at Array.forEach (<anonymous>)
+      at conferirSetas (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/janelas-no-navegador.test.ts:91:9)
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/janelas-no-navegador.test.ts:326:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/janelas-no-navegador.test.ts:318:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at test/janelas-no-navegador.test.ts:331:11
+✖ reprodução: na rolagem, cada seta acompanha o seu balão e a sua janela (RF-03, critério 1 do OW7G) (96.071917ms)
+  AssertionError [ERR_ASSERTION]: a janela S1 não tem seta visível: {"seta":null,"janela":{"id":"S1","x":957,"y":49,"largura":322,"altura":139},"balao":49}
+      at file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/janelas-no-navegador.test.ts:93:12
+      at Array.forEach (<anonymous>)
+      at conferirSetas (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/janelas-no-navegador.test.ts:91:9)
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/janelas-no-navegador.test.ts:339:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/janelas-no-navegador.test.ts:331:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at test/janelas-no-navegador.test.ts:346:11
+✖ a seta não rouba cliques e fica por trás das janelas (critério 3 do OW7G) (119.073666ms)
+  AssertionError [ERR_ASSERTION]: a janela deslocada não tem cotovelo: {"primeira":false,"eventos":"","noTrilho":null,"seta":null}
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/janelas-no-navegador.test.ts:364:12)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/janelas-no-navegador.test.ts:346:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at test/janelas-no-navegador.test.ts:373:11
+✖ a seta da janela nova nasce no lugar, mesmo quando a altura medida a move, e fechar a janela leva a seta junto (OW7G) (205.427875ms)
+  Error: (() => {
+        const g = gerenciadorReal({ L1: 560, L2: 600 });
+        g.abrir("L1");
+        g.definirEstado("L1", concluido(T.longo));
+        g.abrir("L2");
+        const linha = document.querySelector('.whispper-setas [data-whispper-seta-de="L2"] .whispper-seta-linha');
+        const r = { animacoes: linha.getAnimations().length, alvo: linha.style.d, desenhado: getComputedStyle(linha).d };
+        g.fechar("L2");
+        return { ...r, restantes: document.querySelectorAll('[data-whispper-seta-de="L2"]').length };
+      })(): TypeError: Cannot read properties of null (reading 'getAnimations')
+      at <anonymous>:7:36
+      at <anonymous>:10:7
+      at Pagina.avaliar (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/suporte/navegador-cdp.ts:138:33)
+      at async TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/janelas-no-navegador.test.ts:375:21)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/janelas-no-navegador.test.ts:373:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at test/posicionador-colisoes.test.ts:150:1
+✖ calcularPosicoesJanelas sobe a janela que passaria do fim da área das mensagens até terminar 8 px acima dele (0.929458ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  739 !== 594
+  
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/posicionador-colisoes.test.ts:155:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 739,
+    expected: 594,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/posicionador-colisoes.test.ts:158:1
+✖ calcularPosicoesJanelas sobe em bloco a pilha que passaria do fim da área, mantendo os vãos de 8 px (0.771458ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   434,
+  +   581,
+  +   831,
+  +   978
+  -   153,
+  -   300,
+  -   550,
+  -   697
+    ]
+  
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/posicionador-colisoes.test.ts:163:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 434, 581, 831, 978 ],
+    expected: [ 153, 300, 550, 697 ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at test/posicionador-colisoes.test.ts:166:1
+✖ calcularPosicoesJanelas começa no topo da área a pilha mais alta que ela, sem sobreposição, e só o excesso passa do fim (0.201666ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   149,
+  +   347,
+  +   545,
+  +   743,
+  +   941
+  -   64,
+  -   262,
+  -   460,
+  -   658,
+  -   856
+    ]
+  
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/posicionador-colisoes.test.ts:170:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 149, 347, 545, 743, 941 ],
+    expected: [ 64, 262, 460, 658, 856 ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at test/posicionador-colisoes.test.ts:179:1
+✖ calcularPosicoesJanelas oculta a janela do balão sob a caixa de escrita ou sob o cabeçalho, e começa no topo da área a do balão em parte sob o cabeçalho (RF-03) (0.117459ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/posicionador-colisoes.test.ts:185:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/posicionador-colisoes.test.ts:192:1
+✖ calcularPosicoesJanelas abre acima do balão, sem cobri-lo, a janela do modo abaixo (RF-02) que não cabe abaixo dele no pé da conversa (0.083083ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  815 !== 592
+  
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/posicionador-colisoes.test.ts:197:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 815,
+    expected: 592,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/posicionador-colisoes.test.ts:241:1
+✖ calcularPosicoesJanelas liga por uma seta reta a janela à altura do seu balão, com a ponta na borda dele, no recebido e no enviado (RF-05, seção 8) (0.088875ms)
+  TypeError [Error]: Cannot read properties of undefined (reading 'direcao')
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/posicionador-colisoes.test.ts:250:23)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at test/posicionador-colisoes.test.ts:256:1
+✖ calcularPosicoesJanelas liga a janela deslocada ao centro do seu balão por um cotovelo no corredor, saindo 10 px abaixo do topo da janela (RF-05) (0.093542ms)
+  TypeError [Error]: Cannot read properties of undefined (reading 'caudaY')
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/posicionador-colisoes.test.ts:263:32)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at test/posicionador-colisoes.test.ts:271:1
+✖ calcularPosicoesJanelas põe em trilhos distintos, sem cruzamento, os cotovelos que se sobrepõem, subindo ou descendo até o balão (0.137791ms)
+  TypeError [Error]: Cannot read properties of undefined (reading 'trilho')
+      at cruzam (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/posicionador-colisoes.test.ts:223:25)
+      at semCruzamentos (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/posicionador-colisoes.test.ts:231:20)
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/posicionador-colisoes.test.ts:274:3)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at test/posicionador-colisoes.test.ts:292:1
+✖ calcularPosicoesJanelas liga por uma seta vertical a janela do modo abaixo (RF-02), abaixo ou acima do balão (0.057459ms)
+  TypeError [Error]: Cannot read properties of undefined (reading 'direcao')
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/posicionador-colisoes.test.ts:296:26)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at test/posicionador-colisoes.test.ts:301:1
+✖ calcularPosicoesJanelas não dá seta à janela oculta, e a seta da janela do balão em parte sob o cabeçalho mira a parte visível dele (0.115708ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - null
+  
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/posicionador-colisoes.test.ts:303:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: null,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+# cd extension && npm run typecheck   (exit code: 1; esperado: o quarto parâmetro, faixaVertical, só chega no Gate 2)
+test/posicionador-colisoes.test.ts:152:77 - error TS2554: Expected 1-3 arguments, but got 4.
+test/posicionador-colisoes.test.ts:161:61 - error TS2554: Expected 1-3 arguments, but got 4.
+test/posicionador-colisoes.test.ts:169:61 - error TS2554: Expected 1-3 arguments, but got 4.
+test/posicionador-colisoes.test.ts:174:77 - error TS2554: Expected 1-3 arguments, but got 4.
+test/posicionador-colisoes.test.ts:181:132 - error TS2554: Expected 1-3 arguments, but got 4.
+test/posicionador-colisoes.test.ts:194:84 - error TS2554: Expected 1-3 arguments, but got 4.
+test/posicionador-colisoes.test.ts:246:89 - error TS2554: Expected 1-3 arguments, but got 4.
+test/posicionador-colisoes.test.ts:259:61 - error TS2554: Expected 1-3 arguments, but got 4.
+test/posicionador-colisoes.test.ts:273:139 - error TS2554: Expected 1-3 arguments, but got 4.
+test/posicionador-colisoes.test.ts:281:108 - error TS2554: Expected 1-3 arguments, but got 4.
+test/posicionador-colisoes.test.ts:294:104 - error TS2554: Expected 1-3 arguments, but got 4.
+test/posicionador-colisoes.test.ts:302:116 - error TS2554: Expected 1-3 arguments, but got 4.
+Found 12 errors in the same file, starting at: test/posicionador-colisoes.test.ts:152

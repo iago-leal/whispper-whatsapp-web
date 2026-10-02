@@ -1,4 +1,4 @@
-<!-- GENERATED, DO NOT EDIT: regenerado por /reversa-debugger-graph em 2026-10-02T21:14Z a partir de 10 bugs -->
+<!-- GENERATED, DO NOT EDIT: regenerado por /reversa-debugger-graph em 2026-10-02T22:42Z a partir de 12 bugs -->
 
 # Bugs por artefato de spec
 
@@ -31,6 +31,8 @@ Espelho gerado a partir de `_reversa_bugs/`; o vínculo é registrado aqui, a mu
 - BUG-20261002-IXWO (resolved/fixed, P0): Janela flutuante fica invisível até a página rolar: a âncora só chega em scroll ou resize · `_reversa_bugs/janela-flutuante/bugs/BUG-20261002-IXWO-janela-invisivel/`
 - BUG-20261002-A4MZ (resolved/fixed, P1): Janela flutuante abre longe do balão, sobre a lista de conversas · `_reversa_bugs/janela-flutuante/bugs/BUG-20261002-A4MZ-janela-longe-do-balao/`
 - BUG-20261002-K3DY (resolved/fixed, P2): Janelas flutuantes se sobrepõem: o posicionador supõe altura fixa de 160 px · `_reversa_bugs/janela-flutuante/bugs/BUG-20261002-K3DY-janelas-sobrepostas/`
+- BUG-20261002-HVT4 (resolved/fixed, P1): Janela flutuante cortada na borda inferior: o posicionador não tem limite vertical · `_reversa_bugs/janela-flutuante/bugs/BUG-20261002-HVT4-janela-cortada-na-borda-inferior/` · adendo `_reversa_sdd/addenda/bug-BUG-20261002-HVT4-v001.md`
+- BUG-20261002-OW7G (resolved/fixed, P1): Janela deslocada sem a seta até o balão de origem (RF-05) · `_reversa_bugs/janela-flutuante/bugs/BUG-20261002-OW7G-janela-sem-seta-ate-o-balao/`
 
 ## `_reversa_sdd/sdd/nucleo-transcricao.md`
 

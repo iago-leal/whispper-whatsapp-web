@@ -1,0 +1,14 @@
+--- a/extension/src/content/janela-flutuante.css
++++ b/extension/src/content/janela-flutuante.css
+@@ -39,6 +39,11 @@
+   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+ }
+ 
++/* A janela que entra na página já no lugar não desliza até ele (BUG-20261002-HVT4) */
++.whispper-janela-entrando {
++  transition: none;
++}
++
+ .whispper-janela-oculta {
+   opacity: 0;
+   pointer-events: none;

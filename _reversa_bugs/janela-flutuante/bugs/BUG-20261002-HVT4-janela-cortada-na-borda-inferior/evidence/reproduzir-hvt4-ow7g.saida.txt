@@ -1,0 +1,160 @@
+{
+ "tela": {
+  "largura": 1624,
+  "altura": 907
+ },
+ "area": {
+  "esquerda": 551,
+  "direita": 1624
+ },
+ "fundoDasMensagens": 844,
+ "cenario1_pe_da_conversa_texto_longo": {
+  "balao": {
+   "idAudio": "P",
+   "x": 613,
+   "y": 739,
+   "largura": 336,
+   "altura": 68,
+   "visivel": true
+  },
+  "janela": {
+   "id": "P",
+   "x": 957,
+   "y": 739,
+   "largura": 322,
+   "altura": 242,
+   "fim": 981,
+   "alemDoFimDasMensagens": 137,
+   "alemDaTela": 74
+  }
+ },
+ "cenario1_pe_da_conversa_erro": {
+  "balao": {
+   "idAudio": "P",
+   "x": 613,
+   "y": 739,
+   "largura": 336,
+   "altura": 68,
+   "visivel": true
+  },
+  "janela": {
+   "id": "P",
+   "x": 957,
+   "y": 739,
+   "largura": 322,
+   "altura": 139,
+   "fim": 878,
+   "alemDoFimDasMensagens": 34,
+   "alemDaTela": 0
+  }
+ },
+ "cenario2_cadeia_de_cinco": [
+  {
+   "id": "C1",
+   "x": 957,
+   "y": 149,
+   "largura": 322,
+   "altura": 139,
+   "fim": 288,
+   "alemDoFimDasMensagens": 0,
+   "alemDaTela": 0
+  },
+  {
+   "id": "C2",
+   "x": 957,
+   "y": 296,
+   "largura": 322,
+   "altura": 242,
+   "fim": 538,
+   "alemDoFimDasMensagens": 0,
+   "alemDaTela": 0
+  },
+  {
+   "id": "C3",
+   "x": 957,
+   "y": 546,
+   "largura": 322,
+   "altura": 139,
+   "fim": 685,
+   "alemDoFimDasMensagens": 0,
+   "alemDaTela": 0
+  },
+  {
+   "id": "C4",
+   "x": 957,
+   "y": 693,
+   "largura": 322,
+   "altura": 139,
+   "fim": 832,
+   "alemDoFimDasMensagens": 0,
+   "alemDaTela": 0
+  },
+  {
+   "id": "C5",
+   "x": 957,
+   "y": 840,
+   "largura": 322,
+   "altura": 190,
+   "fim": 1030,
+   "alemDoFimDasMensagens": 186,
+   "alemDaTela": 123
+  }
+ ],
+ "cenario3_quatro_como_no_k3dy": {
+  "janelas": [
+   {
+    "id": "S1",
+    "x": 957,
+    "y": 149,
+    "largura": 322,
+    "altura": 139,
+    "balaoY": 149,
+    "abaixoDoBalao": 0,
+    "centroDoBalaoDentroDaJanela": true,
+    "deslocadaPorColisao": false,
+    "filhosComSeta": 0,
+    "pseudoelementosComConteudo": []
+   },
+   {
+    "id": "S2",
+    "x": 957,
+    "y": 296,
+    "largura": 322,
+    "altura": 242,
+    "balaoY": 244,
+    "abaixoDoBalao": 52,
+    "centroDoBalaoDentroDaJanela": false,
+    "deslocadaPorColisao": true,
+    "filhosComSeta": 0,
+    "pseudoelementosComConteudo": []
+   },
+   {
+    "id": "S3",
+    "x": 957,
+    "y": 546,
+    "largura": 322,
+    "altura": 139,
+    "balaoY": 339,
+    "abaixoDoBalao": 207,
+    "centroDoBalaoDentroDaJanela": false,
+    "deslocadaPorColisao": true,
+    "filhosComSeta": 0,
+    "pseudoelementosComConteudo": []
+   },
+   {
+    "id": "S4",
+    "x": 957,
+    "y": 693,
+    "largura": 322,
+    "altura": 139,
+    "balaoY": 434,
+    "abaixoDoBalao": 259,
+    "centroDoBalaoDentroDaJanela": false,
+    "deslocadaPorColisao": true,
+    "filhosComSeta": 0,
+    "pseudoelementosComConteudo": []
+   }
+  ],
+  "elementosNoContainerAlemDasJanelas": 0
+ }
+}

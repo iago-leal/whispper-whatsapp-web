@@ -1,0 +1,129 @@
+--- a/extension/src/content/gerenciador-janelas.ts
++++ b/extension/src/content/gerenciador-janelas.ts
+@@ -1,6 +1,6 @@
+ import type { ExibicaoDeTranscricao, EstadoExibicao } from '../dominio/exibicao-de-transcricao.ts';
+ import type { CoordenadasAncora } from '../dominio/fonte-de-audio.ts';
+-import { calcularPosicoesJanelas, type AreaDaConversa } from './posicionador-colisoes.ts';
++import { calcularPosicoesJanelas, type AreaDaConversa, type PosicaoCalculada, type SetaCalculada } from './posicionador-colisoes.ts';
+ import { criarElementoJanela, atualizarConteudoJanela, aplicarDestaqueJanela, liberarContadorJanela } from './janela-elemento.ts';
+ import { CronometroDeEspera } from './cronometro-espera.ts';
+ 
+@@ -10,10 +10,13 @@
+   estado: EstadoExibicao;
+   direcao: 'recebido' | 'enviado';
+   ancora?: CoordenadasAncora;
++  seta: SVGGElement | null;
+ }
+ 
+ const LIMITE_MAXIMO_JANELAS = 20;
+ 
++const SVG = 'http://www.w3.org/2000/svg';
++
+ // Altura suposta da janela que ainda não entrou na página, ou de toda janela sem página, nos testes de
+ // unidade; na página, vale a altura desenhada (BUG-20261002-K3DY)
+ const ALTURA_SEM_MEDIDA = 160;
+@@ -45,6 +48,21 @@
+     this.garantirContainer();
+   }
+ 
++  // As setas ficam numa camada própria, a primeira filha do container: atrás de todas as janelas
++  // (BUG-20261002-OW7G)
++  private garantirCamadaSetas(): SVGSVGElement | null {
++    const container = this.garantirContainer();
++    if (!container) return null;
++    let camada = container.querySelector<SVGSVGElement>(':scope > svg.whispper-setas');
++    if (!camada) {
++      camada = document.createElementNS(SVG, 'svg');
++      camada.setAttribute('class', 'whispper-setas');
++      camada.setAttribute('aria-hidden', 'true');
++      container.prepend(camada);
++    }
++    return camada;
++  }
++
+   private garantirContainer(): HTMLElement | null {
+     if (typeof document === 'undefined') return null;
+     if (!this.container) {
+@@ -101,7 +119,8 @@
+       elemento: el,
+       estado: estadoInicial,
+       direcao,
+-      ancora: ancoraAtual
++      ancora: ancoraAtual,
++      seta: null
+     });
+ 
+     // A janela recebe a posição antes de entrar na página e só depois é medida: medida antes, ainda sem
+@@ -158,6 +177,7 @@
+     if (reg.elemento && reg.elemento.parentNode) {
+       reg.elemento.parentNode.removeChild(reg.elemento);
+     }
++    reg.seta?.remove();
+     this.janelas.delete(idAudio);
+ 
+     for (const ouvinte of this.ouvintesFechar) {
+@@ -202,10 +222,38 @@
+           reg.elemento.classList.remove('whispper-janela-oculta');
+           reg.elemento.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
+         }
++        this.desenharSeta(reg, pos);
+       }
+     }
+   }
+ 
++  // A seta só é desenhada para a janela que já está na página: a da janela nova nasce no lugar, sem a
++  // transição do traçado. Some com a janela oculta (BUG-20261002-OW7G).
++  private desenharSeta(reg: RegistroJanela, pos: PosicaoCalculada): void {
++    if (!pos.visivel || !pos.seta) {
++      if (reg.seta) reg.seta.style.display = 'none';
++      return;
++    }
++    if (!reg.elemento?.isConnected) return;
++
++    let grupo = reg.seta;
++    const nova = !grupo;
++    if (!grupo) {
++      grupo = document.createElementNS(SVG, 'g');
++      grupo.setAttribute('data-whispper-seta-de', reg.idAudio);
++      for (const classe of ['whispper-seta-linha', 'whispper-seta-ponta']) {
++        const caminho = document.createElementNS(SVG, 'path');
++        caminho.setAttribute('class', classe);
++        grupo.appendChild(caminho);
++      }
++      reg.seta = grupo;
++    }
++    grupo.style.display = '';
++    grupo.querySelector<SVGPathElement>('.whispper-seta-linha')?.style.setProperty('d', `path("${tracadoDaLinha(pos.seta)}")`);
++    grupo.querySelector<SVGPathElement>('.whispper-seta-ponta')?.style.setProperty('d', `path("${tracadoDaPonta(pos.seta)}")`);
++    if (nova) this.garantirCamadaSetas()?.appendChild(grupo);
++  }
++
+   temJanelaAberta(idAudio: string): boolean {
+     return this.janelas.has(idAudio);
+   }
+@@ -218,3 +266,25 @@
+     return this.janelas.size;
+   }
+ }
++
++const px = (v: number) => Math.round(v * 100) / 100;
++
++// Da cauda ao trilho, pelo trilho até a altura da ponta e dali até a ponta, sempre com os mesmos comandos:
++// a transição do traçado leva a seta reta ao cotovelo e de volta
++function tracadoDaLinha(seta: SetaCalculada): string {
++  return `M ${px(seta.caudaX)} ${px(seta.caudaY)} H ${px(seta.trilho)} V ${px(seta.pontaY)} H ${px(seta.pontaX)}`;
++}
++
++// Triângulo de 4 px de comprimento e 7 de largura, com o bico na ponta, voltado para o balão
++function tracadoDaPonta(seta: SetaCalculada): string {
++  const { pontaX: x, pontaY: y } = seta;
++  // Os dois cantos da base, do lado da janela
++  const cantos: Record<SetaCalculada['direcao'], [number, number, number, number]> = {
++    esquerda: [x + 4, y - 3.5, x + 4, y + 3.5],
++    direita: [x - 4, y - 3.5, x - 4, y + 3.5],
++    acima: [x - 3.5, y + 4, x + 3.5, y + 4],
++    abaixo: [x - 3.5, y - 4, x + 3.5, y - 4]
++  };
++  const [x1, y1, x2, y2] = cantos[seta.direcao];
++  return `M ${px(x)} ${px(y)} L ${px(x1)} ${px(y1)} L ${px(x2)} ${px(y2)} Z`;
++}

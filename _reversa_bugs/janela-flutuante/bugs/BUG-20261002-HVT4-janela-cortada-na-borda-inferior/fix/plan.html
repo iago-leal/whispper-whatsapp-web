@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plano de correção · #11 HVT4 e #12 OW7G</title>
+  <style>
+body { background-color: #121212; color: #e0e0e0; font-family: sans-serif; padding: 20px; max-width: 1100px; margin: 0 auto; line-height: 1.5; }
+a { color: #bb86fc; text-decoration: none; } a:hover { text-decoration: underline; }
+table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+th, td { border: 1px solid #333; padding: 8px 10px; text-align: left; vertical-align: top; }
+th { background-color: #1e1e1e; }
+.card { background-color: #1e1e1e; padding: 12px 16px; border-radius: 8px; margin: 0 12px 12px 0; display: inline-block; min-width: 120px; }
+.card b { display: block; font-size: 1.3em; }
+.meta { color: #9e9e9e; font-size: 0.9em; }
+.tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 0.85em; background: #2a2a2a; border: 1px solid #444; }
+.ok { color: #81c784; } .alerta { color: #ffb74d; } .erro { color: #ef5350; } .novo { color: #64b5f6; }
+.aviso { background: #2a2210; border-left: 4px solid #ffb74d; padding: 10px 14px; border-radius: 6px; }
+.decisao { background: #10221a; border-left: 4px solid #81c784; padding: 10px 14px; border-radius: 6px; }
+code { background: #1e1e1e; padding: 1px 5px; border-radius: 4px; }
+ol li, ul li { margin-bottom: 4px; }
+svg { background: #181818; border-radius: 8px; max-width: 100%; height: auto; }
+pre.bloco { background: #0d0d0d; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.82em; line-height: 1.35; }
+h2 { margin-top: 32px; }
+  </style>
+</head>
+<body>
+  <h1>Plano de correção · #11 HVT4 e #12 OW7G</h1>
+  <p class="meta">Contexto <code>janela-flutuante</code> · 2026-10-02 · plano único, por decisão sua, com o HVT4 primeiro · gerado por /reversa-debugger-fix antes de qualquer alteração no projeto · <a href="../bug.md">HVT4 bug.md</a> · <a href="../../BUG-20261002-OW7G-janela-sem-seta-ate-o-balao/bug.md">OW7G bug.md</a></p>
+
+  <table>
+    <thead><tr><th>Bug</th><th>Severidade</th><th>Prioridade</th><th>Causa raiz</th><th>Reprodução</th><th>Spec</th></tr></thead>
+    <tbody>
+      <tr><td><a href="../bug.md">#11 BUG-20261002-HVT4</a><br>Janela cortada na borda inferior</td><td class="erro">high</td><td class="alerta">P1</td><td class="ok">confirmed</td><td>4/4, determinística</td><td class="alerta">spec-gap (OQ-01)</td></tr>
+      <tr><td><a href="../../BUG-20261002-OW7G-janela-sem-seta-ate-o-balao/bug.md">#12 BUG-20261002-OW7G</a><br>Janela deslocada sem a seta</td><td class="alerta">medium</td><td class="alerta">P1</td><td class="ok">confirmed</td><td>4/4, determinística</td><td>RF-05 (Must)</td></tr>
+    </tbody>
+  </table>
+  <div style="margin-top:12px">
+    <div class="card"><b class="alerta">média</b>Risco da mudança</div>
+    <div class="card"><b>local-software</b>Closure policy</div>
+    <div class="card"><b>2 gates</b>conjuntos, aplicação em duas etapas</div>
+  </div>
+
+  <h2>1. Defeitos</h2>
+  <p><b>HVT4.</b> A janela de um áudio perto do pé da conversa desce além da área das mensagens: cobre a caixa de escrita e, quando é alta, perde o rodapé (resumo e "Copiar") abaixo da tela. No fim da conversa, rolar não ajuda. A spec não define o comportamento: o RF-01 pede a janela "no espaço livre da área da conversa", o EC-05 propõe, só para a cadeia, exibi-la "por inteiro com a rolagem", e a OQ-01 segue aberta.</p>
+  <p><b>OW7G.</b> Com várias janelas abertas, as deslocadas pela colisão ficam abaixo dos seus balões sem nada que as ligue a eles; o texto é facilmente atribuído ao áudio errado. O RF-05 (Must) pede "uma seta que a liga ao balão de origem", com o critério "cada seta apontando para o balão correto"; a seção 8 lista a "seta de ligação ao balão" entre os componentes.</p>
+
+  <h2>2. Causas raiz <span class="tag ok">confirmed</span></h2>
+  <p><b>HVT4: a área não tem altura.</b> <code>AdaptadorWhatsAppWeb.obterAreaConversa</code> mede só <code>left</code> e <code>right</code> do <code>#main</code>; o tipo <code>FaixaHorizontal</code> não tem topo nem fundo; <code>calcularPosicoesJanelas</code> põe a janela no topo do balão, abaixo dele (RF-02) ou no fim da de cima (colisão), e nunca compara o fim dela com uma borda inferior. O defeito existe desde <code>bab1e53</code>; o K3DY só alongou as pilhas.</p>
+  <p><b>OW7G: a seta nunca existiu.</b> O posicionador calcula <code>deslocadaPorColisao</code>, mas <code>recalcularPosicoes</code> lê só <code>visivel</code>, <code>x</code> e <code>y</code>; a janela e a folha de estilos não têm seta, e a palavra não aparece em <code>extension/src</code>. O campo nasceu sem consumidor em <code>bab1e53</code>.</p>
+  <table>
+    <thead><tr><th>Evidência (<a href="../evidence/reproduction.md">HVT4</a>, <a href="../../BUG-20261002-OW7G-janela-sem-seta-ate-o-balao/evidence/reproduction.md">OW7G</a>)</th><th>Medida hoje</th></tr></thead>
+    <tbody>
+      <tr><td>Cenário 1: último áudio, balão em y = 739, texto longo (242 px)</td><td class="erro">janela de 739 a 981: 137 px além do fim das mensagens (844), 74 px além da tela</td></tr>
+      <tr><td>Cenário 1: o mesmo áudio com erro (139 px)</td><td class="erro">34 px sobre a caixa de escrita</td></tr>
+      <tr><td>Cenário 2: cinco áudios consecutivos (EC-05)</td><td class="erro">a quinta termina em 1030, 186 px além do fim das mensagens</td></tr>
+      <tr><td>Cenário 3: quatro áudios, estados da aceitação do K3DY</td><td class="erro">janelas 2 a 4 a 52, 207 e 259 px abaixo dos balões; nenhuma seta, nenhum pseudoelemento, nada além das janelas no container</td></tr>
+      <tr><td><a href="../../BUG-20261002-A4MZ-janela-longe-do-balao/evidence/aceitacao-whatsapp-real.md">WhatsApp real</a> (aceitações do A4MZ e do <a href="../../BUG-20261002-K3DY-janelas-sobrepostas/evidence/aceitacao-whatsapp-real.md">K3DY</a>)</td><td class="erro">a mesma janela de 739 a 981; janelas 32, 187 e 219 px abaixo dos balões, sem ligação</td></tr>
+    </tbody>
+  </table>
+  <p class="meta">Script único, 4/4 saídas idênticas no Chrome for Testing com o gerenciador e a folha de estilos reais, na geometria do WhatsApp real (<a href="../evidence/reproduzir-hvt4-ow7g.ts">reproduzir-hvt4-ow7g.ts</a>, <a href="../evidence/reproduzir-hvt4-ow7g.saida.txt">saída</a>).</p>
+
+  <h2>3. Estratégia: correção direta, com as suas decisões</h2>
+  <div class="decisao">
+    <p><b>Decisões registradas por volta das 18:40.</b></p>
+    <ol>
+      <li><b>Estratégia:</b> correção direta, sem debate (causas sem hipóteses concorrentes).</li>
+      <li><b>HVT4, comportamento (spec-gap):</b> subir até caber. A janela, e a pilha acima dela, sobe até terminar 8 px acima do fim da área das mensagens, nunca acima do topo da área; só sobra corte, embaixo, quando a pilha inteira é mais alta que a área. A janela se oculta quando o balão sai da área das mensagens, e não só da tela.</li>
+      <li><b>OW7G, desenho da seta:</b> cotovelo no corredor de 8 px, ponta na borda do balão, por trás das janelas, sem roubar cliques e sem mudar a posição de nenhuma janela.</li>
+      <li><b>DOM real:</b> leitura da estrutura no WhatsApp Web antes do Gate 1, só retângulos e <code>data-testid</code>, sem texto; a página falsa dos testes passa a copiá-la.</li>
+    </ol>
+  </div>
+
+  <h3>3.1 HVT4: a área ganha topo e fundo, e o posicionador, três passadas</h3>
+  <p><b>Medida da área (adaptador).</b> As bordas laterais continuam as do <code>#main</code>. O topo e o fundo passam a ser os da parte visível da lista de mensagens: a interseção do <code>#main</code>, da tela e de cada ancestral da lista (<code>containerMensagens</code>), até o <code>#main</code>, que a recorta (<code>overflow-y</code> diferente de <code>visible</code>). O cabeçalho e a caixa de escrita ficam fora por construção, sem depender de um <code>data-testid</code> deles. A lista em si só entra se recortar: numa conversa curta, ela é mais baixa que a área visível e não pode limitá-la.</p>
+  <pre class="bloco">// posicionador-colisoes.ts (esboço)
+export interface FaixaVertical { topo: number; fundo: number }
+export type AreaDaConversa = FaixaHorizontal &amp; Partial&lt;FaixaVertical&gt;
+calcularPosicoesJanelas(requisicoes, direitaDaArea, esquerdaDaArea, faixaVertical?)   // 4º parâmetro opcional
+
+visível  = balão visível na tela E balão cruza [topo, fundo]          // RF-03 lido contra a área das mensagens
+passada 1 (de cima para baixo, como hoje): posição ideal ao lado do balão; colisão com as de cima que cruzam
+          modo abaixo (RF-02): se não cabe abaixo do balão e cabe acima, abre acima, sem cobri-lo
+passada 2 (de baixo para cima): limite = fundo − 8; a janela termina antes do limite e 8 px acima das de baixo
+          que a cruzam; quem passa sobe
+passada 3 (de cima para baixo): nunca acima do topo e sempre 8 px abaixo das de cima que a cruzam;
+          só a pilha mais alta que a área volta a passar do fundo</pre>
+  <p>Sem faixa vertical (testes de unidade antigos, página sem conversa), as passadas 2 e 3 não agem e o resultado é o de hoje. A janela que cabe continua com o topo no topo do balão (RF-01).</p>
+  <p><b>Abertura sem deslize (restrição herdada do K3DY).</b> Hoje a posição da janela nova não depende da altura dela, e o segundo cálculo do <code>abrir</code> só move as de baixo. Com a subida, depende: no pé da conversa, o primeiro cálculo usa a altura suposta de 160 px, e o segundo, a medida, move a janela recém-entrada, que deslizaria com a transição de 120 ms. O <code>abrir</code> passa a inserir a janela com a classe <code>whispper-janela-entrando</code> (<code>transition: none</code>), fixar o estilo depois do segundo cálculo e só então retirar a classe. A ordem do K3DY (posição antes de entrar, medida depois) fica como está.</p>
+
+  <h3>3.2 OW7G: a seta em cotovelo, calculada pelo posicionador e desenhada pelo gerenciador</h3>
+  <ul>
+    <li><b>Geometria (posicionador, puro).</b> Cada posição visível ganha <code>seta</code>: ponta, cauda, trilho e direção. A ponta fica na borda do balão voltada para a janela, à altura do centro da parte visível do balão. Se esse centro cabe na lateral da janela (10 px longe dos cantos arredondados), a seta é reta e curta, de borda a borda. Senão, a cauda sai da lateral da janela a 10 px do topo (ou do fundo, se o balão está abaixo), corre na vertical pelo trilho e entra no balão. No modo abaixo (RF-02), a seta é vertical, do topo da janela à base do balão.</li>
+    <li><b>Trilhos.</b> Cotovelos do mesmo corredor cujos trechos verticais se sobrepõem recebem trilhos distintos, ordenados para que nenhum trecho horizontal de um cruze o vertical de outro: a seta cuja ponta cai na altura de outra fica mais perto do balão; a cuja cauda cai, mais perto da janela. Os trilhos se distribuem entre o fim da ponta (4 px do balão) e a borda da janela.</li>
+    <li><b>Desenho (gerenciador).</b> Uma camada <code>&lt;svg class="whispper-setas"&gt;</code>, primeira filha do container, atrás das janelas, com <code>pointer-events: none</code>; um grupo por janela (<code>data-whispper-seta-de</code>) com a linha e a ponta, em verde <code>#00a884</code> (o do título), legível nos dois temas. O traçado é escrito pela propriedade CSS <code>d</code>, com a mesma transição de 120 ms do <code>transform</code> da janela: na rolagem, a seta anda junto com a janela (<a href="../../BUG-20261002-OW7G-janela-sem-seta-ate-o-balao/evidence/experimento-transicao-da-seta.saida.txt">experimento</a>: 1 animação durante, alvo atingido ao fim). A seta só é desenhada para a janela que já está na página, então a da janela nova nasce no lugar. Some com a janela oculta e sai com a janela fechada.</li>
+    <li><b>Ordem de leitura e escrita.</b> Nenhuma leitura nova: a geometria sai do mesmo cálculo; o desenho só escreve, depois de todas as leituras do recálculo.</li>
+  </ul>
+
+  <h3>3.3 Como fica, na geometria da aceitação do K3DY</h3>
+  <svg viewBox="0 0 760 470" width="760" height="470" role="img" aria-label="Quatro balões e quatro janelas com setas, depois da correção">
+    <defs><marker id="pt" viewBox="0 0 8 8" refX="1" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M8 0 L0 4 L8 8 z" fill="#00a884"/></marker></defs>
+    <text x="20" y="22" fill="#9e9e9e" font-size="12">Balões a 95 px um do outro; janelas de erro (119,5 px) e de texto longo (242 px). Corredor ampliado no desenho (no real, 8 px).</text>
+    <g fill="#2a3942" stroke="#555"><rect x="40" y="50" width="200" height="40" rx="6"/><rect x="40" y="107" width="200" height="40" rx="6"/><rect x="40" y="164" width="200" height="40" rx="6"/><rect x="40" y="221" width="200" height="40" rx="6"/></g>
+    <g fill="#e0e0e0" font-size="12"><text x="52" y="74">áudio 1</text><text x="52" y="131">áudio 2</text><text x="52" y="188">áudio 3</text><text x="52" y="245">áudio 4</text></g>
+    <g fill="#202c33" stroke="#777"><rect x="300" y="50" width="200" height="72" rx="6"/><rect x="300" y="126" width="200" height="145" rx="6"/><rect x="300" y="276" width="200" height="72" rx="6"/><rect x="300" y="352" width="200" height="72" rx="6"/></g>
+    <g fill="#e0e0e0" font-size="12"><text x="312" y="74">janela 1 (alinhada)</text><text x="312" y="150">janela 2 (32 px abaixo)</text><text x="312" y="300">janela 3 (187 px abaixo)</text><text x="312" y="376">janela 4 (219 px abaixo)</text></g>
+    <g stroke="#00a884" stroke-width="2" fill="none">
+      <path d="M300 70 H244" marker-end="url(#pt)"/>
+      <path d="M300 136 H272 V127 H244" marker-end="url(#pt)"/>
+      <path d="M300 286 H284 V184 H244" marker-end="url(#pt)"/>
+      <path d="M300 362 H262 V241 H244" marker-end="url(#pt)"/>
+    </g>
+    <text x="520" y="70" fill="#9e9e9e" font-size="11">reta: o balão está à altura da janela</text>
+    <text x="520" y="140" fill="#9e9e9e" font-size="11">cotovelo curto</text>
+    <text x="520" y="290" fill="#9e9e9e" font-size="11">trilho perto da janela</text>
+    <text x="520" y="366" fill="#9e9e9e" font-size="11">trilho perto do balão: a ponta da 4</text>
+    <text x="520" y="381" fill="#9e9e9e" font-size="11">cai na altura do trecho vertical da 3</text>
+    <text x="20" y="455" fill="#9e9e9e" font-size="11">A pilha termina em 772,5, antes do fim das mensagens (844): nenhuma janela sobe. No pé da conversa, a pilha subiria em bloco, e as setas apontariam para baixo.</text>
+  </svg>
+
+  <h2>4. Correction Change Set proposto</h2>
+  <p>Dois gates conjuntos. Em cada um, os itens do HVT4 são aplicados primeiro e os do OW7G depois, com diffs separados em <code>fix/</code> de cada bug: no Gate 2, a suíte é rodada entre as duas etapas, para provar que o código do HVT4 deixa verdes os testes do HVT4 e ainda vermelhos os do OW7G.</p>
+  <table>
+    <thead><tr><th>Bug</th><th>CHG</th><th>Tipo</th><th>Artefato</th><th>Propósito</th><th>Gate</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="9">HVT4</td><td>CHG-001</td><td>test</td><td><code>extension/test/posicionador-colisoes.test.ts</code></td><td>Unitários do limite vertical (seção 5).</td><td>1</td></tr>
+      <tr><td>CHG-002</td><td>test</td><td><code>extension/test/janelas-no-navegador.test.ts</code></td><td>Navegador com a geometria do WhatsApp real (tela de 1624 × 907, área das mensagens até 844): pé da conversa, pilha no pé e a guarda da abertura sem deslize.</td><td>1</td></tr>
+      <tr><td>CHG-003</td><td>test</td><td><code>extension/test/integracao-conversa.test.ts</code></td><td>Página falsa com a estrutura vertical conferida no DOM real (cabeçalho, lista rolável, caixa de escrita), aplicada a todos os testes; teste novo com a extensão montada: a janela do último áudio não cobre a caixa de escrita.</td><td>1</td></tr>
+      <tr><td>CHG-004</td><td>code</td><td><code>extension/src/content/posicionador-colisoes.ts</code></td><td><code>FaixaVertical</code> e <code>AreaDaConversa</code>; visibilidade contra a área das mensagens; modo abaixo que abre acima no pé; passadas 2 e 3.</td><td>2</td></tr>
+      <tr><td>CHG-005</td><td>code</td><td><code>extension/src/content/gerenciador-janelas.ts</code></td><td>Repassa topo e fundo; <code>abrir</code> com a classe que suspende a transição até o estilo fixar.</td><td>2</td></tr>
+      <tr><td>CHG-006</td><td>code</td><td><code>extension/src/content/janela-flutuante.css</code></td><td><code>.whispper-janela-entrando { transition: none }</code>.</td><td>2</td></tr>
+      <tr><td>CHG-007</td><td>code</td><td><code>extension/src/adaptadores/adaptador-whatsapp-web.ts</code></td><td><code>obterAreaConversa</code> devolve também topo e fundo da parte visível da lista.</td><td>2</td></tr>
+      <tr><td>CHG-008</td><td>documentation</td><td><code>extension/src/content/JANELAS.md</code></td><td>Passo 5 do algoritmo: limite vertical.</td><td>2</td></tr>
+      <tr><td>CHG-009</td><td>specification</td><td><code>_reversa_sdd/addenda/bug-BUG-20261002-HVT4-v001.md</code> <span class="tag novo">novo</span></td><td>Adendo aditivo que resolve a OQ-01 e dá a leitura do EC-05 e do RF-03 (área visível = área das mensagens). Só depois do veredito, com a sua decisão.</td><td>veredito</td></tr>
+      <tr><td rowspan="6">OW7G</td><td>CHG-001</td><td>test</td><td><code>extension/test/posicionador-colisoes.test.ts</code></td><td>Unitários da geometria da seta e dos trilhos.</td><td>1</td></tr>
+      <tr><td>CHG-002</td><td>test</td><td><code>extension/test/janelas-no-navegador.test.ts</code></td><td>Navegador: critério do RF-05 com cinco áudios, rolagem, cliques e ciclo de vida da seta.</td><td>1</td></tr>
+      <tr><td>CHG-003</td><td>code</td><td><code>extension/src/content/posicionador-colisoes.ts</code></td><td><code>SetaCalculada</code> em cada posição visível; trilhos sem cruzamento.</td><td>2</td></tr>
+      <tr><td>CHG-004</td><td>code</td><td><code>extension/src/content/gerenciador-janelas.ts</code></td><td>Camada SVG atrás das janelas; desenho, ocultação e remoção da seta.</td><td>2</td></tr>
+      <tr><td>CHG-005</td><td>code</td><td><code>extension/src/content/janela-flutuante.css</code></td><td>Camada, linha e ponta da seta; transição de 120 ms do <code>d</code>; sem animação com <code>prefers-reduced-motion</code>.</td><td>2</td></tr>
+      <tr><td>CHG-006</td><td>documentation</td><td><code>extension/src/content/JANELAS.md</code></td><td>Passo 6 do algoritmo: a seta.</td><td>2</td></tr>
+    </tbody>
+  </table>
+  <p class="meta">Sem <code>data-repair</code>: nada é persistido; a janela e a seta vivem só na aba. A assinatura de <code>calcularPosicoesJanelas</code> ganha um parâmetro opcional; os testes atuais do posicionador continuam válidos sem mudança. <code>index.ts</code> não muda.</p>
+
+  <h2>5. Testes planejados</h2>
+  <h3>HVT4</h3>
+  <table>
+    <thead><tr><th>Teste</th><th>Papel</th><th>O que prova</th><th>Hoje</th></tr></thead>
+    <tbody>
+      <tr><td>Navegador: <i>reprodução: a janela do último áudio, no pé da conversa, fica inteira na área das mensagens, com "Copiar" visível (critérios 1 e 2)</i></td><td>reprodução</td><td>Balão em 739, texto longo: a janela termina 8 px acima de 844 (594 a 836), e o fim do botão "Copiar" fica dentro da área, no alvo e no desenhado ao fim da transição.</td><td class="erro">falha (termina em 981)</td></tr>
+      <tr><td>Navegador: <i>reprodução: quatro áudios no pé da conversa empilham-se dentro da área das mensagens, sem sobreposição (EC-05, RF-05)</i></td><td>reprodução</td><td>Balões em 434, 529, 624 e 719; erro, texto longo, erro, erro: a pilha sobe em bloco, com vãos de 8 px.</td><td class="erro">falha (termina em 1117)</td></tr>
+      <tr><td>Navegador (extensão montada, página falsa com a estrutura real): <i>reprodução: a janela do último áudio não cobre a caixa de escrita</i></td><td>reprodução</td><td>A medida da área sai do adaptador de verdade: a janela fica acima da caixa de escrita.</td><td class="erro">falha</td></tr>
+      <tr><td>Navegador: <i>a janela nova aberta no pé da conversa entra na página já no lugar, sem deslizar (RF-01; lição do K3DY)</i></td><td>regressão (guarda)</td><td>Balão parcialmente sob a caixa de escrita: a janela em espera sobe, sem transição em curso e no destino no instante seguinte. Pega a correção ingênua, que a faria deslizar 66 px.</td><td class="ok">passa (guarda)</td></tr>
+      <tr><td>Unitário: <i>a janela que passaria do fim da área sobe até terminar 8 px acima dele</i></td><td>reprodução</td><td>739 + 242 → y = 594.</td><td class="erro">falha</td></tr>
+      <tr><td>Unitário: <i>a pilha que passaria do fim da área sobe em bloco, mantendo os vãos de 8 px</i></td><td>reprodução</td><td>Passada 2 com colisão.</td><td class="erro">falha</td></tr>
+      <tr><td>Unitário: <i>a pilha mais alta que a área começa no topo, sem sobreposição, e só o excesso passa do fim</i></td><td>regressão</td><td>Passada 3: nenhuma sobreposição é trocada por caber.</td><td class="erro">falha</td></tr>
+      <tr><td>Unitário: <i>a janela que cabe mantém o topo no topo do balão (RF-01)</i></td><td>regressão</td><td>Com faixa vertical, nada muda para quem cabe.</td><td class="ok">passa</td></tr>
+      <tr><td>Unitário: <i>a janela se oculta com o balão sob a caixa de escrita ou sob o cabeçalho, e começa no topo da área com o balão em parte sob o cabeçalho (RF-03)</i></td><td>regressão</td><td>Visibilidade e topo contra a área das mensagens.</td><td class="erro">falha</td></tr>
+      <tr><td>Unitário: <i>no modo abaixo (RF-02), a janela que não cabe abaixo do balão no pé da conversa abre acima dele, sem cobri-lo</i></td><td>regressão</td><td>Subir não pode cobrir o balão quando há espaço acima.</td><td class="erro">falha</td></tr>
+      <tr><td>Testes atuais: K3DY (<code>janelas-no-navegador</code>), IXWO e A4MZ (<code>integracao-conversa</code>), posicionador e gerenciador</td><td>guarda</td><td>Sem regressão do RF-01, do RF-02, do RF-03 e do RF-05. Os de integração passam a rodar na página falsa com cabeçalho e caixa de escrita.</td><td class="ok">passam</td></tr>
+    </tbody>
+  </table>
+  <h3>OW7G</h3>
+  <table>
+    <thead><tr><th>Teste</th><th>Papel</th><th>O que prova</th><th>Hoje</th></tr></thead>
+    <tbody>
+      <tr><td>Navegador: <i>reprodução: cinco áudios consecutivos resultam em cinco janelas, nenhuma sobreposta, cada seta apontando para o balão correto (RF-05)</i></td><td>reprodução</td><td>O critério literal do RF-05: cada janela tem a sua seta; a ponta toca o seu balão, à altura dele; a cauda toca a sua janela; todo o traçado fica no corredor, sem cobrir balão nem janela; nenhum par de setas se cruza.</td><td class="erro">falha (nenhuma seta)</td></tr>
+      <tr><td>Navegador: <i>reprodução: na rolagem, cada seta acompanha o seu balão e a sua janela (RF-03)</i></td><td>reprodução</td><td>Âncoras 100 px acima: as pontas sobem 100 px e continuam nos balões.</td><td class="erro">falha</td></tr>
+      <tr><td>Navegador: <i>a seta não rouba cliques e fica por trás das janelas (critério 3)</i></td><td>regressão</td><td><code>pointer-events: none</code>; a camada é a primeira filha do container; o ponto do trilho devolve a página, não a seta.</td><td class="erro">falha</td></tr>
+      <tr><td>Navegador: <i>a seta da janela nova nasce no lugar, e fechar a janela remove a seta</i></td><td>regressão</td><td>Sem animação no traçado logo após a abertura; nenhum grupo órfão depois do fechamento.</td><td class="erro">falha</td></tr>
+      <tr><td>Unitário: <i>a seta é reta quando o balão está à altura da janela, com a ponta na borda do balão (recebido e enviado)</i></td><td>reprodução</td><td>Ponta na borda direita do recebido e na esquerda do enviado; cauda na borda da janela.</td><td class="erro">falha</td></tr>
+      <tr><td>Unitário: <i>a seta da janela deslocada faz cotovelo no corredor, até o centro do balão</i></td><td>reprodução</td><td>Cauda a 10 px do topo da janela; trilho entre o balão e a janela.</td><td class="erro">falha</td></tr>
+      <tr><td>Unitário: <i>cotovelos que se sobrepõem ficam em trilhos distintos e não se cruzam, descendo ou subindo</i></td><td>regressão</td><td>A regra de ordem dos trilhos, nas pilhas abaixo (colisão) e acima (subida do HVT4) dos balões.</td><td class="erro">falha</td></tr>
+      <tr><td>Unitário: <i>no modo abaixo, a seta é vertical; a janela oculta não tem seta</i></td><td>regressão</td><td>Direções <code>acima</code> e <code>abaixo</code>; <code>seta: null</code> na oculta.</td><td class="erro">falha</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6. Riscos e o que fica de fora</h2>
+  <p><b>change_risk: média</b> nos dois. Sem contrato externo, dado persistido nem concorrência nova; reversível por <code>git revert</code>. Os motivos para não ser baixa:</p>
+  <ul>
+    <li><b>Posição de todas as janelas</b> (blast radius visual): as passadas 2 e 3 valem para toda pilha que encosta no fundo, e a visibilidade passa a depender da área das mensagens.</li>
+    <li><b>Medida nova no adaptador</b>, a cada recálculo: a interseção percorre os ancestrais da lista com <code>getComputedStyle</code> e <code>getBoundingClientRect</code>. São leituras, feitas antes das escritas, como as do K3DY; sem medição automática do RNF-02.</li>
+    <li><b>Página falsa dos testes de integração</b>: ganha cabeçalho, lista rolável e caixa de escrita, e todos os testes do IXWO, do A4MZ e do GAOZ passam a rodar nela. É o preço de a área ter altura; sem isso, o <code>#main</code> falso, da altura do conteúdo, confinaria as janelas.</li>
+    <li><b>Abertura</b>: a guarda nova pega o deslize que a subida introduziria; a do K3DY continua.</li>
+  </ul>
+  <div class="aviso">
+    <p><b>Limite honesto do corredor de 8 px.</b> A ponta ocupa 4 px junto ao balão; sobram cerca de 3 px para os trechos verticais. Dois trilhos ficam distintos; a partir do terceiro cotovelo sobreposto, as linhas se encostam. Se a aceitação no WhatsApp real mostrar setas ilegíveis numa pilha longa, a saída é a sua segunda opção (corredor alargado para as janelas deslocadas), como correção nova.</p>
+  </div>
+  <p><b>Fora da correção (Agent Notes):</b></p>
+  <ul>
+    <li>Agrupar áudios consecutivos numa janela (alternativa da OQ-01): feature, não correção.</li>
+    <li>Balão de texto largo entre dois áudios: a janela já pode cobri-lo hoje, e o trilho passaria sobre ele. Fica registrado como limitação.</li>
+    <li>Pilha mais alta que a área das mensagens (cinco janelas altas numa tela baixa): o excesso continua abaixo do fim, como no EC-05; a rolagem resolve fora do pé da conversa.</li>
+    <li>No modo abaixo, a seta de uma janela deslocada passa por trás das janelas do meio e só aparece nas pontas.</li>
+  </ul>
+
+  <h2>7. Mini-grafo dos bugs</h2>
+  <svg viewBox="0 0 920 330" width="920" height="330" role="img" aria-label="Mini-grafo do HVT4 e do OW7G">
+    <line x1="330" y1="80" x2="330" y2="250" stroke="#9e9e9e" stroke-width="1.5"/>
+    <text x="340" y="170" fill="#9e9e9e" font-size="11">related-to (supported)</text>
+    <line x1="330" y1="80" x2="590" y2="165" stroke="#9e9e9e" stroke-width="1.5"/>
+    <text x="470" y="108" fill="#9e9e9e" font-size="11">related-to (supported)</text>
+    <line x1="330" y1="250" x2="590" y2="165" stroke="#9e9e9e" stroke-width="1.5"/>
+    <text x="470" y="232" fill="#9e9e9e" font-size="11">related-to (supported)</text>
+    <a href="../bug.md"><rect x="40" y="30" width="290" height="100" rx="8" fill="#1e1e1e" stroke="#bb86fc" stroke-width="3"/>
+      <text x="52" y="55" fill="#bb86fc" font-size="13" font-weight="bold">#11 BUG-20261002-HVT4</text>
+      <text x="52" y="77" fill="#e0e0e0" font-size="12">Janela cortada na borda inferior</text>
+      <text x="52" y="97" fill="#ef5350" font-size="11">high · P1 · active · spec-gap</text>
+      <text x="52" y="117" fill="#81c784" font-size="11">causa confirmed · 1º no plano</text></a>
+    <a href="../../BUG-20261002-OW7G-janela-sem-seta-ate-o-balao/bug.md"><rect x="40" y="200" width="290" height="100" rx="8" fill="#1e1e1e" stroke="#bb86fc" stroke-width="3"/>
+      <text x="52" y="225" fill="#bb86fc" font-size="13" font-weight="bold">#12 BUG-20261002-OW7G</text>
+      <text x="52" y="247" fill="#e0e0e0" font-size="12">Janela deslocada sem a seta</text>
+      <text x="52" y="267" fill="#ffb74d" font-size="11">medium · P1 · active</text>
+      <text x="52" y="287" fill="#81c784" font-size="11">causa confirmed · 2º no plano</text></a>
+    <a href="../../BUG-20261002-K3DY-janelas-sobrepostas/bug.md"><rect x="590" y="120" width="290" height="90" rx="8" fill="#1e1e1e" stroke="#9e9e9e" stroke-width="2"/>
+      <text x="602" y="145" fill="#bb86fc" font-size="13" font-weight="bold">#8 BUG-20261002-K3DY</text>
+      <text x="602" y="167" fill="#e0e0e0" font-size="12">Janelas sobrepostas</text>
+      <text x="602" y="187" fill="#81c784" font-size="11">medium · P2 · resolved (travado)</text></a>
+  </svg>
+  <p class="meta">A aresta HVT4–OW7G passou de <code>proposed</code> a <code>supported</code> nesta investigação: os dois nascem no par <code>calcularPosicoesJanelas</code> → <code>recalcularPosicoes</code>, e a subida do HVT4 cria deslocamentos que só a seta do OW7G liga ao balão. Clique nos nós para abrir o <code>bug.md</code>.</p>
+
+  <h2>8. Matriz de relações</h2>
+  <table>
+    <thead><tr><th>Origem</th><th>Tipo</th><th>Destino</th><th>Estado</th><th>Evidência</th></tr></thead>
+    <tbody>
+      <tr><td><a href="../bug.md">BUG-20261002-HVT4</a></td><td>related-to</td><td><a href="../../BUG-20261002-K3DY-janelas-sobrepostas/bug.md">BUG-20261002-K3DY</a></td><td>supported</td><td>Com a altura desenhada do K3DY, cinco janelas empilhadas terminam em y = 978 numa tela de 806; o mesmo cálculo que resolve a colisão não limita o fim da pilha.</td></tr>
+      <tr><td><a href="../../BUG-20261002-OW7G-janela-sem-seta-ate-o-balao/bug.md">BUG-20261002-OW7G</a></td><td>related-to</td><td><a href="../../BUG-20261002-K3DY-janelas-sobrepostas/bug.md">BUG-20261002-K3DY</a></td><td>supported</td><td>Na aceitação do K3DY, as janelas 2 a 4 ficaram 32, 187 e 219 px abaixo dos balões, sem ligação; a altura real alongou os deslocamentos.</td></tr>
+      <tr><td><a href="../../BUG-20261002-OW7G-janela-sem-seta-ate-o-balao/bug.md">BUG-20261002-OW7G</a></td><td>related-to</td><td><a href="../bug.md">BUG-20261002-HVT4</a></td><td class="ok">supported <span class="meta">(era proposed)</span></td><td>Mesmo par de funções; na pilha do cenário 2, a colisão que leva a quinta janela além da tela afasta as de baixo dos balões.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>9. Ordem de correção</h2>
+  <ol>
+    <li><a href="../bug.md">HVT4</a>: onde a janela fica. A seta é calculada a partir da posição final, então a posição vem antes (causa estrutural primeiro).</li>
+    <li><a href="../../BUG-20261002-OW7G-janela-sem-seta-ate-o-balao/bug.md">OW7G</a>: como a janela se liga ao balão, sobre as posições já contidas na área.</li>
+  </ol>
+
+  <h2>10. Próximos passos</h2>
+  <ol>
+    <li><b>Aprovação deste plano.</b></li>
+    <li><b>Leitura do DOM real</b> (sua decisão): você abre o WhatsApp Web na aba vazia do grupo da automação que criei e escolhe uma conversa rolada até o fim; eu leio só retângulos e <code>data-testid</code> da cadeia <code>#main</code> → lista → caixa de escrita, sem texto, e ajusto a página falsa do CHG-003 à estrutura lida.</li>
+    <li><b>Gate 1</b>: diffs dos testes (HVT4 CHG-001 a 003; OW7G CHG-001 e 002), aplicação e prova do vermelho.</li>
+    <li><b>Gate 2</b>: diffs do código (HVT4 CHG-004 a 008, depois OW7G CHG-003 a 006), aplicação em duas etapas, prova do verde com a suíte completa e o typecheck.</li>
+    <li><b>Aceitação no WhatsApp real</b>: último áudio da conversa transcrito (janela inteira acima da caixa de escrita) e três ou mais áudios consecutivos (setas até os balões certos).</li>
+    <li><b>Vereditos de spec</b>, com a sua decisão. Recomendação prévia: HVT4 <code>spec-gap</code>, com o adendo do CHG-009; OW7G <code>spec-correta</code>, porque o RF-05 já pede a seta e o desenho dela é detalhe de implementação.</li>
+    <li>Fechamento pela closure policy, travas <code>DONE.md</code> e views.</li>
+  </ol>
+</body>
+</html>

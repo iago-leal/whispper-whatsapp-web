@@ -1,0 +1,67 @@
+--- a/extension/src/content/gerenciador-janelas.ts
++++ b/extension/src/content/gerenciador-janelas.ts
+@@ -1,6 +1,6 @@
+ import type { ExibicaoDeTranscricao, EstadoExibicao } from '../dominio/exibicao-de-transcricao.ts';
+ import type { CoordenadasAncora } from '../dominio/fonte-de-audio.ts';
+-import { calcularPosicoesJanelas, type FaixaHorizontal } from './posicionador-colisoes.ts';
++import { calcularPosicoesJanelas, type AreaDaConversa } from './posicionador-colisoes.ts';
+ import { criarElementoJanela, atualizarConteudoJanela, aplicarDestaqueJanela, liberarContadorJanela } from './janela-elemento.ts';
+ import { CronometroDeEspera } from './cronometro-espera.ts';
+ 
+@@ -28,16 +28,16 @@
+ 
+   private readonly obterAncora: (idAudio: string) => CoordenadasAncora | null;
+ 
+-  private readonly obterAreaConversa: () => FaixaHorizontal | null;
++  private readonly obterAreaConversa: () => AreaDaConversa | null;
+ 
+   // A âncora só é notificada na rolagem e no redimensionamento; a abertura a lê de obterAncora, senão
+   // a janela nasce oculta até a primeira rolagem (BUG-20261002-IXWO). A área da conversa é lida a cada
+   // posicionamento: sem ela, a janela cabe na tela inteira e pode cobrir a lista de conversas
+-  // (BUG-20261002-A4MZ).
++  // (BUG-20261002-A4MZ) ou descer sobre a caixa de escrita (BUG-20261002-HVT4).
+   constructor(
+     cronometro: CronometroDeEspera = new CronometroDeEspera(),
+     obterAncora: (idAudio: string) => CoordenadasAncora | null = () => null,
+-    obterAreaConversa: () => FaixaHorizontal | null = () => null
++    obterAreaConversa: () => AreaDaConversa | null = () => null
+   ) {
+     this.cronometro = cronometro;
+     this.obterAncora = obterAncora;
+@@ -106,11 +106,16 @@
+ 
+     // A janela recebe a posição antes de entrar na página e só depois é medida: medida antes, ainda sem
+     // posição, a transição do transform a faria deslizar do canto da tela. Já medida, o segundo cálculo
+-    // acomoda à altura dela as janelas de baixo (BUG-20261002-K3DY).
++    // acomoda à altura dela as janelas de baixo (BUG-20261002-K3DY). No pé da conversa, o segundo cálculo
++    // move a própria janela, que sobe pela altura medida: ela entra sem transição até o estilo fixar, para
++    // não deslizar (BUG-20261002-HVT4).
++    el?.classList.add('whispper-janela-entrando');
+     this.recalcularPosicoes(area);
+     if (el) {
+       this.garantirContainer()?.appendChild(el);
+       this.recalcularPosicoes(area);
++      void getComputedStyle(el).transform;
++      el.classList.remove('whispper-janela-entrando');
+     }
+   }
+ 
+@@ -176,7 +181,7 @@
+     };
+   }
+ 
+-  recalcularPosicoes(area: FaixaHorizontal | null = this.obterAreaConversa()): void {
++  recalcularPosicoes(area: AreaDaConversa | null = this.obterAreaConversa()): void {
+     // Todas as alturas são lidas antes de qualquer posição ser escrita, numa só medida da página
+     const requisicoes = Array.from(this.janelas.values()).map((reg) => ({
+       idAudio: reg.idAudio,
+@@ -186,7 +191,8 @@
+       ancora: reg.ancora
+     }));
+ 
+-    const posicoes = calcularPosicoesJanelas(requisicoes, area?.direita, area?.esquerda);
++    const faixaVertical = area?.topo !== undefined && area.fundo !== undefined ? { topo: area.topo, fundo: area.fundo } : undefined;
++    const posicoes = calcularPosicoesJanelas(requisicoes, area?.direita, area?.esquerda, faixaVertical);
+     for (const pos of posicoes) {
+       const reg = this.janelas.get(pos.idAudio);
+       if (reg && reg.elemento) {

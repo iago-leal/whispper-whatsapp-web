@@ -1,0 +1,2 @@
+{"alvo":"path(\"M 10 100 H 20 V 150 H 5\")","anims":1,"agora":"path(\"M 10 10 H 20 V 50 H 5\")"}
+{"anims":0,"fim":"path(\"M 10 100 H 20 V 150 H 5\")","bbox":100}

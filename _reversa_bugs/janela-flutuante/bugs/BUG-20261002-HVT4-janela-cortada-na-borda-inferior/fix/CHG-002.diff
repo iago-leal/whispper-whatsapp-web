@@ -1,0 +1,108 @@
+--- a/extension/test/janelas-no-navegador.test.ts
++++ b/extension/test/janelas-no-navegador.test.ts
+@@ -2,7 +2,8 @@
+ // Testing com a folha de estilos real, numa página neutra, sem o WhatsApp. Só ali a janela tem altura,
+ // a do texto até 240 px (RF-07), e a posição de cada janela depende da altura das de cima (RF-05). As
+ // âncoras simulam balões de voz recebidos de 336 × 62 px, a 70 px um do outro, na área da conversa do
+-// print do BUG-20261002-A4MZ (x de 488 a 1316).
++// print do BUG-20261002-A4MZ (x de 488 a 1316). Os testes do BUG-20261002-HVT4 usam a geometria do WhatsApp
++// real, com a altura da área das mensagens (evidence/estrutura-vertical-whatsapp-real.md do bug).
+ //
+ // Sem rede, sem conta e sem efeito fora do diretório temporário. Pulado sem o Chrome for Testing.
+ 
+@@ -48,8 +49,22 @@
+   function novoGerenciador(ids) {
+     return new W.GerenciadorDeJanelas(new W.CronometroDeEspera(), function (id) { return ancora(id, ids.indexOf(id)); }, function () { return AREA; });
+   }
++  // Geometria do WhatsApp real (BUG-20261002-HVT4), numa tela de 1624 × 907: área da conversa de x = 551 a
++  // 1624, mensagens de y = 64 (fim do cabeçalho) a 844 (começo da caixa de escrita), balões de voz recebidos
++  // de 336 × 68 px em x = 613
++  var AREA_REAL = { esquerda: 551, direita: 1624, topo: 64, fundo: 844 };
++  var ERRO = { tipo: "erro", mensagem: "O motor não conseguiu transcrever este áudio.", motivo: "FALHA_NA_TRANSCRICAO", falhouAposMs: 0 };
++  function balao(id, y) { return { idAudio: id, x: 613, y: y, largura: 336, altura: 68, visivel: true }; }
++  // Gerenciador com o balão de cada id no y dado
++  function gerenciadorReal(ysDosBaloes) {
++    return new W.GerenciadorDeJanelas(new W.CronometroDeEspera(), function (id) { return balao(id, ysDosBaloes[id]); }, function () { return AREA_REAL; });
++  }
+ `;
+ 
++// Tela do WhatsApp real nas aceitações do A4MZ e do K3DY
++const TELA_REAL = { largura: 1624, altura: 907 };
++const MENSAGENS = { topo: 64, fundo: 844 };
++
+ interface Retangulo {
+   id: string;
+   x: number;
+@@ -107,9 +122,9 @@
+   });
+ 
+   // Uma página por teste, na tela do print e em primeiro plano: em segundo plano, a transição não anda
+-  async function abrirPagina(): Promise<Pagina> {
++  async function abrirPagina(tela = { largura: 1316, altura: 806 }): Promise<Pagina> {
+     const p = await navegador.abrirPagina("about:blank");
+-    await p.definirTamanho(1316, 806);
++    await p.definirTamanho(tela.largura, tela.altura);
+     await p.navegarSimulado("https://exemplo.test/", html);
+     await p.aguardar("typeof W !== 'undefined' && typeof novoGerenciador === 'function'", 10_000, "o gerenciador carregar");
+     await p.trazerParaFrente();
+@@ -188,4 +203,60 @@
+       assert.deepEqual([Math.round(desenhado.x), Math.round(desenhado.y)], [alvo.x, alvo.y], `a janela ${id} não abriu no destino`);
+     }
+   });
++
++  // BUG-20261002-HVT4: a janela do último áudio começava no topo do balão e descia sobre a caixa de
++  // escrita e além da tela (739 a 981 no WhatsApp real); "Copiar" e o resumo ficavam abaixo da tela.
++  await t.test("reprodução: a janela do último áudio, no pé da conversa, fica inteira na área das mensagens, com \"Copiar\" visível (critérios 1 e 2 do HVT4)", async () => {
++    const p = await abrirPagina(TELA_REAL);
++    const { janela, fimDoCopiar } = await p.avaliar<{ janela: Retangulo; fimDoCopiar: number }>(`(() => {
++      const g = gerenciadorReal({ P: 739 });
++      g.abrir("P");
++      g.definirEstado("P", concluido(T.longo));
++      const a = alvo("P");
++      const copiar = [...janela("P").querySelectorAll("button")].find((b) => b.textContent === "Copiar");
++      return { janela: a, fimDoCopiar: a.y + copiar.offsetTop + copiar.offsetHeight };
++    })()`);
++
++    assert.ok(janela.altura >= 240, `a janela não chegou ao limite do RF-07: ${JSON.stringify(janela)}`);
++    assert.ok(janela.y >= MENSAGENS.topo, `a janela começa sob o cabeçalho: ${JSON.stringify(janela)}`);
++    assert.ok(janela.y + janela.altura <= MENSAGENS.fundo - 8, `a janela passa do fim da área das mensagens: ${JSON.stringify(janela)}`);
++    assert.ok(fimDoCopiar <= MENSAGENS.fundo, `"Copiar" termina em ${fimDoCopiar}, sob a caixa de escrita`);
++
++    // Ao fim da transição, a tela também a mostra inteira
++    await p.aguardar(`janela("P").getAnimations().length === 0`, 5_000, "a janela terminar de subir");
++    const [desenhada] = await p.avaliar<Retangulo[]>(`["P"].map(desenhado)`);
++    assert.ok(desenhada!.y + desenhada!.altura <= MENSAGENS.fundo, `na tela, a janela passa do fim da área: ${JSON.stringify(desenhada)}`);
++  });
++
++  await t.test("reprodução: quatro áudios no pé da conversa empilham-se dentro da área das mensagens, sem sobreposição (EC-05, RF-05)", async () => {
++    const p = await abrirPagina(TELA_REAL);
++    const alvos = await p.avaliar<Retangulo[]>(`(() => {
++      const ids = ["Q1", "Q2", "Q3", "Q4"];
++      const g = gerenciadorReal({ Q1: 434, Q2: 529, Q3: 624, Q4: 719 });
++      for (const id of ids) g.abrir(id);
++      [ERRO, concluido(T.longo), ERRO, ERRO].forEach((estado, i) => g.definirEstado(ids[i], estado));
++      return ids.map(alvo);
++    })()`);
++
++    for (const a of alvos) {
++      assert.ok(a.y >= MENSAGENS.topo && a.y + a.altura <= MENSAGENS.fundo - 8, `janela fora da área das mensagens: ${JSON.stringify(alvos)}`);
++    }
++    assert.deepEqual(cruzamentos(alvos), [], `janelas sobrepostas: ${JSON.stringify(alvos)}`);
++  });
++
++  // A subida faz a posição da janela nova depender da altura dela: no pé da conversa, o primeiro cálculo
++  // do abrir (altura suposta de 160 px) e o segundo (a medida) a põem em lugares diferentes, e a janela
++  // recém-entrada deslizaria entre eles. O balão vai de 780 a 848, em parte sob a caixa de escrita. Guarda:
++  // passa sem a subida, em que a janela fica no topo do balão; a subida é provada pelos testes acima.
++  await t.test("a janela nova aberta no pé da conversa entra na página já no lugar, sem deslizar (RF-01; lição do K3DY)", async () => {
++    const p = await abrirPagina(TELA_REAL);
++    const { transicoes, janela, desenhada } = await p.avaliar<{ transicoes: number; janela: Retangulo; desenhada: Retangulo }>(`(() => {
++      const g = gerenciadorReal({ N: 780 });
++      g.abrir("N");
++      return { transicoes: janela("N").getAnimations().length, janela: alvo("N"), desenhada: desenhado("N") };
++    })()`);
++
++    assert.equal(transicoes, 0, `a janela abriu com transição em curso: ${JSON.stringify(janela)}`);
++    assert.deepEqual([Math.round(desenhada.x), Math.round(desenhada.y)], [janela.x, janela.y], "a janela não abriu no destino");
++  });
+ });

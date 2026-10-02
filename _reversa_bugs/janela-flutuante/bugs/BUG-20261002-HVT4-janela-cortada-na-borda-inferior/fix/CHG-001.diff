@@ -1,0 +1,74 @@
+--- a/extension/test/posicionador-colisoes.test.ts
++++ b/extension/test/posicionador-colisoes.test.ts
+@@ -128,3 +128,71 @@
+   assert.equal(porId.get('recebido-2')?.y, 264);
+   assert.equal(porId.get('recebido-2')?.deslocadaPorColisao, true);
+ });
++
++// BUG-20261002-HVT4: a área das mensagens tem topo e fundo, o fim do cabeçalho e o começo da caixa de
++// escrita. A janela que passaria do fundo sobe até terminar 8 px acima dele, e a pilha acima dela sobe
++// junto; nunca acima do topo. Geometria da aceitação do A4MZ: mensagens de y = 64 a 844, área da
++// conversa de x = 551 a 1624, balões de voz recebidos de 336 × 68 px em x = 613.
++const MENSAGENS = { topo: 64, fundo: 844 };
++
++function voz(idAudio: string, yBalao: number, altura: number): RequisicaoPosicionamento {
++  return {
++    idAudio,
++    direcao: 'recebido',
++    largura: 320,
++    altura,
++    ancora: { idAudio, x: 613, y: yBalao, largura: 336, altura: 68, visivel: true }
++  };
++}
++
++const ys = (posicoes: Array<{ y: number }>) => posicoes.map((p) => p.y);
++
++test('calcularPosicoesJanelas sobe a janela que passaria do fim da área das mensagens até terminar 8 px acima dele', () => {
++  // O último áudio da conversa, com texto longo: 739 + 242 = 981 passaria de 844
++  const [janela] = calcularPosicoesJanelas([voz('P', 739, 242)], 1624, 551, MENSAGENS);
++  assert.equal(janela?.visivel, true);
++  assert.equal(janela?.x, 957);
++  assert.equal(janela?.y, 844 - 8 - 242);
++});
++
++test('calcularPosicoesJanelas sobe em bloco a pilha que passaria do fim da área, mantendo os vãos de 8 px', () => {
++  // Quatro áudios no pé da conversa: na descida, a pilha iria de 434 a 1117
++  const reqs = [voz('Q1', 434, 139), voz('Q2', 529, 242), voz('Q3', 624, 139), voz('Q4', 719, 139)];
++  const posicoes = calcularPosicoesJanelas(reqs, 1624, 551, MENSAGENS);
++  // De baixo para cima: 836 − 139 = 697; 697 − 8 − 139 = 550; 550 − 8 − 242 = 300; 300 − 8 − 139 = 153
++  assert.deepEqual(ys(posicoes), [153, 300, 550, 697]);
++});
++
++test('calcularPosicoesJanelas começa no topo da área a pilha mais alta que ela, sem sobreposição, e só o excesso passa do fim', () => {
++  // Cinco janelas de 190 px somam 982 px com os vãos; a área tem 780
++  const reqs = [149, 244, 339, 434, 529].map((y, i) => voz(`R${i + 1}`, y, 190));
++  const posicoes = calcularPosicoesJanelas(reqs, 1624, 551, MENSAGENS);
++  assert.deepEqual(ys(posicoes), [64, 262, 460, 658, 856]);
++});
++
++test('calcularPosicoesJanelas mantém no topo do balão a janela que cabe na área das mensagens (RF-01)', () => {
++  const [janela] = calcularPosicoesJanelas([voz('A', 149, 242)], 1624, 551, MENSAGENS);
++  assert.equal(janela?.y, 149);
++  assert.equal(janela?.deslocadaPorColisao, false);
++});
++
++test('calcularPosicoesJanelas oculta a janela do balão sob a caixa de escrita ou sob o cabeçalho, e começa no topo da área a do balão em parte sob o cabeçalho (RF-03)', () => {
++  const porId = new Map(
++    calcularPosicoesJanelas([voz('sob-a-caixa', 844, 139), voz('sob-o-cabecalho', -10, 139), voz('em-parte', 30, 139)], 1624, 551, MENSAGENS)
++      .map((p) => [p.idAudio, p])
++  );
++  // O balão de y = 844 a 912 está na tela, mas sob a caixa de escrita; o de −10 a 58, sob o cabeçalho
++  assert.equal(porId.get('sob-a-caixa')?.visivel, false);
++  assert.equal(porId.get('sob-o-cabecalho')?.visivel, false);
++  // O de 30 a 98 aparece de 64 a 98: a janela começa no topo da área, e não sob o cabeçalho
++  assert.equal(porId.get('em-parte')?.visivel, true);
++  assert.equal(porId.get('em-parte')?.y, 64);
++});
++
++test('calcularPosicoesJanelas abre acima do balão, sem cobri-lo, a janela do modo abaixo (RF-02) que não cabe abaixo dele no pé da conversa', () => {
++  // Área da conversa de 600 px (x de 551 a 1151): sem espaço ao lado, a janela iria para 739 + 68 + 8 = 815
++  const [janela] = calcularPosicoesJanelas([voz('estreita', 739, 139)], 1151, 551, MENSAGENS);
++  assert.equal(janela?.x, 613);
++  // Acima do balão: 739 − 8 − 139 = 592, terminando 8 px antes do topo do balão
++  assert.equal(janela?.y, 592);
++});

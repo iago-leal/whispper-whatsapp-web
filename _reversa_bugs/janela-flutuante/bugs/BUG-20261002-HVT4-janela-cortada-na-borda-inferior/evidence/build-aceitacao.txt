@@ -1,0 +1,21 @@
+2026-10-02 19:22:10 -0300
+525ac3b
+árvore com HVT4 CHG-001 a 008 e OW7G CHG-001 a 006 aplicados (não commitada)
+
+> whispper-whatsapp-web-extensao@0.1.0 build
+> tsc -p tsconfig.json && esbuild src/content/index.ts --bundle --format=iife --outfile=dist/content/index.js && esbuild src/pagina/ponte-audio.ts --bundle --format=iife --outfile=dist/pagina/ponte-audio.js && mkdir -p dist/diagnostico dist/content dist/popup dist/onboarding && cp ../amostras/sinteticas/fala-pt.ogg dist/diagnostico/ && cp src/content/estilos.css dist/content/ && cp src/content/janela-flutuante.css dist/content/ && cp popup/index.html dist/popup/ && cp popup/popup.css dist/popup/ && cp onboarding/index.html dist/onboarding/ && cp onboarding/onboarding.css dist/onboarding/ && npm run build:instalador
+
+
+  dist/content/index.js  71.1kb
+
+⚡ Done in 10ms
+
+  dist/pagina/ponte-audio.js  4.3kb
+
+⚡ Done in 2ms
+
+> whispper-whatsapp-web-extensao@0.1.0 build:instalador
+> test $(uname) != Darwin || bash ../auxiliar/ferramentas/gerar_pkg.sh
+
+Instalador gerado em /Users/iagoleal/dev/whispper-whatsapp-web/extension/dist/instaladores/whispper-macos-apple-silicon.pkg
+exit: 0

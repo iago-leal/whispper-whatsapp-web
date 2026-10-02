@@ -1,0 +1,6 @@
+# Gate 2: cd extension && npm run typecheck; 2026-10-02 19:23 -0300
+# Exit code: 0
+
+> whispper-whatsapp-web-extensao@0.1.0 typecheck
+> tsc -p tsconfig.test.json
+

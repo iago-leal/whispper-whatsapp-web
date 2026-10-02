@@ -1,0 +1,42 @@
+--- a/extension/src/adaptadores/adaptador-whatsapp-web.ts
++++ b/extension/src/adaptadores/adaptador-whatsapp-web.ts
+@@ -14,7 +14,7 @@
+ import { aplicarEstadoIcone } from '../content/botao-transcricao.ts';
+ import { CronometroDeEspera } from '../content/cronometro-espera.ts';
+ import { CONFIGURACAO_ESTRUTURAS } from '../content/configuracao-estruturas.ts';
+-import type { FaixaHorizontal } from '../content/posicionador-colisoes.ts';
++import type { AreaDaConversa } from '../content/posicionador-colisoes.ts';
+ 
+ export class AdaptadorWhatsAppWeb implements FonteDeAudio {
+   private mensagens = new Map<string, MensagemDetectada>();
+@@ -129,13 +129,26 @@
+   }
+ 
+   /**
+-   * Bordas horizontais da área da conversa aberta na tela, ou null sem conversa aberta.
++   * Bordas da área da conversa aberta na tela, ou null sem conversa aberta: as laterais do painel e, na
++   * vertical, a parte visível da lista de mensagens, entre o cabeçalho e a caixa de escrita.
+    */
+-  obterAreaConversa(): FaixaHorizontal | null {
++  obterAreaConversa(): AreaDaConversa | null {
+     const painel = document.querySelector<HTMLElement>(CONFIGURACAO_ESTRUTURAS.seletores.containerConversa);
+     if (!painel) return null;
+-    const { left, right } = painel.getBoundingClientRect();
+-    return { esquerda: left, direita: right };
++    const { left, right, top, bottom } = painel.getBoundingClientRect();
++    let topo = Math.max(top, 0);
++    let fundo = Math.min(bottom, window.innerHeight);
++    // A lista rola dentro de um ancestral que a recorta, e o cabeçalho e a caixa de escrita ficam fora dele.
++    // A lista só limita a área se ela mesma recortar: é o conteúdo rolado e, numa conversa curta, fica mais
++    // baixa que a parte visível (BUG-20261002-HVT4).
++    const lista = painel.querySelector<HTMLElement>(CONFIGURACAO_ESTRUTURAS.seletores.containerMensagens);
++    for (let el = lista; el && el !== painel; el = el.parentElement) {
++      if (getComputedStyle(el).overflowY === 'visible') continue;
++      const recorte = el.getBoundingClientRect();
++      topo = Math.max(topo, recorte.top);
++      fundo = Math.min(fundo, recorte.bottom);
++    }
++    return { esquerda: left, direita: right, topo, fundo };
+   }
+ 
+   verificarSaude(): StatusSaudeFonte {

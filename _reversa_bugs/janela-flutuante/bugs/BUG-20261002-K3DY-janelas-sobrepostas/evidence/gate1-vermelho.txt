@@ -1,0 +1,127 @@
+# Gate 1 (BUG-20261002-K3DY): testes aplicados sobre 75e027c, sem a correção; 2026-10-02 17:50 -0300
+# cd extension && node --test test/posicionador-colisoes.test.ts test/janelas-no-navegador.test.ts
+▶ janelas flutuantes no navegador, com a altura desenhada
+  ✖ reprodução: cinco áudios consecutivos concluídos, com textos de alturas diferentes e um no limite de 240 px, resultam em cinco janelas sem sobreposição (RF-05, RF-07) (394.27875ms)
+  ✖ reprodução: quando a janela de cima cresce ao concluir, a de baixo desce e nenhuma se sobrepõe (RF-05) (110.125458ms)
+  ✖ a janela aberta acima de outra já aberta a empurra pela altura desenhada, a 8 px (RF-05) (90.284583ms)
+  ✔ a janela nova entra na página já na posição, sem deslizar do canto da tela (RF-01) (65.939459ms)
+✖ janelas flutuantes no navegador, com a altura desenhada (2329.204958ms)
+✔ calcularPosicoesJanelas posiciona janela ao lado da âncora em espaço suficiente (0.542666ms)
+✔ calcularPosicoesJanelas desloca verticalmente janela para resolver colisão (0.098709ms)
+✔ calcularPosicoesJanelas usa fallback abaixo do balão quando espaço lateral for insuficiente (0.068333ms)
+✔ calcularPosicoesJanelas mede o espaço lateral dentro da área da conversa e, sem ele, abre abaixo do balão (0.065459ms)
+✖ calcularPosicoesJanelas não desloca a janela que não cruza, na horizontal, a janela de cima (0.79875ms)
+✖ calcularPosicoesJanelas desloca a janela pela de cima que a cruza, mesmo com outra, de lado oposto, entre as duas (0.16625ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 5
+ℹ fail 6
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7521.572083
+
+✖ failing tests:
+
+test at test/janelas-no-navegador.test.ts:120:11
+✖ reprodução: cinco áudios consecutivos concluídos, com textos de alturas diferentes e um no limite de 240 px, resultam em cinco janelas sem sobreposição (RF-05, RF-07) (394.27875ms)
+  AssertionError [ERR_ASSERTION]: janelas sobrepostas: [{"id":"A1","x":894,"y":66,"largura":322,"altura":190},{"id":"A2","x":894,"y":234,"largura":322,"altura":129},{"id":"A3","x":894,"y":402,"largura":322,"altura":242},{"id":"A4","x":894,"y":570,"largura":322,"altura":190},{"id":"A5","x":894,"y":738,"largura":322,"altura":129}]
+  + actual - expected
+  
+  + [
+  +   'A1 e A2 se cruzam em 22 px na vertical',
+  +   'A3 e A4 se cruzam em 74 px na vertical',
+  +   'A4 e A5 se cruzam em 22 px na vertical'
+  + ]
+  - []
+  
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/janelas-no-navegador.test.ts:134:12)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/janelas-no-navegador.test.ts:120:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ 'A1 e A2 se cruzam em 22 px na vertical', 'A3 e A4 se cruzam em 74 px na vertical', 'A4 e A5 se cruzam em 22 px na vertical' ],
+    expected: [],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at test/janelas-no-navegador.test.ts:137:11
+✖ reprodução: quando a janela de cima cresce ao concluir, a de baixo desce e nenhuma se sobrepõe (RF-05) (110.125458ms)
+  AssertionError [ERR_ASSERTION]: a janela de baixo não desceu: {"antes":[{"id":"B1","x":894,"y":66,"largura":322,"altura":94},{"id":"B2","x":894,"y":234,"largura":322,"altura":94}],"depois":[{"id":"B1","x":894,"y":66,"largura":322,"altura":242},{"id":"B2","x":894,"y":234,"largura":322,"altura":94}]}
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/janelas-no-navegador.test.ts:149:12)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/janelas-no-navegador.test.ts:137:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at test/janelas-no-navegador.test.ts:160:11
+✖ a janela aberta acima de outra já aberta a empurra pela altura desenhada, a 8 px (RF-05) (90.284583ms)
+  AssertionError [ERR_ASSERTION]: a janela de baixo não ficou a 8 px da nova: [{"id":"D1","x":894,"y":66,"largura":322,"altura":94},{"id":"D2","x":894,"y":234,"largura":322,"altura":94}]
+  
+  234 !== 168
+  
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/janelas-no-navegador.test.ts:170:12)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/janelas-no-navegador.test.ts:160:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 234,
+    expected: 168,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/posicionador-colisoes.test.ts:105:1
+✖ calcularPosicoesJanelas não desloca a janela que não cruza, na horizontal, a janela de cima (0.79875ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  264 !== 136
+  
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/posicionador-colisoes.test.ts:112:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 264,
+    expected: 136,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/posicionador-colisoes.test.ts:116:1
+✖ calcularPosicoesJanelas desloca a janela pela de cima que a cruza, mesmo com outra, de lado oposto, entre as duas (0.16625ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  264 !== 100
+  
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/posicionador-colisoes.test.ts:125:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 264,
+    expected: 100,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+exit=1

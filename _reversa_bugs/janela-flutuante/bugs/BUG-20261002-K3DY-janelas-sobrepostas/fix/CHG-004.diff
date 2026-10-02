@@ -1,0 +1,34 @@
+--- a/extension/src/content/posicionador-colisoes.ts
++++ b/extension/src/content/posicionador-colisoes.ts
+@@ -42,7 +42,8 @@
+   });
+ 
+   const resultados: PosicaoCalculada[] = [];
+-  let ultimoFimY = -Infinity;
++  // Faixa horizontal e fim, já com o espaçamento, de cada janela posta
++  const postas: Array<{ x: number; largura: number; fimY: number }> = [];
+ 
+   for (const req of ordenadas) {
+     if (!req.ancora || !req.ancora.visivel) {
+@@ -79,13 +80,17 @@
+     }
+ 
+     let deslocada = false;
+-    // Resolução de colisão vertical contra a janela imediatamente acima
+-    if (y < ultimoFimY) {
+-      y = ultimoFimY;
++    // Resolução de colisão vertical contra as janelas postas que cruzam a faixa horizontal desta; a de um
++    // áudio do outro lado da conversa, que não a alcança, não a empurra (BUG-20261002-K3DY)
++    const fimDasQueCruzam = postas
++      .filter((posta) => posta.x < x + largura && x < posta.x + posta.largura)
++      .reduce((fim, posta) => Math.max(fim, posta.fimY), -Infinity);
++    if (y < fimDasQueCruzam) {
++      y = fimDasQueCruzam;
+       deslocada = true;
+     }
+ 
+-    ultimoFimY = y + altura + GAP;
++    postas.push({ x, largura, fimY: y + altura + GAP });
+ 
+     resultados.push({
+       idAudio: req.idAudio,

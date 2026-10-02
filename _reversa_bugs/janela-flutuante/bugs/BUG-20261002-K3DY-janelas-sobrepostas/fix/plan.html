@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plano de correção · #8 BUG-20261002-K3DY</title>
+  <style>
+body { background-color: #121212; color: #e0e0e0; font-family: sans-serif; padding: 20px; max-width: 1100px; margin: 0 auto; line-height: 1.5; }
+a { color: #bb86fc; text-decoration: none; } a:hover { text-decoration: underline; }
+table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+th, td { border: 1px solid #333; padding: 8px 10px; text-align: left; vertical-align: top; }
+th { background-color: #1e1e1e; }
+.card { background-color: #1e1e1e; padding: 12px 16px; border-radius: 8px; margin: 0 12px 12px 0; display: inline-block; min-width: 120px; }
+.card b { display: block; font-size: 1.3em; }
+.meta { color: #9e9e9e; font-size: 0.9em; }
+.tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 0.85em; background: #2a2a2a; border: 1px solid #444; }
+.ok { color: #81c784; } .alerta { color: #ffb74d; } .erro { color: #ef5350; } .novo { color: #64b5f6; }
+.aviso { background: #2a2210; border-left: 4px solid #ffb74d; padding: 10px 14px; border-radius: 6px; }
+code { background: #1e1e1e; padding: 1px 5px; border-radius: 4px; }
+ol li, ul li { margin-bottom: 4px; }
+svg { background: #181818; border-radius: 8px; max-width: 100%; }
+pre.bloco { background: #0d0d0d; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.82em; line-height: 1.35; }
+  </style>
+</head>
+<body>
+  <h1>Plano de correção · #8 BUG-20261002-K3DY</h1>
+  <p class="meta">Contexto <code>janela-flutuante</code> · 2026-10-02 · gerado por /reversa-debugger-fix antes de qualquer alteração no projeto · <a href="../bug.md">bug.md</a></p>
+  <div>
+    <div class="card"><b class="alerta">medium</b>Severidade</div>
+    <div class="card"><b class="alerta">P2</b>Prioridade</div>
+    <div class="card"><b class="ok">confirmed</b>Causa raiz</div>
+    <div class="card"><b class="alerta">média</b>Risco da mudança</div>
+    <div class="card"><b>4/4</b>Reprodução</div>
+    <div class="card"><b>local-software</b>Closure policy</div>
+  </div>
+
+  <h2>1. Defeito</h2>
+  <p>Com duas ou mais janelas abertas, a de baixo cobre o fim da de cima: o texto e o resumo da janela de cima ficam escondidos. O RF-05 pede várias janelas abertas, nenhuma sobreposta, deslocando para baixo a que colidir; o RF-07, altura ajustada ao texto até 240 px.</p>
+
+  <h2>2. Causa raiz <span class="tag ok">confirmed</span></h2>
+  <p><code>GerenciadorDeJanelas.recalcularPosicoes</code> informa ao posicionador <code>altura: 160</code> para toda janela, desde a primeira implementação (<code>bab1e53</code>). O posicionador empilha cada janela em <code>y + 160 + 8</code>; a janela mais alta invade a seguinte em <code>altura − 160</code> px, e a que cresce ao concluir não empurra as de baixo, porque o <code>definirEstado</code> recalcula com os mesmos 160 px.</p>
+  <table>
+    <thead><tr><th>Evidência</th><th>Altura desenhada</th><th>Sobreposição</th><th>Conta</th></tr></thead>
+    <tbody>
+      <tr><td><a href="../evidence/reproduction.md">Reprodução</a>, cenário 1: texto médio</td><td>190 px</td><td class="erro">22 px</td><td>190 − 168</td></tr>
+      <tr><td>Reprodução, cenário 1: texto no limite do RF-07</td><td>242 px</td><td class="erro">74 px</td><td>242 − 168</td></tr>
+      <tr><td>Reprodução, cenário 2: a de cima conclui (94 → 242 px)</td><td>242 px</td><td class="erro">74 px</td><td>a de baixo fica em y = 234</td></tr>
+      <tr><td><a href="../../BUG-20261002-A4MZ-janela-longe-do-balao/evidence/aceitacao-whatsapp-real.md">WhatsApp real</a> (aceitação do A4MZ)</td><td>191 px</td><td class="erro">17 px</td><td>565 + 168 = 733 &lt; 739</td></tr>
+    </tbody>
+  </table>
+  <p class="meta">Reprodução determinística: 4/4 saídas idênticas no Chrome for Testing, com o gerenciador e a folha de estilos reais (<a href="../evidence/reproduzir-k3dy.ts">reproduzir-k3dy.ts</a>, <a href="../evidence/reproduzir-k3dy.saida.txt">saída</a>).</p>
+
+  <h2>3. Estratégia: correção direta</h2>
+  <p>A altura passa a ser a desenhada (<code>offsetHeight</code>, borda incluída), lida a cada recálculo, com todas as leituras feitas antes de qualquer posição ser escrita. A colisão passa a valer só entre janelas que se cruzam na horizontal, conforme você decidiu. Escolha sem debate: há uma causa só, confirmada, e uma estratégia sem concorrente forte.</p>
+  <p><b>Ordem da abertura.</b> A altura só existe depois que a janela entra na página, mas medi-la ali, antes de ela receber a posição, dispara a transição do <code>transform</code>, e a janela desliza do canto da tela (a armadilha da revisão 1 do A4MZ). O <a href="../evidence/experimento-ordem-de-abertura.saida.txt">experimento</a> mede as três ordens:</p>
+  <table>
+    <thead><tr><th>Ordem</th><th>Transições</th><th>Topo na tela no instante seguinte</th></tr></thead>
+    <tbody>
+      <tr><td>entra, é medida, recebe a posição (correção ingênua)</td><td class="erro">1</td><td class="erro">0 (canto da tela)</td></tr>
+      <tr><td>entra, recebe a posição, sem medida (código atual)</td><td class="ok">0</td><td class="ok">300 (destino)</td></tr>
+      <tr><td>recebe a posição fora da página, entra, é medida (plano)</td><td class="ok">0</td><td class="ok">300 (destino)</td></tr>
+    </tbody>
+  </table>
+  <p>Por isso, o <code>abrir</code> calcula as posições duas vezes: a primeira com a janela nova ainda fora da página (altura suposta de 160 px, só dela, só nesse instante) e a segunda logo depois de ela entrar, já medida, para acomodar as janelas de baixo. A posição da própria janela nova não depende da altura dela, então não muda entre os dois cálculos.</p>
+  <pre class="bloco">// gerenciador-janelas.ts (esboço)
+abrir(...)
+  ancora, area  ← lidas antes de tudo (IXWO, A4MZ)
+  el ← criarElementoJanela + atualizarConteudoJanela      // fora da página
+  janelas.set(idAudio, ...)
+  recalcularPosicoes(area)    // a nova recebe a posição fora da página; as outras já medidas
+  container.appendChild(el)
+  recalcularPosicoes(area)    // a nova, medida, empurra as de baixo
+
+recalcularPosicoes(area)
+  altura: reg.elemento?.isConnected ? reg.elemento.offsetHeight : ALTURA_SEM_MEDIDA (160)
+
+// posicionador-colisoes.ts (esboço)
+fimAcima = maior fim (y + altura + 8) entre as janelas já postas que cruzam [x, x + largura]
+if (y &lt; fimAcima) { y = fimAcima; deslocada = true }</pre>
+  <p class="meta">Quando todas as janelas se cruzam na horizontal, como as do mesmo lado da conversa, a regra nova dá o mesmo resultado da atual: o fim da última janela posta é o maior de todos.</p>
+
+  <h2>4. Correction Change Set proposto</h2>
+  <table>
+    <thead><tr><th>CHG</th><th>Tipo</th><th>Artefato</th><th>Propósito</th><th>Gate</th></tr></thead>
+    <tbody>
+      <tr><td>CHG-001</td><td>test</td><td><code>extension/test/janelas-no-navegador.test.ts</code> <span class="tag novo">novo</span></td><td>Gerenciador montado do código-fonte no Chrome for Testing, com a folha de estilos real, numa página neutra (o mesmo arranjo da reprodução). Quatro testes: dois de reprodução, dois de regressão (seção 5). Pulado sem o Chrome for Testing, como o de integração.</td><td>1</td></tr>
+      <tr><td>CHG-002</td><td>test</td><td><code>extension/test/posicionador-colisoes.test.ts</code></td><td>Dois testes unitários da colisão por faixa horizontal.</td><td>1</td></tr>
+      <tr><td>CHG-003</td><td>code</td><td><code>extension/src/content/gerenciador-janelas.ts</code></td><td>Altura desenhada no <code>recalcularPosicoes</code>; <code>abrir</code> posiciona a janela antes de ela entrar na página e recalcula depois de medi-la.</td><td>2</td></tr>
+      <tr><td>CHG-004</td><td>code</td><td><code>extension/src/content/posicionador-colisoes.ts</code></td><td>A janela só desce pelas janelas já postas que cruzam a sua faixa horizontal.</td><td>2</td></tr>
+      <tr><td>CHG-005</td><td>documentation</td><td><code>extension/src/content/JANELAS.md</code></td><td>Passo 3 do algoritmo de colisão: altura desenhada e colisão só entre janelas que se cruzam.</td><td>2</td></tr>
+    </tbody>
+  </table>
+  <p class="meta">Sem <code>data-repair</code>: nada é persistido; a janela vive só na aba. A assinatura de <code>calcularPosicoesJanelas</code> não muda, e os testes atuais do posicionador continuam válidos.</p>
+
+  <h2>5. Testes planejados</h2>
+  <table>
+    <thead><tr><th>Teste</th><th>Papel</th><th>O que prova</th><th>Hoje</th></tr></thead>
+    <tbody>
+      <tr><td>Navegador: <i>reprodução: cinco áudios consecutivos concluídos, com textos de alturas diferentes e um no limite de 240 px, resultam em cinco janelas sem sobreposição (RF-05, RF-07)</i></td><td>reprodução</td><td>Critério 1. Balões a 70 px um do outro; textos médio, curto, longo, médio e curto; a longa rola por dentro (no limite do RF-07). Nenhum par de retângulos-alvo se cruza.</td><td class="erro">falha (22, 74 e 22 px)</td></tr>
+      <tr><td>Navegador: <i>reprodução: quando a janela de cima cresce ao concluir, a de baixo desce e nenhuma se sobrepõe (RF-05)</i></td><td>reprodução</td><td>Critério 2. Duas janelas em espera; a de cima conclui com texto longo. Sem sobreposição no retângulo-alvo, logo após o <code>definirEstado</code>, nem no desenhado, ao fim da transição.</td><td class="erro">falha (74 px)</td></tr>
+      <tr><td>Navegador: <i>a janela aberta acima de outra já aberta a empurra pela altura desenhada, a 8 px (RF-05)</i></td><td>regressão</td><td>O segundo cálculo do <code>abrir</code>: a janela de baixo fica exatamente 8 px abaixo da nova, e não 8 px abaixo de uma altura suposta.</td><td class="erro">falha (vão de 74 px)</td></tr>
+      <tr><td>Navegador: <i>a janela nova entra na página já na posição, sem deslizar do canto da tela (RF-01; lição do A4MZ)</i></td><td>regressão</td><td>Com outra janela aberta, a nova não tem transição em curso e está no destino no instante seguinte à abertura. Protege a ordem do <code>abrir</code>; a correção ingênua a deixaria vermelha.</td><td class="ok">passa (guarda)</td></tr>
+      <tr><td>Unitário: <i>calcularPosicoesJanelas não desloca a janela que não cruza, na horizontal, a janela de cima</i></td><td>regressão</td><td>Enviado e recebido de lados opostos, numa área de conversa larga, sem cruzamento: a do recebido fica alinhada ao seu balão.</td><td class="erro">falha</td></tr>
+      <tr><td>Unitário: <i>calcularPosicoesJanelas desloca a janela pela de cima que a cruza, mesmo com outra, de lado oposto, entre as duas</i></td><td>regressão</td><td>A janela do meio, do outro lado, não empurra nem é empurrada; a terceira desce pela primeira, que a cruza.</td><td class="erro">falha</td></tr>
+      <tr><td>Navegador: testes do IXWO e do A4MZ em <code>integracao-conversa.test.ts</code></td><td>guarda</td><td>A janela continua visível e junto ao balão desde a primeira leitura, na abertura e na rolagem.</td><td class="ok">passam</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6. Riscos e o que fica de fora</h2>
+  <p><b>change_risk: média.</b> Não há contrato externo, dado persistido nem concorrência nova, e a mudança se reverte por <code>git revert</code>. Os motivos para não ser baixa:</p>
+  <ul>
+    <li><b>Posicionamento de todas as janelas</b> (blast radius visual), pelos dois eixos do mesmo cálculo.</li>
+    <li><b>Ordem de abertura</b>: a armadilha do deslize já derrubou uma revisão do A4MZ; fica coberta por teste de regressão próprio e pelos testes do IXWO.</li>
+    <li><b>Leitura de layout na rolagem</b> (RNF-02): o recálculo, chamado por âncora a cada quadro de rolagem, passa a ler <code>offsetHeight</code>. As leituras acontecem antes das escritas, e o rastreador já lê o <code>getBoundingClientRect</code> de cada balão no mesmo laço; o custo novo é da mesma ordem. Sem medição automática do RNF-02 nesta correção.</li>
+    <li><b>Regra de colisão nova</b>, decidida por você: idêntica à atual quando as janelas se cruzam.</li>
+  </ul>
+  <div class="aviso">
+    <p><b>Leitura do critério 2, para sua aprovação junto com o plano.</b> O critério pede "sem sobreposição em nenhum momento após a mudança de estado". A janela que conclui cresce no mesmo quadro, mas a de baixo desce com a transição de 120 ms que a folha de estilos aplica a todo <code>transform</code> (a mesma que suaviza a rolagem). Durante esses 120 ms, as duas se cruzam parcialmente. Proposta: manter a transição e verificar o critério no retângulo-alvo, na mesma tarefa do <code>definirEstado</code>, e no retângulo desenhado, ao fim da transição. A alternativa, sem cruzamento nem por um quadro, é a janela empurrada saltar para o lugar, sem transição, o que trocaria o deslize por um salto.</p>
+  </div>
+  <p><b>Fora da correção (Agent Notes):</b></p>
+  <ul>
+    <li><b>Corte na borda inferior</b> da área da conversa: por decisão sua, registrado com <code>/reversa-debugger</code> e corrigido em seguida, sobre a altura real; é <code>spec-gap</code> (OQ-01 aberta).</li>
+    <li>A janela desenhada tem 322 × até 242 px (borda de 1 px fora dos 320 × 240 do CSS). A altura medida já inclui a borda; a largura do cálculo segue 320, como no A4MZ. O cruzamento horizontal de 2 px que essa diferença permitiria é desprezível.</li>
+    <li>Crescimento por outra causa que não a mudança de estado (por exemplo, "Falha ao copiar" quebrando a linha do rodapé): o recálculo seguinte, na rolagem ou na próxima mudança, corrige; um <code>ResizeObserver</code> fica como evolução, se aparecer na prática.</li>
+  </ul>
+
+  <h2>7. Mini-grafo do bug</h2>
+  <svg viewBox="0 0 920 330" width="920" height="330" role="img" aria-label="Mini-grafo do BUG-20261002-K3DY">
+    <line x1="330" y1="165" x2="590" y2="66" stroke="#81c784" stroke-width="2"/>
+    <text x="455" y="100" fill="#81c784" font-size="11" text-anchor="middle">related-to (confirmed)</text>
+    <line x1="330" y1="165" x2="590" y2="166" stroke="#9e9e9e" stroke-width="1.5"/>
+    <text x="460" y="158" fill="#9e9e9e" font-size="11" text-anchor="middle">related-to (supported)</text>
+    <line x1="330" y1="165" x2="590" y2="266" stroke="#64b5f6" stroke-width="1.5" stroke-dasharray="6 4"/>
+    <text x="455" y="238" fill="#64b5f6" font-size="11" text-anchor="middle">related-to (a registrar)</text>
+    <a href="../bug.md"><rect x="40" y="115" width="290" height="100" rx="8" fill="#1e1e1e" stroke="#bb86fc" stroke-width="3"/>
+      <text x="52" y="140" fill="#bb86fc" font-size="13" font-weight="bold">#8 BUG-20261002-K3DY</text>
+      <text x="52" y="162" fill="#e0e0e0" font-size="12">Janelas sobrepostas</text>
+      <text x="52" y="182" fill="#ffb74d" font-size="11">medium · P2 · active</text>
+      <text x="52" y="202" fill="#81c784" font-size="11">causa confirmed · em correção</text></a>
+    <a href="../../BUG-20261002-A4MZ-janela-longe-do-balao/bug.md"><rect x="590" y="20" width="290" height="90" rx="8" fill="#1e1e1e" stroke="#81c784" stroke-width="2"/>
+      <text x="602" y="45" fill="#bb86fc" font-size="13" font-weight="bold">#7 BUG-20261002-A4MZ</text>
+      <text x="602" y="67" fill="#e0e0e0" font-size="12">Janela longe do balão</text>
+      <text x="602" y="87" fill="#81c784" font-size="11">high · P1 · resolved (travado)</text></a>
+    <a href="../../BUG-20261002-IXWO-janela-invisivel/bug.md"><rect x="590" y="122" width="290" height="90" rx="8" fill="#1e1e1e" stroke="#9e9e9e" stroke-width="2"/>
+      <text x="602" y="147" fill="#bb86fc" font-size="13" font-weight="bold">#6 BUG-20261002-IXWO</text>
+      <text x="602" y="169" fill="#e0e0e0" font-size="12">Janela invisível até a rolagem</text>
+      <text x="602" y="189" fill="#81c784" font-size="11">critical · P0 · resolved (travado)</text></a>
+    <rect x="590" y="224" width="290" height="90" rx="8" fill="#1e1e1e" stroke="#64b5f6" stroke-width="2" stroke-dasharray="6 4"/>
+    <text x="602" y="249" fill="#64b5f6" font-size="13" font-weight="bold">candidato, sem ID</text>
+    <text x="602" y="271" fill="#e0e0e0" font-size="12">Janela cortada na borda inferior</text>
+    <text x="602" y="291" fill="#9e9e9e" font-size="11">spec-gap · registrar em seguida</text>
+  </svg>
+  <p class="meta">Verde: relação <code>confirmed</code>, promovida nesta investigação pela medida no WhatsApp real. Cinza: <code>supported</code>, herdada do registro. Azul tracejado: candidato ainda sem registro, sem página para abrir. Clique nos nós para abrir o <code>bug.md</code>.</p>
+
+  <h2>8. Matriz de relações</h2>
+  <table>
+    <thead><tr><th>Origem</th><th>Tipo</th><th>Destino</th><th>Estado</th><th>Evidência</th></tr></thead>
+    <tbody>
+      <tr><td><a href="../bug.md">BUG-20261002-K3DY</a></td><td>related-to</td><td><a href="../../BUG-20261002-A4MZ-janela-longe-do-balao/bug.md">BUG-20261002-A4MZ</a></td><td class="ok">confirmed</td><td>Achado 2 da aceitação do A4MZ: no WhatsApp real, 565 + 160 + 8 = 733 &lt; 739 e 17 px de sobreposição; os dois vivem em <code>calcularPosicoesJanelas</code>, o A4MZ no eixo horizontal e o K3DY no vertical.</td></tr>
+      <tr><td><a href="../bug.md">BUG-20261002-K3DY</a></td><td>related-to</td><td><a href="../../BUG-20261002-IXWO-janela-invisivel/bug.md">BUG-20261002-IXWO</a></td><td>supported</td><td>A sobreposição só era vista depois do contorno do IXWO (rolar); a altura fixa e a âncora ausente nasciam na mesma montagem de requisições de <code>recalcularPosicoes</code>.</td></tr>
+      <tr><td><a href="../bug.md">BUG-20261002-K3DY</a></td><td>related-to</td><td>corte na borda inferior (sem registro)</td><td class="novo">a registrar</td><td>O posicionador não tem limite vertical; a correção do corte depende da altura real que o K3DY introduz.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>9. Ordem sugerida para o encadeamento</h2>
+  <ol>
+    <li><a href="../../BUG-20261002-IXWO-janela-invisivel/bug.md">BUG-20261002-IXWO</a> e <a href="../../BUG-20261002-A4MZ-janela-longe-do-balao/bug.md">BUG-20261002-A4MZ</a>: resolvidos e travados.</li>
+    <li><a href="../bug.md">BUG-20261002-K3DY</a> (esta sessão): altura real e colisão por faixa horizontal.</li>
+    <li>Corte na borda inferior: registrar com <code>/reversa-debugger</code>, decidir o comportamento (spec-gap) e corrigir sobre a altura real.</li>
+  </ol>
+
+  <h2>10. Próximos passos</h2>
+  <ol>
+    <li>Aprovação deste plano, inclusive da leitura do critério 2.</li>
+    <li>Gate 1: diff dos testes (CHG-001 e CHG-002), aplicação e prova do vermelho.</li>
+    <li>Gate 2: diff da correção (CHG-003 a CHG-005), aplicação e prova do verde, com a suíte completa e o typecheck.</li>
+    <li>Aceitação no WhatsApp real (opcional pela closure policy, recomendada pela natureza visual), veredito de spec (recomendação prévia: <code>spec-correta</code>, porque o RF-05 já pede nenhuma sobreposta e deslocar só a que colidir), fechamento e trava <code>DONE.md</code>.</li>
+  </ol>
+</body>
+</html>

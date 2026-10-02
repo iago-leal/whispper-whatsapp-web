@@ -1,0 +1,22 @@
+--- a/extension/test/janelas-no-navegador.test.ts
++++ b/extension/test/janelas-no-navegador.test.ts
+@@ -11,7 +11,6 @@
+ import { tmpdir } from "node:os";
+ import { join } from "node:path";
+ import { test } from "node:test";
+-import { setTimeout as esperar } from "node:timers/promises";
+ import { fileURLToPath } from "node:url";
+ import { build } from "esbuild";
+ 
+@@ -149,8 +148,9 @@
+     assert.ok(depois[1]!.y > antes[1]!.y, `a janela de baixo não desceu: ${JSON.stringify({ antes, depois })}`);
+     assert.deepEqual(cruzamentos(depois), [], `sobrepostas logo após a mudança de estado: ${JSON.stringify(depois)}`);
+ 
+-    // A de baixo desce com a transição de 120 ms do transform; ao fim dela, a tela também não as sobrepõe
+-    await esperar(300);
++    // A de baixo desce com a transição de 120 ms do transform; ao fim dela, a tela também não as sobrepõe.
++    // Espera-se o fim da transição, e não um tempo fixo: com a máquina ocupada, os quadros atrasam.
++    await p.aguardar(`janela("B2").getAnimations().length === 0`, 5_000, "a janela de baixo terminar de descer");
+     const desenhados = await p.avaliar<Retangulo[]>(`["B1", "B2"].map(desenhado)`);
+     assert.deepEqual(cruzamentos(desenhados), [], `sobrepostas na tela ao fim da transição: ${JSON.stringify(desenhados)}`);
+   });

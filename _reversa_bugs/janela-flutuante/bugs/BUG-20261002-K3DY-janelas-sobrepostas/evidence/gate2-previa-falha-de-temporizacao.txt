@@ -1,0 +1,27 @@
+# Prévia do Gate 2 (BUG-20261002-K3DY) na cópia isolada do scratchpad, com a correção e a versão aprovada do CHG-001 (espera fixa de 300 ms); suíte completa, arquivos em paralelo; 2026-10-02
+# Resultado: 1 falha por temporização. O alvo de B2 estava certo (passou a asserção anterior), mas, com a máquina ocupada pelo outro navegador de teste, a transição ainda não tinha andado aos 300 ms: B2 desenhada em y = 168, alvo em 316. Motivou a revisão 2 do CHG-001 (espera pelo fim da transição).
+
+
+test at test/janelas-no-navegador.test.ts:137:11
+✖ reprodução: quando a janela de cima cresce ao concluir, a de baixo desce e nenhuma se sobrepõe (RF-05) (488.856ms)
+  AssertionError [ERR_ASSERTION]: sobrepostas na tela ao fim da transição: [{"id":"B1","x":894,"y":66,"largura":322,"altura":242},{"id":"B2","x":894,"y":168,"largura":322,"altura":94.296875}]
+  + actual - expected
+  
+  + [
+  +   'B1 e B2 se cruzam em 94 px na vertical'
+  + ]
+  - []
+  
+      at TestContext.<anonymous> (file:///private/tmp/claude-501/-Users-iagoleal-dev-whispper-whatsapp-web/cc07bd31-13d7-48c9-b492-f94df8ad3ddd/scratchpad/ext-k3dy/test/janelas-no-navegador.test.ts:155:12)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> (file:///private/tmp/claude-501/-Users-iagoleal-dev-whispper-whatsapp-web/cc07bd31-13d7-48c9-b492-f94df8ad3ddd/scratchpad/ext-k3dy/test/janelas-no-navegador.test.ts:137:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+
+ℹ tests 160
+ℹ suites 5
+ℹ pass 156
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 2
+ℹ todo 0
+ℹ duration_ms 14575.317458

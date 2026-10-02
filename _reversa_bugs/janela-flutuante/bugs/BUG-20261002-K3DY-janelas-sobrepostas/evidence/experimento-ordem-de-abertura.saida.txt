@@ -1,0 +1,14 @@
+{
+ "entra_mede_posiciona": {
+  "transicoes": 1,
+  "topoNaTela": 0
+ },
+ "entra_posiciona_sem_medir": {
+  "transicoes": 0,
+  "topoNaTela": 300
+ },
+ "posiciona_entra_mede": {
+  "transicoes": 0,
+  "topoNaTela": 300
+ }
+}

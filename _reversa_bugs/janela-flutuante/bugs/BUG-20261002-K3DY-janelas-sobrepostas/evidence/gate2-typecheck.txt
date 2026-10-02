@@ -1,0 +1,9 @@
+# Gate 2 (BUG-20261002-K3DY): typecheck e compilação; 2026-10-02 17:58 -0300
+# npm run typecheck
+
+> whispper-whatsapp-web-extensao@0.1.0 typecheck
+> tsc -p tsconfig.test.json
+
+exit=0
+# npx tsc -p tsconfig.json --noEmit
+exit=0

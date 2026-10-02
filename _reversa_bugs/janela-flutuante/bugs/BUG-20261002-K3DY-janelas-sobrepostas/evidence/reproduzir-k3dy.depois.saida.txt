@@ -1,0 +1,100 @@
+{
+ "cenario1_cinco_concluidos": {
+  "janelas": [
+   {
+    "id": "A1",
+    "x": 894,
+    "y": 66,
+    "largura": 322,
+    "altura": 190
+   },
+   {
+    "id": "A2",
+    "x": 894,
+    "y": 264,
+    "largura": 322,
+    "altura": 129
+   },
+   {
+    "id": "A3",
+    "x": 894,
+    "y": 401,
+    "largura": 322,
+    "altura": 242
+   },
+   {
+    "id": "A4",
+    "x": 894,
+    "y": 651,
+    "largura": 322,
+    "altura": 190
+   },
+   {
+    "id": "A5",
+    "x": 894,
+    "y": 849,
+    "largura": 322,
+    "altura": 129
+   }
+  ],
+  "sobreposicoes": []
+ },
+ "cenario2_antes_em_espera": {
+  "janelas": [
+   {
+    "id": "B1",
+    "x": 894,
+    "y": 66,
+    "largura": 322,
+    "altura": 94
+   },
+   {
+    "id": "B2",
+    "x": 894,
+    "y": 168,
+    "largura": 322,
+    "altura": 94
+   }
+  ],
+  "sobreposicoes": []
+ },
+ "cenario2_depois_de_B1_concluir": {
+  "janelas": [
+   {
+    "id": "B1",
+    "x": 894,
+    "y": 66,
+    "largura": 322,
+    "altura": 242
+   },
+   {
+    "id": "B2",
+    "x": 894,
+    "y": 316,
+    "largura": 322,
+    "altura": 94
+   }
+  ],
+  "sobreposicoes": []
+ },
+ "cenario3_lados_opostos": {
+  "janelas": [
+   {
+    "id": "E",
+    "x": 591,
+    "y": 66,
+    "largura": 322,
+    "altura": 190
+   },
+   {
+    "id": "R",
+    "x": 894,
+    "y": 264,
+    "largura": 322,
+    "altura": 190
+   }
+  ],
+  "sobreposicoes": [],
+  "R_deslocada_de": 136
+ }
+}

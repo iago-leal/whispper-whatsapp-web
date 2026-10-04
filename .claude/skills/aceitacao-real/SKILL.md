@@ -50,11 +50,18 @@ de teste (decisão de 2026-10-04). A contenção abaixo faz as vezes da separaç
   `pointerdown`, `mousedown`, `pointerup`, `mouseup` e `click` (só `mousedown` e `click` na linha não
   abrem a conversa), devolvendo só se achou e se abriu; nunca devolva nomes nem prévias. Outra conversa, só o usuário abre, e nada técnico o impediria: a regra é sua.
 - **Barra lateral escondida.** Depois de cada carga ou recarga da aba, aplique
-  `#side { visibility: hidden !important }` por uma `CSSStyleSheet` em `document.adoptedStyleSheets`;
-  um `<style>` no `head` some quando uma conversa abre (visto em 2026-10-04). Antes de qualquer print
-  ou `take_snapshot`, confira que `getComputedStyle(#side).visibility` é `hidden`. A `visibility` tira
-  nomes e prévias do print e da árvore de acessibilidade sem mexer na largura da área da conversa, de
-  que depende o limiar de 726 px da seção 4; `display: none` mudaria essa largura.
+  `#side, #side * { visibility: hidden !important } #side { opacity: 0 !important }` por uma
+  `CSSStyleSheet` em `document.adoptedStyleSheets`; um `<style>` no `head` some quando uma conversa
+  abre. Antes de qualquer print ou `take_snapshot`, confira que **nenhum** elemento de
+  `[#side, ...#side.querySelectorAll('*')]` tem `visibility` diferente de `hidden`. Conferir só o
+  `#side` não basta: em 2026-10-04 ele dava `hidden` e o print mostrou a lista de conversas, porque
+  linhas da lista declaram a própria `visibility`. A `visibility` tira nomes e prévias do print e da
+  árvore de acessibilidade sem mexer na largura da área da conversa, de que depende o limiar de 726 px
+  da seção 4; `display: none` mudaria essa largura.
+- **Print só da conversa.** Grave o print em arquivo (`take_screenshot` com `filePath`, nunca anexado à
+  resposta), recorte-o à área da conversa (`#main`, em pixels do print: o `devicePixelRatio` do
+  Chrome for Testing é 2) e só então desfoque, com sigma 40. Com o sigma 14 de antes, o texto das
+  janelas seguia em parte legível num print de 2400 px.
 - **Nenhum envio pela automação.** Seus cliques se limitam ao ícone da extensão e ao ▶ do player.
   Quem grava e manda os áudios é o usuário, pelo celular; uso de leitura é o de menor risco de
   suspensão, que aqui recairia sobre o número principal.

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plano de correção · #13 TTLJ</title>
+  <style>
+body { background-color: #121212; color: #e0e0e0; font-family: sans-serif; padding: 20px; max-width: 1100px; margin: 0 auto; line-height: 1.5; }
+a { color: #bb86fc; text-decoration: none; } a:hover { text-decoration: underline; }
+table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+th, td { border: 1px solid #333; padding: 8px 10px; text-align: left; vertical-align: top; }
+th { background-color: #1e1e1e; }
+.card { background-color: #1e1e1e; padding: 12px 16px; border-radius: 8px; margin: 0 12px 12px 0; display: inline-block; min-width: 120px; }
+.card b { display: block; font-size: 1.3em; }
+.meta { color: #9e9e9e; font-size: 0.9em; }
+.tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 0.85em; background: #2a2a2a; border: 1px solid #444; }
+.ok { color: #81c784; } .alerta { color: #ffb74d; } .erro { color: #ef5350; } .novo { color: #64b5f6; }
+.aviso { background: #2a2210; border-left: 4px solid #ffb74d; padding: 10px 14px; border-radius: 6px; }
+.decisao { background: #10221a; border-left: 4px solid #81c784; padding: 10px 14px; border-radius: 6px; }
+code { background: #1e1e1e; padding: 1px 5px; border-radius: 4px; }
+ol li, ul li { margin-bottom: 4px; }
+svg { background: #181818; border-radius: 8px; max-width: 100%; height: auto; }
+pre.bloco { background: #0d0d0d; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.82em; line-height: 1.35; }
+h2 { margin-top: 32px; }
+  </style>
+</head>
+<body>
+  <h1>Plano de correção · #13 TTLJ</h1>
+  <p class="meta">Contexto <code>janela-flutuante</code> · 2026-10-04 · gerado por /reversa-debugger-fix antes de qualquer alteração no projeto · <a href="../bug.md">bug.md</a> · <a href="../evidence/reproduction.md">reprodução</a> · <a href="../evidence/diagnostico.md">diagnóstico</a></p>
+
+  <table>
+    <thead><tr><th>Bug</th><th>Severidade</th><th>Prioridade</th><th>Causa raiz</th><th>Reprodução</th><th>Spec</th></tr></thead>
+    <tbody>
+      <tr><td><a href="../bug.md">#13 BUG-20261004-TTLJ</a><br>Modo abaixo: a pilha cobre os próprios balões e esconde as setas</td><td class="alerta">medium</td><td class="alerta">P1</td><td class="ok">confirmed</td><td>1/1 no WhatsApp Web; 1/1 no algoritmo isolado, com as mesmas posições</td><td class="alerta">RF-02 × Adição 2 do HVT4 (veredito no passo 7)</td></tr>
+    </tbody>
+  </table>
+  <div style="margin-top:12px">
+    <div class="card"><b class="alerta">média</b>Risco da mudança</div>
+    <div class="card"><b>local-software</b>Closure policy</div>
+    <div class="card"><b>2 gates</b>testes, depois o change set</div>
+  </div>
+
+  <h2>1. Defeito</h2>
+  <p>Com a área da conversa abaixo de 726 px, toda janela abre no modo abaixo (RF-02), na coluna do próprio balão. Com várias janelas abertas, a pilha cobre os balões de áudio, inclusive o próprio de cada janela, e o ▶ deles; a seta vertical que liga cada janela ao balão (OW7G) corre por trás das janelas e some. Na reprodução (área de 656 px, mensagens de y = 64 a 768, cinco áudios): balões cobertos de 87% a 96%, ▶ de quatro dos cinco sob uma janela, três setas sem nenhum ponto visível, e as janelas 4 e 5 além do fim da área.</p>
+
+  <h2>2. Causa raiz <span class="tag ok">confirmed</span></h2>
+  <p><b>Onde nasceu.</b> <code>calcularPosicoesJanelas</code> (<code>posicionador-colisoes.ts</code>) põe a janela do modo abaixo na coluna do balão e resolve colisão só entre janelas, nunca contra balões. Numa sequência de áudios, um a cada 117 px, qualquer pilha de janelas de 171 a 242 px cobre balões: cada janela empurrada para baixo da anterior cobre os seguintes, e <code>conterNaFaixa</code> (Adição 2) sobe a pilha sem distinguir o modo, cobrindo também os próprios. A seta desse modo é vertical; na janela deslocada, ela atravessa a vizinha, e a camada das setas fica atrás das janelas (<code>garantirCamadaSetas</code>).</p>
+  <p><b>Na origem, uma lacuna de spec.</b> O RF-02 foi escrito para uma janela só; a combinação com o RF-05 (várias janelas) e com a Adição 2 nunca foi especificada, como o "Limite conhecido" do adendo do HVT4 admite.</p>
+  <table>
+    <thead><tr><th>Evidência</th><th>Medida</th></tr></thead>
+    <tbody>
+      <tr><td>Algoritmo isolado com as entradas medidas (<a href="../evidence/diagnostico.md">diagnóstico §1</a>)</td><td class="erro">janelas em 64, 304, 483, 702 e 952: exatamente as posições medidas no WhatsApp</td></tr>
+      <tr><td>O mesmo cálculo sem a faixa vertical (antes do HVT4)</td><td class="erro">a janela 1, abaixo do balão 1, cobre 100% dos balões 2 e 3: o defeito é anterior ao HVT4, que o agrava</td></tr>
+      <tr><td>WhatsApp Web, <code>whatsapp-cft</code> (<a href="../evidence/reproduction.md">reprodução</a>)</td><td class="erro">balões cobertos de 87% a 96%; ▶ de 4 em 5 sob janela; 3 setas sem ponto visível em 9</td></tr>
+      <tr><td>Largura da área por janela do navegador (<a href="../evidence/diagnostico.md">diagnóstico §2</a>)</td><td class="alerta">balão de voz fixo em 336 px; área de 656, 476 e 354 px a 1200, 900 e 760 px de navegador: o modo abaixo vale para toda janela abaixo de uns 1270 px com a lista de conversas</td></tr>
+      <tr><td>▶ e ícone da extensão (<a href="../evidence/diagnostico.md">diagnóstico §3</a>)</td><td>▶ de 76 a 110 px da borda esquerda do balão; ícone na borda esquerda da área (x = 550), fora da coluna dos balões</td></tr>
+    </tbody>
+  </table>
+
+  <h2>3. Estratégia: uma janela à vista no modo abaixo</h2>
+  <div class="aviso">
+    <p><b>A restrição geométrica.</b> No modo abaixo, a janela mora na coluna dos balões. Na tela da reprodução, a área tem 704 px; entre um balão e o seguinte sobram 28 px, e o único vão que comporta uma janela inteira fica acima do primeiro balão (229 px), enquanto as cinco janelas somam 1120 px. Nenhuma correção atende ao mesmo tempo a três exigências: <b>(a)</b> todos os balões descobertos, <b>(b)</b> todas as janelas à vista e <b>(c)</b> todas dentro da área. Estreitar a janela não escapa disso: a 900 px de navegador sobram 75 px ao lado do balão.</p>
+    <p>A estratégia escolhida cede <b>(b)</b> por inteiro, porque só a janela de foco fica à vista, e <b>(a)</b> em parte, porque essa janela pode cobrir os balões vizinhos, nunca o próprio. Mantém <b>(c)</b>.</p>
+  </div>
+  <div class="decisao" style="margin-top:12px">
+    <p><b>Decisão registrada por volta das 16:15:</b> correção direta, "uma por vez", recomendada entre três opções. A outra opção era reservar espaço na conversa, com risco alto, alteração do RF-02 e do adaptador, e por isso mais adequada como feature. A terceira era o debate multiagente.</p>
+    <ol>
+      <li><b>Só uma janela à vista no modo abaixo</b>: a aberta ou destacada por último. As demais seguem abertas, com o estado e o texto, mas ocultas, como no RF-03.</li>
+      <li><b>Troca pelo ícone.</b> Clicar no ícone de outro áudio (<code>destacar</code>, pelo núcleo) mostra a janela dele e oculta a anterior. O ícone fica fora da coluna dos balões, e nenhuma janela o cobre.</li>
+      <li><b>Fechar a janela à vista não traz outra.</b> O usuário escolhe a próxima pelo ícone. É a opção previsível: mostrar a de foco anterior faria janelas surgirem sem clique, na ordem inversa da leitura.</li>
+      <li><b>Lugar e seta.</b> A janela fica 8 px abaixo do próprio balão (RF-02) ou, no pé da conversa, 8 px acima dele (Adição 3), com a seta vertical de 8 px no vão, sem nada no caminho.</li>
+      <li><b>Balão de foco fora da área.</b> A janela dele se oculta (RF-03), e nenhuma outra aparece no lugar.</li>
+      <li><b>Modo lateral intacto.</b> A partir de 726 px, todas as janelas seguem à vista, em pilha, com a Adição 2.</li>
+    </ol>
+  </div>
+
+  <h3>3.1 Esboço do código</h3>
+  <pre class="bloco">// posicionador-colisoes.ts
+export interface RequisicaoPosicionamento {
+  ...
+  // Ordem do último abrir ou destacar: no modo abaixo, só a janela de foco mais recente fica à vista
+  // (BUG-20261004-TTLJ); sem ela, vale a ordem das requisições
+  foco?: number;
+}
+
+// Extraído do laço, sem mudar a regra: o x da janela ao lado do balão, ou null quando não cabe (RF-01, RF-02)
+function xAoLado(ancora, req, direitaDaArea, esquerdaDaArea): number | null
+
+// Antes do laço: entre as janelas sem lugar ao lado, a de foco mais recente
+const focadaAbaixo = requisicoes.filter(sem lugar ao lado).reduce(maior foco)
+// No laço: a janela do modo abaixo que não é a focada sai oculta, sem seta, e não entra na pilha
+if (!req.ancora || !req.ancora.visivel || foraDaFaixa || (xLateral === null &amp;&amp; req !== focadaAbaixo)) → oculta
+
+// gerenciador-janelas.ts
+interface RegistroJanela { ...; foco: number }
+abrir (janela nova): foco = ++contadorDeFoco
+destacar: reg.foco = ++contadorDeFoco; recalcularPosicoes()   // além do destaque visual de hoje
+recalcularPosicoes: requisições levam foco: reg.foco</pre>
+  <p class="meta">Sem mudança de porta: <code>destacar</code> já existe no contrato <code>ExibicaoDeTranscricao</code> e já é chamado pelo núcleo no clique do ícone de um áudio com janela aberta (cache, fila ou transcrição em curso). Sem mudança no CSS: a janela oculta usa a classe do RF-03, e a seta da janela oculta já some (<code>desenharSeta</code>).</p>
+
+  <svg viewBox="0 0 740 560" width="740" height="560" role="img" aria-label="Esquema da coluna de balões, hoje e depois da correção">
+    <text x="20" y="24" fill="#e0e0e0" font-size="13" font-weight="bold">Hoje: a pilha sobe e cobre os balões</text>
+    <rect x="20" y="50.1" width="275.5" height="295.7" fill="#151a1d" stroke="#555" stroke-dasharray="4 3"/>
+    <text x="24" y="62.1" fill="#9e9e9e" font-size="10">área das mensagens (64 a 768)</text>
+    <line x1="20" y1="345.8" x2="295.5" y2="345.8" stroke="#ffb74d" stroke-width="1"/>
+    <text x="24" y="357.8" fill="#ffb74d" font-size="10">caixa de escrita</text>
+    <rect x="130.5" y="146.3" width="141.1" height="37.4" rx="4" fill="#005c4b"/><circle cx="169.5" cy="164.9" r="7.1" fill="#e0e0e0"/><text x="276.5" y="167.3" fill="#81c784" font-size="10">B1</text><rect x="22.5" y="183.6" width="10.9" height="10.9" rx="2" fill="#64b5f6"/>
+    <rect x="130.5" y="195.4" width="141.1" height="37.4" rx="4" fill="#005c4b"/><circle cx="169.5" cy="214.1" r="7.1" fill="#e0e0e0"/><text x="276.5" y="216.4" fill="#81c784" font-size="10">B2</text><rect x="22.5" y="232.8" width="10.9" height="10.9" rx="2" fill="#64b5f6"/>
+    <rect x="130.5" y="245.0" width="141.1" height="37.4" rx="4" fill="#005c4b"/><circle cx="169.5" cy="263.6" r="7.1" fill="#e0e0e0"/><text x="276.5" y="266.0" fill="#81c784" font-size="10">B3</text><rect x="22.5" y="282.3" width="10.9" height="10.9" rx="2" fill="#64b5f6"/>
+    <rect x="130.5" y="294.1" width="141.1" height="37.4" rx="4" fill="#005c4b"/><circle cx="169.5" cy="312.8" r="7.1" fill="#e0e0e0"/><text x="276.5" y="315.1" fill="#81c784" font-size="10">B4</text><rect x="22.5" y="331.5" width="10.9" height="10.9" rx="2" fill="#64b5f6"/>
+    <rect x="130.5" y="343.7" width="141.1" height="37.4" rx="4" fill="#005c4b"/><circle cx="169.5" cy="362.3" r="7.1" fill="#e0e0e0"/><text x="276.5" y="364.7" fill="#81c784" font-size="10">B5</text><rect x="22.5" y="381.0" width="10.9" height="10.9" rx="2" fill="#64b5f6"/>
+    <rect x="130.5" y="50.1" width="135.2" height="97.4" rx="4" fill="#202c33" fill-opacity="0.93" stroke="#bb86fc" stroke-width="1.5"/><text x="135.9" y="64.1" fill="#e0e0e0" font-size="10">janela 1</text>
+    <rect x="130.5" y="150.9" width="135.2" height="71.8" rx="4" fill="#202c33" fill-opacity="0.93" stroke="#bb86fc" stroke-width="1.5"/><text x="135.9" y="164.9" fill="#e0e0e0" font-size="10">janela 2</text>
+    <rect x="130.5" y="226.1" width="135.2" height="88.6" rx="4" fill="#202c33" fill-opacity="0.93" stroke="#bb86fc" stroke-width="1.5"/><text x="135.9" y="240.1" fill="#e0e0e0" font-size="10">janela 3</text>
+    <rect x="130.5" y="318.0" width="135.2" height="101.6" rx="4" fill="#202c33" fill-opacity="0.93" stroke="#bb86fc" stroke-width="1.5"/><text x="135.9" y="332.0" fill="#e0e0e0" font-size="10">janela 4</text>
+    <rect x="130.5" y="423.0" width="135.2" height="97.4" rx="4" fill="#202c33" fill-opacity="0.93" stroke="#bb86fc" stroke-width="1.5"/><text x="135.9" y="437.0" fill="#e0e0e0" font-size="10">janela 5 (fora da tela)</text>
+
+    <text x="440" y="24" fill="#e0e0e0" font-size="13" font-weight="bold">Depois: só a janela de foco (ex.: áudio 2)</text>
+    <rect x="440" y="50.1" width="275.5" height="295.7" fill="#151a1d" stroke="#555" stroke-dasharray="4 3"/>
+    <text x="444" y="62.1" fill="#9e9e9e" font-size="10">área das mensagens (64 a 768)</text>
+    <line x1="440" y1="345.8" x2="715.5" y2="345.8" stroke="#ffb74d" stroke-width="1"/>
+    <text x="444" y="357.8" fill="#ffb74d" font-size="10">caixa de escrita</text>
+    <rect x="550.5" y="146.3" width="141.1" height="37.4" rx="4" fill="#005c4b"/><circle cx="589.5" cy="164.9" r="7.1" fill="#e0e0e0"/><text x="696.5" y="167.3" fill="#81c784" font-size="10">B1</text><rect x="442.5" y="183.6" width="10.9" height="10.9" rx="2" fill="#64b5f6"/>
+    <rect x="550.5" y="195.4" width="141.1" height="37.4" rx="4" fill="#005c4b"/><circle cx="589.5" cy="214.1" r="7.1" fill="#e0e0e0"/><text x="696.5" y="216.4" fill="#81c784" font-size="10">B2</text><rect x="442.5" y="232.8" width="10.9" height="10.9" rx="2" fill="#64b5f6"/>
+    <rect x="550.5" y="245.0" width="141.1" height="37.4" rx="4" fill="#005c4b"/><circle cx="589.5" cy="263.6" r="7.1" fill="#e0e0e0"/><text x="696.5" y="266.0" fill="#81c784" font-size="10">B3</text><rect x="442.5" y="282.3" width="10.9" height="10.9" rx="2" fill="#64b5f6"/>
+    <rect x="550.5" y="294.1" width="141.1" height="37.4" rx="4" fill="#005c4b"/><circle cx="589.5" cy="312.8" r="7.1" fill="#e0e0e0"/><text x="696.5" y="315.1" fill="#81c784" font-size="10">B4</text><rect x="442.5" y="331.5" width="10.9" height="10.9" rx="2" fill="#64b5f6"/>
+    <rect x="550.5" y="343.7" width="141.1" height="37.4" rx="4" fill="#005c4b"/><circle cx="589.5" cy="362.3" r="7.1" fill="#e0e0e0"/><text x="696.5" y="364.7" fill="#81c784" font-size="10">B5</text><rect x="442.5" y="381.0" width="10.9" height="10.9" rx="2" fill="#64b5f6"/>
+    <rect x="550.5" y="236.6" width="135.2" height="71.8" rx="4" fill="#202c33" fill-opacity="0.93" stroke="#bb86fc" stroke-width="1.5"/><text x="555.9" y="250.6" fill="#e0e0e0" font-size="10">janela 2 (foco)</text>
+    <line x1="618.1" y1="233.2" x2="618.1" y2="236.6" stroke="#00a884" stroke-width="2"/>
+    <text x="440" y="420" fill="#9e9e9e" font-size="10">janelas 1, 3, 4 e 5: abertas e ocultas;</text>
+    <text x="440" y="434" fill="#9e9e9e" font-size="10">voltam pelo ícone azul de cada áudio</text>
+    <text x="440" y="448" fill="#9e9e9e" font-size="10">a janela de foco cobre parte de B3 e B4, nunca B2</text>
+    <text x="20" y="545" fill="#9e9e9e" font-size="10">verde: balão de voz com ▶ · azul: ícone da extensão · roxo: janela à vista · verde-água: seta (8 px)</text>
+  </svg>
+
+  <h2>4. Correction Change Set proposto</h2>
+  <table>
+    <thead><tr><th>CHG</th><th>Tipo</th><th>Artefato</th><th>Propósito</th><th>Gate</th></tr></thead>
+    <tbody>
+      <tr><td>CHG-001</td><td>test</td><td><code>extension/test/posicionador-colisoes.test.ts</code></td><td>Reprodução e regressões do cálculo (seção 5); o teste atual da seta vertical, com duas janelas do modo abaixo na mesma chamada, passa a calcular cada uma sozinha, porque a regra nova oculta a de foco mais antigo</td><td>1</td></tr>
+      <tr><td>CHG-002</td><td>test</td><td><code>extension/test/janelas-no-navegador.test.ts</code></td><td>Reprodução no Chrome for Testing com o CSS real e a geometria medida; troca de janela por <code>destacar</code> e fechamento</td><td>1</td></tr>
+      <tr><td>CHG-003</td><td>code</td><td><code>extension/src/content/posicionador-colisoes.ts</code></td><td>Campo <code>foco</code>; <code>xAoLado</code> extraído do laço sem mudar a regra; no modo abaixo, só a janela de foco mais recente fica à vista</td><td>2</td></tr>
+      <tr><td>CHG-004</td><td>code</td><td><code>extension/src/content/gerenciador-janelas.ts</code></td><td>Contador de foco em <code>abrir</code> e <code>destacar</code>; <code>destacar</code> recalcula as posições; as requisições levam o foco</td><td>2</td></tr>
+      <tr><td>CHG-005</td><td>documentation</td><td><code>extension/src/content/JANELAS.md</code></td><td>Passos 4 e 6 do algoritmo com a regra do modo abaixo</td><td>2</td></tr>
+      <tr><td>CHG-006</td><td>specification</td><td><code>_reversa_sdd/addenda/bug-BUG-20261004-TTLJ-v001.md</code></td><td>Adendo com a regra nova do modo abaixo e o "Limite conhecido" do adendo do HVT4 resolvido; depende do veredito, que é seu (passo 7)</td><td>veredito</td></tr>
+    </tbody>
+  </table>
+  <p class="meta">Sem <code>data-repair</code>: as janelas vivem só na memória da aba, e nada persistido fica errado. Nenhum arquivo das pastas travadas do HVT4 e do OW7G é tocado.</p>
+
+  <h2>5. Testes planejados</h2>
+  <table>
+    <thead><tr><th>Teste</th><th>Tipo</th><th>Arquivo</th><th>O que prova</th><th>Hoje</th></tr></thead>
+    <tbody>
+      <tr><td>Reprodução: no modo abaixo, com cinco áudios abertos na geometria do WhatsApp real, nenhuma janela à vista cobre o próprio balão nem o ▶ dele, e a seta de cada uma não atravessa janela à vista</td><td class="novo">reprodução</td><td>posicionador</td><td>Critérios 1 (reescrito) e 2 do registro, no cálculo</td><td class="erro">falha: a janela 2 cobre 73% do próprio balão, e a seta dela corre por dentro da própria janela</td></tr>
+      <tr><td>Reprodução: o mesmo cenário no navegador, com o gerenciador e o CSS reais; a seta de cada janela à vista tem trecho visível (<code>elementFromPoint</code> fora de janela)</td><td class="novo">reprodução</td><td>janelas-no-navegador</td><td>Critério 2 na tela, onde a camada das setas fica atrás das janelas</td><td class="erro">falha</td></tr>
+      <tr><td>No modo abaixo, só a janela de foco mais recente fica à vista, 8 px abaixo do próprio balão, com seta vertical de 8 px; as demais saem ocultas e sem seta</td><td>regressão</td><td>posicionador</td><td>A regra nova e o RF-02 ("sem cobri-lo") com várias janelas abertas</td><td class="erro">falha: as cinco ficam à vista</td></tr>
+      <tr><td>No pé da conversa, a janela de foco do modo abaixo abre acima do próprio balão, mesmo com outras abertas</td><td>regressão</td><td>posicionador</td><td>Adição 3 com várias janelas</td><td class="erro">falha</td></tr>
+      <tr><td>A janela de foco cujo balão sai da área se oculta, e nenhuma outra do modo abaixo aparece no lugar</td><td>regressão</td><td>posicionador</td><td>RF-03 com a regra nova</td><td class="erro">falha</td></tr>
+      <tr><td>No modo lateral, todas as janelas ficam à vista, qualquer que seja o foco, nas posições da pilha do HVT4 (153, 300, 550, 697)</td><td>regressão (guarda)</td><td>posicionador</td><td>Critério 4: o modo lateral não regride</td><td class="ok">passa, e deve seguir passando</td></tr>
+      <tr><td>No navegador: abrir três no modo abaixo deixa à vista só a última; <code>destacar</code> a primeira a mostra e oculta as outras, com as setas; fechar a janela à vista não traz outra</td><td>regressão</td><td>janelas-no-navegador</td><td>A troca pelo ícone e o fechamento, no gerenciador real</td><td class="erro">falha</td></tr>
+    </tbody>
+  </table>
+  <p class="meta">Os demais testes seguem como estão, inclusive os do HVT4 e do OW7G no navegador, todos com área de modo lateral. Depois do Gate 2: <code>/verificar</code> completo (testes, typecheck, ruff e build carimbado) e, se você quiser, aceitação no <code>whatsapp-cft</code>, no grupo de teste, com a contenção da <code>/aceitacao-real</code>.</p>
+
+  <h2>6. Riscos e o que fica de fora</h2>
+  <p><b>Risco da mudança: <span class="alerta">média</span>.</b> A mudança fica restrita ao módulo, no posicionador e no gerenciador, sem porta, contrato externo, dados nem concorrência, e é reversível por <code>git revert</code>. Pesam contra o comportamento visível novo, que exige adendo de spec, e a escrita de critério: o critério 1 do registro, "nenhuma janela cobre o balão de um áudio", é inalcançável nesse modo e passa a ser "nenhuma janela cobre o próprio balão nem o ▶ dele, e o ícone de cada áudio fica livre".</p>
+  <ul>
+    <li><b>Janela de foco que não cabe nem abaixo nem acima do próprio balão.</b> Vale a Adição 2, que a sobe sobre o balão. Só acontece com área das mensagens abaixo de uns 590 px de altura (com a janela de 242 px) e com o balão no meio dela. Fica como está; registro nas Agent Notes.</li>
+    <li><b>Janela que volta à vista desliza da última posição</b> (120 ms, enquanto a opacidade sobe), como já acontece na reexibição do RF-03. Fica como está.</li>
+    <li><b>Achado lateral do registro:</b> o balão 5, em parte sob a caixa de escrita, não oculta a janela. A regra nova não o absorve; segue candidato a <code>/reversa-debugger</code>.</li>
+    <li><b>Modo intercalado</b> (espaço reservado na conversa, todas as janelas à vista sem cobrir nada): descartado neste bug pelo risco; candidato a feature por <code>/reversa-requirements</code>, se você quiser.</li>
+    <li>Nenhuma mudança no CSS nem na camada das setas: com uma janela à vista, a seta do modo abaixo corre no vão de 8 px, sem janela no caminho.</li>
+  </ul>
+
+  <h2>7. Mini-grafo do bug</h2>
+  <svg viewBox="0 0 920 300" width="920" height="300" role="img" aria-label="Mini-grafo do TTLJ com o HVT4 e o OW7G">
+    <line x1="330" y1="150" x2="590" y2="70" stroke="#9e9e9e" stroke-width="1.5"/>
+    <text x="400" y="96" fill="#9e9e9e" font-size="11">related-to (supported)</text>
+    <line x1="330" y1="150" x2="590" y2="230" stroke="#9e9e9e" stroke-width="1.5"/>
+    <text x="400" y="218" fill="#9e9e9e" font-size="11">related-to (supported)</text>
+    <a href="../bug.md"><rect x="40" y="95" width="290" height="110" rx="8" fill="#1e1e1e" stroke="#bb86fc" stroke-width="3"/>
+      <text x="52" y="120" fill="#bb86fc" font-size="13" font-weight="bold">#13 BUG-20261004-TTLJ</text>
+      <text x="52" y="142" fill="#e0e0e0" font-size="12">Modo abaixo: a pilha cobre os balões</text>
+      <text x="52" y="162" fill="#ffb74d" font-size="11">medium · P1 · active · awaiting-human</text>
+      <text x="52" y="182" fill="#81c784" font-size="11">causa confirmed</text></a>
+    <a href="../../BUG-20261002-HVT4-janela-cortada-na-borda-inferior/bug.md"><rect x="590" y="25" width="290" height="90" rx="8" fill="#1e1e1e" stroke="#9e9e9e" stroke-width="2"/>
+      <text x="602" y="50" fill="#bb86fc" font-size="13" font-weight="bold">#11 BUG-20261002-HVT4</text>
+      <text x="602" y="72" fill="#e0e0e0" font-size="12">Janela cortada na borda inferior</text>
+      <text x="602" y="92" fill="#81c784" font-size="11">high · P1 · resolved (travado)</text></a>
+    <a href="../../BUG-20261002-OW7G-janela-sem-seta-ate-o-balao/bug.md"><rect x="590" y="185" width="290" height="90" rx="8" fill="#1e1e1e" stroke="#9e9e9e" stroke-width="2"/>
+      <text x="602" y="210" fill="#bb86fc" font-size="13" font-weight="bold">#12 BUG-20261002-OW7G</text>
+      <text x="602" y="232" fill="#e0e0e0" font-size="12">Janela deslocada sem a seta</text>
+      <text x="602" y="252" fill="#81c784" font-size="11">medium · P1 · resolved (travado)</text></a>
+  </svg>
+
+  <h2>8. Matriz de relações</h2>
+  <table>
+    <thead><tr><th>Origem</th><th>Tipo</th><th>Destino</th><th>Estado</th><th>Evidência</th></tr></thead>
+    <tbody>
+      <tr><td><a href="../bug.md">#13 TTLJ</a></td><td>related-to</td><td><a href="../../BUG-20261002-HVT4-janela-cortada-na-borda-inferior/bug.md">#11 HVT4</a></td><td class="ok">supported</td><td><code>conterNaFaixa</code> (Adição 2) sobe a pilha do modo abaixo sobre o próprio balão; sem a faixa, a pilha já cobria os seguintes</td></tr>
+      <tr><td><a href="../bug.md">#13 TTLJ</a></td><td>related-to</td><td><a href="../../BUG-20261002-OW7G-janela-sem-seta-ate-o-balao/bug.md">#12 OW7G</a></td><td class="ok">supported</td><td>a seta vertical do modo abaixo atravessa a janela vizinha, e a camada das setas fica atrás das janelas</td></tr>
+    </tbody>
+  </table>
+  <p class="meta">As relações eram <code>proposed</code> no registro e foram promovidas com o diagnóstico. HVT4 e OW7G têm <code>DONE.md</code>: nada nas pastas deles muda.</p>
+
+  <h2>9. Ordem de correção</h2>
+  <p>Bug único nesta sessão, sem encadeamento: os dois vizinhos do grafo estão travados. Na fila, depois dele, seguem o YUB4 (#10) e os candidatos a registro (direção sempre "recebido", ícone ausente, balão sob a caixa de escrita).</p>
+
+  <h2>10. Próximos passos</h2>
+  <ol>
+    <li>Você aprova este plano ou pede mudanças, e eu o regenero.</li>
+    <li><b>Gate 1:</b> mostro o diff de CHG-001 e CHG-002; aprovados, aplico e mostro os testes falhando.</li>
+    <li><b>Gate 2:</b> mostro os diffs de CHG-003 a CHG-005; aprovados, aplico, mostro os testes passando e rodo o <code>/verificar</code>.</li>
+    <li><b>Veredito de spec:</b> minha recomendação provável é <code>spec-desatualizada</code>, porque a regra muda a leitura do RF-05 e da Adição 2 no modo abaixo. A decisão é sua; o adendo (CHG-006) vem com ela.</li>
+    <li>Fechamento pela closure policy (<code>local-software</code>), trava <code>DONE.md</code> e views do contexto.</li>
+  </ol>
+</body>
+</html>

@@ -1,0 +1,59 @@
+# Gate 1, vermelho: 2026-10-04 16:33 -0300, commit a7b6bdd + CHG-001 e CHG-002
+# node --test test/posicionador-colisoes.test.ts test/janelas-no-navegador.test.ts
+  ✔ reprodução: cinco áudios consecutivos concluídos, com textos de alturas diferentes e um no limite de 240 px, resultam em cinco janelas sem sobreposição (RF-05, RF-07) (285.073541ms)
+  ✔ reprodução: quando a janela de cima cresce ao concluir, a de baixo desce e nenhuma se sobrepõe (RF-05) (349.965834ms)
+  ✔ a janela aberta acima de outra já aberta a empurra pela altura desenhada, a 8 px (RF-05) (76.754417ms)
+  ✔ a janela nova entra na página já na posição, sem deslizar do canto da tela (RF-01) (82.855542ms)
+  ✔ reprodução: a janela do último áudio, no pé da conversa, fica inteira na área das mensagens, com "Copiar" visível (critérios 1 e 2 do HVT4) (330.894167ms)
+  ✔ reprodução: quatro áudios no pé da conversa empilham-se dentro da área das mensagens, sem sobreposição (EC-05, RF-05) (80.730375ms)
+  ✔ a janela nova aberta no pé da conversa entra na página já no lugar, sem deslizar (RF-01; lição do K3DY) (64.430584ms)
+  ✔ reprodução: cinco áudios consecutivos resultam em cinco janelas, nenhuma sobreposta, cada seta apontando para o balão correto (critério do RF-05) (81.43875ms)
+  ✔ reprodução: na rolagem, cada seta acompanha o seu balão e a sua janela (RF-03, critério 1 do OW7G) (329.686417ms)
+  ✔ a seta não rouba cliques e fica por trás das janelas (critério 3 do OW7G) (79.953084ms)
+  ✔ a seta da janela nova nasce no lugar, mesmo quando a altura medida a move, e fechar a janela leva a seta junto (OW7G) (73.651541ms)
+  ✖ reprodução: no modo abaixo, com cinco áudios abertos, nenhuma janela à vista cobre o próprio balão, e a seta de cada uma tem trecho visível (critérios 1 e 2 do TTLJ) (336.181917ms)
+  ✖ no modo abaixo, só a janela aberta por último fica à vista; destacar outra a põe à vista e oculta a anterior, e fechar a janela à vista não traz outra (TTLJ) (92.11775ms)
+✖ janelas flutuantes no navegador, com a altura desenhada (2922.4345ms)
+✔ calcularPosicoesJanelas posiciona janela ao lado da âncora em espaço suficiente (1.336166ms)
+✔ calcularPosicoesJanelas desloca verticalmente janela para resolver colisão (0.14225ms)
+✔ calcularPosicoesJanelas usa fallback abaixo do balão quando espaço lateral for insuficiente (0.076541ms)
+✔ calcularPosicoesJanelas mede o espaço lateral dentro da área da conversa e, sem ele, abre abaixo do balão (0.066625ms)
+✔ calcularPosicoesJanelas não desloca a janela que não cruza, na horizontal, a janela de cima (0.12175ms)
+✔ calcularPosicoesJanelas desloca a janela pela de cima que a cruza, mesmo com outra, de lado oposto, entre as duas (0.132375ms)
+✔ calcularPosicoesJanelas sobe a janela que passaria do fim da área das mensagens até terminar 8 px acima dele (0.11525ms)
+✔ calcularPosicoesJanelas sobe em bloco a pilha que passaria do fim da área, mantendo os vãos de 8 px (0.463709ms)
+✔ calcularPosicoesJanelas começa no topo da área a pilha mais alta que ela, sem sobreposição, e só o excesso passa do fim (0.11225ms)
+✔ calcularPosicoesJanelas mantém no topo do balão a janela que cabe na área das mensagens (RF-01) (0.10225ms)
+✔ calcularPosicoesJanelas oculta a janela do balão sob a caixa de escrita ou sob o cabeçalho, e começa no topo da área a do balão em parte sob o cabeçalho (RF-03) (0.086583ms)
+✔ calcularPosicoesJanelas abre acima do balão, sem cobri-lo, a janela do modo abaixo (RF-02) que não cabe abaixo dele no pé da conversa (0.057792ms)
+✔ calcularPosicoesJanelas liga por uma seta reta a janela à altura do seu balão, com a ponta na borda dele, no recebido e no enviado (RF-05, seção 8) (0.082875ms)
+✔ calcularPosicoesJanelas liga a janela deslocada ao centro do seu balão por um cotovelo no corredor, saindo 10 px abaixo do topo da janela (RF-05) (0.168584ms)
+✔ calcularPosicoesJanelas põe em trilhos distintos, sem cruzamento, os cotovelos que se sobrepõem, subindo ou descendo até o balão (0.242584ms)
+✔ calcularPosicoesJanelas liga por uma seta vertical a janela do modo abaixo (RF-02), abaixo ou acima do balão (0.069416ms)
+✔ calcularPosicoesJanelas não dá seta à janela oculta, e a seta da janela do balão em parte sob o cabeçalho mira a parte visível dele (0.044208ms)
+✖ reprodução: no modo abaixo, com cinco áudios abertos, nenhuma janela à vista cobre o próprio balão, e nenhuma seta atravessa janela à vista (critérios 1 e 2 do TTLJ) (0.465375ms)
+✖ calcularPosicoesJanelas deixa à vista, no modo abaixo, só a janela de foco mais recente, 8 px abaixo do próprio balão e ligada a ele por uma seta vertical de 8 px (RF-02, RF-05) (0.433583ms)
+✖ calcularPosicoesJanelas abre acima do próprio balão a janela de foco do modo abaixo que não cabe abaixo dele, mesmo com outras abertas (Adição 3 do HVT4) (0.135791ms)
+✖ calcularPosicoesJanelas oculta a janela de foco do modo abaixo cujo balão sai da área, sem pôr outra à vista no lugar (RF-03) (0.110667ms)
+✔ calcularPosicoesJanelas deixa à vista todas as janelas do modo lateral, qualquer que seja o foco (critério 4 do TTLJ) (0.078167ms)
+ℹ tests 36
+ℹ suites 0
+ℹ pass 29
+ℹ fail 7
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8071.148833
+✖ failing tests:
+✖ reprodução: no modo abaixo, com cinco áudios abertos, nenhuma janela à vista cobre o próprio balão, e a seta de cada uma tem trecho visível (critérios 1 e 2 do TTLJ) (336.181917ms)
+  AssertionError [ERR_ASSERTION]: a janela T3 cobre o próprio balão: [{"id":"T1","aVista":true,"janela":{"id":"T1","x":807,"y":64,"largura":322,"altura":189.96875},"seta":{"id":"T1","caudaX":967,"caudaY":254,"trilho":967,"pontaY":293,"pontaX":967,"bico":[967,293],"oculta":false},"pontosVisiveis":1},{"id":"T2","aVista":true,"janela":{"id":"T2","x":807,"y":262,"largura":322,"altura":138.59375},"seta":{"id":"T2","caudaX":967,"caudaY":401,"trilho":967,"pontaY":410,"pontaX":967,"bico":[967,410],"oculta":false},"pontosVisiveis":7},{"id":"T3","aVista":true,"janela":{"id":"T3","x":807,"y":409,"largura
+✖ no modo abaixo, só a janela aberta por último fica à vista; destacar outra a põe à vista e oculta a anterior, e fechar a janela à vista não traz outra (TTLJ) (92.11775ms)
+  AssertionError [ERR_ASSERTION]: depois de abrir as três: {"aposAbrir":["D1","D2","D3"],"aposDestacar":["D1","D2","D3"],"setasAposDestacar":["D1","D2","D3"],"aposFechar":["D2","D3"]}
+✖ reprodução: no modo abaixo, com cinco áudios abertos, nenhuma janela à vista cobre o próprio balão, e nenhuma seta atravessa janela à vista (critérios 1 e 2 do TTLJ) (0.465375ms)
+  AssertionError [ERR_ASSERTION]: a janela T1 (64 a 296) cobre o próprio balão (293 a 382)
+✖ calcularPosicoesJanelas deixa à vista, no modo abaixo, só a janela de foco mais recente, 8 px abaixo do próprio balão e ligada a ele por uma seta vertical de 8 px (RF-02, RF-05) (0.433583ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+✖ calcularPosicoesJanelas abre acima do próprio balão a janela de foco do modo abaixo que não cabe abaixo dele, mesmo com outras abertas (Adição 3 do HVT4) (0.135791ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+✖ calcularPosicoesJanelas oculta a janela de foco do modo abaixo cujo balão sai da área, sem pôr outra à vista no lugar (RF-03) (0.110667ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:

@@ -1,0 +1,111 @@
+--- a/extension/test/posicionador-colisoes.test.ts
++++ b/extension/test/posicionador-colisoes.test.ts
+@@ -290,11 +290,11 @@
+ });
+ 
+ test('calcularPosicoesJanelas liga por uma seta vertical a janela do modo abaixo (RF-02), abaixo ou acima do balão', () => {
+-  // Área da conversa de 600 px: a janela vai abaixo do balão (x de 613 a 933) e, no pé da conversa, acima dele
+-  const porId = setas(calcularPosicoesJanelas([voz('topo', 149, 139), voz('pe', 739, 139)], 1151, 551, MENSAGENS));
+-  const topo = porId.get('topo')!;
++  // Área da conversa de 600 px: a janela vai abaixo do balão (x de 613 a 933) e, no pé da conversa, acima dele.
++  // Cada uma é calculada sozinha: no modo abaixo, só a janela de foco mais recente fica à vista (BUG-20261004-TTLJ)
++  const topo = setas(calcularPosicoesJanelas([voz('topo', 149, 139)], 1151, 551, MENSAGENS)).get('topo')!;
+   assert.deepEqual([topo.direcao, topo.pontaX, topo.pontaY, topo.caudaX, topo.caudaY], ['acima', 773, 217, 773, 225]);
+-  const pe = porId.get('pe')!;
++  const pe = setas(calcularPosicoesJanelas([voz('pe', 739, 139)], 1151, 551, MENSAGENS)).get('pe')!;
+   assert.deepEqual([pe.direcao, pe.pontaX, pe.pontaY, pe.caudaX, pe.caudaY], ['abaixo', 773, 739, 773, 731]);
+ });
+ 
+@@ -305,3 +305,92 @@
+   const seta = porId.get('em-parte')!;
+   assert.deepEqual([seta.pontaY, seta.caudaY], [81, 81]);
+ });
++
++// BUG-20261004-TTLJ: no modo abaixo (RF-02), a janela mora na coluna do próprio balão, e uma sequência de
++// áudios, um a cada 117 px, não deixa vão para outra janela. Com várias abertas, a pilha cobria os balões,
++// inclusive o de cada janela, e a seta vertical corria por trás da vizinha. Só a janela de foco mais recente
++// (último abrir ou destacar) fica à vista; as demais seguem abertas, ocultas. Geometria da reprodução no
++// WhatsApp Web: área da conversa de x = 544 a 1200 (656 px, abaixo dos 726 do modo lateral), mensagens de
++// y = 64 a 768, balões de voz enviados de 336 × 89 px em x = 807, janelas da altura medida.
++const MENSAGENS_MODO_ABAIXO = { topo: 64, fundo: 768 };
++const BALOES_MODO_ABAIXO = [293, 410, 528, 645, 763];
++const ALTURAS_MODO_ABAIXO = [232, 171, 211, 242, 232];
++
++function vozEnviada(i: number, foco: number, rolagem = 0): RequisicaoPosicionamento {
++  const idAudio = `T${i + 1}`;
++  return {
++    idAudio,
++    direcao: 'enviado',
++    largura: 320,
++    altura: ALTURAS_MODO_ABAIXO[i]!,
++    foco,
++    ancora: { idAudio, x: 807, y: BALOES_MODO_ABAIXO[i]! - rolagem, largura: 336, altura: 89, visivel: true }
++  };
++}
++
++const modoAbaixo = (focos: number[], rolagem = 0) =>
++  calcularPosicoesJanelas(BALOES_MODO_ABAIXO.map((_, i) => vozEnviada(i, focos[i]!, rolagem)), 1200, 544, MENSAGENS_MODO_ABAIXO);
++
++const aVista = (posicoes: Array<{ idAudio: string; visivel: boolean }>) => posicoes.filter((p) => p.visivel).map((p) => p.idAudio);
++
++test('reprodução: no modo abaixo, com cinco áudios abertos, nenhuma janela à vista cobre o próprio balão, e nenhuma seta atravessa janela à vista (critérios 1 e 2 do TTLJ)', () => {
++  // Abertos na ordem dos balões, como na reprodução
++  const posicoes = modoAbaixo([1, 2, 3, 4, 5]);
++  const visiveis = posicoes.filter((p) => p.visivel);
++  assert.ok(visiveis.length > 0, 'nenhuma janela à vista');
++  const caixa = (p: { idAudio: string; y: number }) => ({ y: p.y, fim: p.y + ALTURAS_MODO_ABAIXO[Number(p.idAudio.slice(1)) - 1]! });
++
++  for (const p of visiveis) {
++    const i = Number(p.idAudio.slice(1)) - 1;
++    const janela = caixa(p);
++    const balao = { y: BALOES_MODO_ABAIXO[i]!, fim: BALOES_MODO_ABAIXO[i]! + 89 };
++    // Janela e balão estão na mesma coluna: cobrir é cruzar na vertical
++    assert.ok(janela.fim <= balao.y || janela.y >= balao.fim, `a janela ${p.idAudio} (${janela.y} a ${janela.fim}) cobre o próprio balão (${balao.y} a ${balao.fim})`);
++
++    const seta = p.seta!;
++    const [de, ate] = [Math.min(seta.caudaY, seta.pontaY), Math.max(seta.caudaY, seta.pontaY)];
++    for (const outra of visiveis) {
++      const o = caixa(outra);
++      const naColuna = seta.trilho > outra.x && seta.trilho < outra.x + 320;
++      assert.ok(!naColuna || Math.min(ate, o.fim) <= Math.max(de, o.y), `a seta de ${p.idAudio} (${de} a ${ate}) atravessa a janela ${outra.idAudio} (${o.y} a ${o.fim})`);
++    }
++  }
++});
++
++test('calcularPosicoesJanelas deixa à vista, no modo abaixo, só a janela de foco mais recente, 8 px abaixo do próprio balão e ligada a ele por uma seta vertical de 8 px (RF-02, RF-05)', () => {
++  // Abertos na ordem dos balões, e o segundo destacado por último (clique no ícone dele)
++  const posicoes = modoAbaixo([1, 6, 3, 4, 5]);
++  assert.deepEqual(aVista(posicoes), ['T2']);
++
++  const t2 = posicoes.find((p) => p.idAudio === 'T2')!;
++  // Na coluna do balão e abaixo dele: 410 + 89 + 8 = 507
++  assert.deepEqual([t2.x, t2.y, t2.deslocadaPorColisao], [807, 507, false]);
++  const seta = t2.seta!;
++  assert.deepEqual([seta.direcao, seta.pontaY, seta.caudaY, seta.pontaX, seta.caudaX], ['acima', 499, 507, 967, 967]);
++  for (const p of posicoes.filter((p) => !p.visivel)) assert.equal(p.seta, null, `a janela oculta ${p.idAudio} tem seta`);
++});
++
++test('calcularPosicoesJanelas abre acima do próprio balão a janela de foco do modo abaixo que não cabe abaixo dele, mesmo com outras abertas (Adição 3 do HVT4)', () => {
++  // O quarto destacado por último: abaixo do balão, 645 + 89 + 8 + 242 = 984 passaria do fim da área (768)
++  const posicoes = modoAbaixo([1, 2, 3, 6, 5]);
++  assert.deepEqual(aVista(posicoes), ['T4']);
++
++  // Acima do balão, terminando 8 px antes do topo dele: 645 − 8 − 242 = 395
++  const t4 = posicoes.find((p) => p.idAudio === 'T4')!;
++  assert.equal(t4.y, 395);
++  assert.deepEqual([t4.seta!.direcao, t4.seta!.pontaY, t4.seta!.caudaY], ['abaixo', 645, 637]);
++});
++
++test('calcularPosicoesJanelas oculta a janela de foco do modo abaixo cujo balão sai da área, sem pôr outra à vista no lugar (RF-03)', () => {
++  // Rolagem de 330 px: o balão 1 vai de −37 a 52, sob o cabeçalho; os outros seguem na área
++  const posicoes = modoAbaixo([6, 2, 3, 4, 5], 330);
++  assert.deepEqual(aVista(posicoes), []);
++});
++
++test('calcularPosicoesJanelas deixa à vista todas as janelas do modo lateral, qualquer que seja o foco (critério 4 do TTLJ)', () => {
++  // A pilha do HVT4 no pé da conversa, com os focos fora da ordem dos balões
++  const reqs = [voz('Q1', 434, 139), voz('Q2', 529, 242), voz('Q3', 624, 139), voz('Q4', 719, 139)].map((req, i) => ({ ...req, foco: [3, 1, 4, 2][i]! }));
++  const posicoes = calcularPosicoesJanelas(reqs, 1624, 551, MENSAGENS);
++  assert.deepEqual(aVista(posicoes), ['Q1', 'Q2', 'Q3', 'Q4']);
++  assert.deepEqual(ys(posicoes), [153, 300, 550, 697]);
++});

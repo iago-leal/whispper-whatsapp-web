@@ -1,0 +1,96 @@
+--- a/extension/src/content/posicionador-colisoes.ts
++++ b/extension/src/content/posicionador-colisoes.ts
+@@ -6,6 +6,10 @@
+   largura: number;
+   altura: number;
+   ancora?: CoordenadasAncora;
++  // Ordem do último abrir ou destacar, a partir de 1; 0 é sem foco. No modo abaixo, só a janela de foco mais
++  // recente fica à vista, e nenhuma quando todas estão sem foco (BUG-20261004-TTLJ); sem o campo, vale a
++  // ordem das requisições
++  foco?: number;
+ }
+ 
+ // Bordas horizontais, em px da tela, da área em que a janela deve caber
+@@ -67,10 +71,29 @@
+ const cruzamNaHorizontal = (a: Posta, b: Posta) => a.x < b.x + b.largura && b.x < a.x + a.largura;
+ 
+ /**
++ * O x da janela ao lado do balão, no espaço livre da área da conversa: à direita dos recebidos e à esquerda
++ * dos enviados, ou do lado em que couber (RF-01). Sem espaço em nenhum dos lados, null: a janela vai para o
++ * modo abaixo (RF-02).
++ */
++function xAoLado(ancora: CoordenadasAncora, req: RequisicaoPosicionamento, direitaDaArea: number, esquerdaDaArea: number): number | null {
++  const espacoDireita = direitaDaArea - (ancora.x + ancora.largura + GAP);
++  const espacoEsquerda = ancora.x - GAP - esquerdaDaArea;
++  const aDireita = ancora.x + ancora.largura + GAP;
++  const aEsquerda = ancora.x - req.largura - GAP;
++
++  if (req.direcao === 'recebido' && espacoDireita >= req.largura) return aDireita;
++  if (req.direcao === 'enviado' && espacoEsquerda >= req.largura) return aEsquerda;
++  if (espacoDireita >= req.largura) return aDireita;
++  if (espacoEsquerda >= req.largura) return aEsquerda;
++  return null;
++}
++
++/**
+  * Calcula as coordenadas de tela para cada janela aberta, resolvendo colisões verticais.
+  * O espaço livre ao lado do balão é medido entre as bordas da área da conversa (RF-01 da janela); sem
+  * elas, vale a tela inteira. Com a faixa vertical das mensagens, a janela cabe entre o cabeçalho e a caixa
+- * de escrita, e a do balão fora dela se oculta (BUG-20261002-HVT4).
++ * de escrita, e a do balão fora dela se oculta (BUG-20261002-HVT4). No modo abaixo, só a janela de foco
++ * mais recente fica à vista (BUG-20261004-TTLJ).
+  */
+ export function calcularPosicoesJanelas(
+   requisicoes: RequisicaoPosicionamento[],
+@@ -84,6 +107,14 @@
+     const yB = b.ancora?.y ?? 0;
+     return yA - yB;
+   });
++
++  // No modo abaixo, a janela mora na coluna do próprio balão, e uma sequência de áudios não deixa vão para
++  // outra: das janelas sem lugar ao lado, só a de foco mais recente fica à vista; as demais seguem abertas,
++  // ocultas, e voltam pelo destaque (BUG-20261004-TTLJ)
++  const ordemDeFoco = new Map(requisicoes.map((req, i) => [req, req.foco ?? i + 1]));
++  const focadaAbaixo = requisicoes
++    .filter((req) => ordemDeFoco.get(req)! > 0 && req.ancora && xAoLado(req.ancora, req, direitaDaArea, esquerdaDaArea) === null)
++    .reduce<RequisicaoPosicionamento | undefined>((focada, req) => (!focada || ordemDeFoco.get(req)! > ordemDeFoco.get(focada)! ? req : focada), undefined);
+ 
+   const resultados: PosicaoCalculada[] = [];
+   const postas: Posta[] = [];
+@@ -92,7 +123,8 @@
+     // Balão sob o cabeçalho ou sob a caixa de escrita está na tela, mas fora da área das mensagens (RF-03)
+     const foraDaFaixa = !!req.ancora && !!faixaVertical &&
+       (req.ancora.y + req.ancora.altura <= faixaVertical.topo || req.ancora.y >= faixaVertical.fundo);
+-    if (!req.ancora || !req.ancora.visivel || foraDaFaixa) {
++    const xLateral = req.ancora ? xAoLado(req.ancora, req, direitaDaArea, esquerdaDaArea) : null;
++    if (!req.ancora || !req.ancora.visivel || foraDaFaixa || (xLateral === null && req !== focadaAbaixo)) {
+       resultados.push({
+         idAudio: req.idAudio,
+         x: 0,
+@@ -104,23 +136,13 @@
+       continue;
+     }
+ 
+-    const { ancora, direcao, largura, altura } = req;
++    const { ancora, largura, altura } = req;
+     let x: number;
+     let y = ancora.y;
+     let lateral = true;
+ 
+-    // Avalia espaço disponível nas laterais
+-    const espacoDireita = direitaDaArea - (ancora.x + ancora.largura + GAP);
+-    const espacoEsquerda = ancora.x - GAP - esquerdaDaArea;
+-
+-    if (direcao === 'recebido' && espacoDireita >= largura) {
+-      x = ancora.x + ancora.largura + GAP;
+-    } else if (direcao === 'enviado' && espacoEsquerda >= largura) {
+-      x = ancora.x - largura - GAP;
+-    } else if (espacoDireita >= largura) {
+-      x = ancora.x + ancora.largura + GAP;
+-    } else if (espacoEsquerda >= largura) {
+-      x = ancora.x - largura - GAP;
++    if (xLateral !== null) {
++      x = xLateral;
+     } else {
+       // Fallback: abaixo do balão sem sobrepor
+       x = Math.max(esquerdaDaArea + GAP, Math.min(ancora.x, direitaDaArea - largura - GAP));

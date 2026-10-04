@@ -1,0 +1,105 @@
+--- /dev/null
++++ b/_reversa_sdd/addenda/bug-BUG-20261004-TTLJ-v001.md
+@@ -0,0 +1,102 @@
++# Adendo: uma janela à vista no modo abaixo
++
++> Identificador: `bug-BUG-20261004-TTLJ-v001`
++> Data: 2026-10-04
++> Origem: veredito `spec-desatualizada` do BUG-20261004-TTLJ (`/reversa-debugger-fix`)
++> Spec alvo: `_reversa_sdd/sdd/janela-flutuante.md` e o adendo `bug-BUG-20261002-HVT4-v001` (nenhum dos dois é
++> editado)
++
++## Vigência
++
++Vigente desde 2026-10-04. Imutável: mudança posterior exige um adendo `v002`.
++
++## Contexto
++
++O BUG-20261004-TTLJ mostrou que, no modo abaixo (RF-02), a pilha de janelas cobria os balões de áudio,
++inclusive o de cada janela, e o ▶ deles, e que a seta vertical de cada janela corria por trás da vizinha.
++A causa é geométrica: nesse modo a janela mora na coluna do próprio balão, e o balão de voz tem largura fixa
++(336 px). Numa sequência de áudios, um a cada 117 px, só cabe uma janela inteira acima do primeiro balão, e
++nenhuma regra atende, ao mesmo tempo, a três exigências: todos os balões descobertos, todas as janelas à
++vista e todas dentro da área das mensagens. O RF-05 e a Adição 2 do adendo do HVT4, escritos pensando no
++modo lateral, pediam as duas últimas; o RF-02 pedia o balão descoberto. O modo abaixo é o caso comum de
++janela de navegador não maximizada: com a lista de conversas aberta, vale abaixo de uns 1270 px.
++
++## Delta 1: RF-05 no modo abaixo (seção 6.1 e Fluxo Alternativo A da seção 6.3)
++
++**Antes:** "O sistema deve permitir várias janelas abertas ao mesmo tempo, uma por áudio, deslocando para
++baixo a janela cuja posição ideal colidir com outra e mantendo uma seta que a liga ao balão de origem."
++Critério: "Cinco áudios consecutivos de 3 s transcritos resultam em 5 janelas, nenhuma sobreposta, cada seta
++apontando para o balão correto."
++
++**Como deve ser lido agora:** no modo lateral, sem mudança. No modo abaixo, as janelas seguem abertas ao
++mesmo tempo, uma por áudio, com o estado e o texto, mas **só uma fica à vista: a aberta ou destacada por
++último**. As demais ficam ocultas, como no RF-03, e voltam quando o usuário clica no ícone do áudio
++correspondente, que fica fora da coluna dos balões; a janela que estava à vista se oculta. Fechar a janela
++à vista não põe outra à vista. Se o balão da janela de foco sai da área das mensagens, ela se oculta, e
++nenhuma outra aparece no lugar.
++
++Critério no modo abaixo: com cinco áudios consecutivos transcritos, há cinco janelas abertas e uma à vista;
++ela não cobre o próprio balão nem o ▶ dele, e a seta que a liga ao balão tem trecho visível. Clicar no ícone
++de outro áudio troca a janela à vista; fechá-la não traz outra.
++
++## Delta 2: Adição 2 do adendo do HVT4 no modo abaixo
++
++**Antes:** "A janela que passaria do fim da área das mensagens sobe até terminar 8 px acima dele, e as
++janelas acima dela que a cruzam na horizontal sobem junto, mantendo os 8 px entre si (RF-05). [...] Só a
++pilha mais alta que a área volta a passar do fim, a partir do topo."
++
++**Como deve ser lido agora:** no modo lateral, sem mudança. No modo abaixo não há pilha: a janela à vista
++fica imediatamente abaixo do próprio balão (RF-02) ou, se ali não couber, imediatamente acima dele
++(Adição 3). Só quando não cabe em nenhum dos dois lugares vale a subida da Adição 2.
++
++## Delta 3: o que a janela à vista pode cobrir no modo abaixo (RF-02)
++
++**Antes:** "abri-la sobreposta à conversa, imediatamente abaixo do balão e sem cobri-lo", com o critério "o
++balão permanece visível".
++
++**Como deve ser lido agora:** o "sem cobri-lo" diz respeito ao balão da própria janela e ao ▶ dele. A janela
++à vista pode cobrir os balões vizinhos, como um balão de ajuda, porque nenhuma posição na coluna dos balões
++os evita. Com a área da conversa de uns 390 px ou mais, não cobre o ícone de transcrição de nenhum áudio,
++por onde o usuário troca de janela; abaixo disso, contida na borda direita da área, pode cobrir até 6 px da
++borda direita do ícone, que segue clicável.
++
++## Limite conhecido do adendo do HVT4
++
++Resolvido por este adendo: a pilha do modo abaixo deixa de existir, e com ela a seta vertical atrás das
++janelas vizinhas.
++
++## Limites conhecidos deste adendo
++
++- A janela de foco que não cabe nem abaixo nem acima do próprio balão sobe sobre ele (Adição 2). Só ocorre
++  com a área das mensagens abaixo de uns 590 px de altura, com a janela de 242 px e o balão no meio dela.
++- Com a área da conversa abaixo de uns 390 px (navegador abaixo de uns 800 px), a janela de foco cobre até
++  6 px da borda direita do ícone do próprio áudio e do vizinho; os outros 20 px seguem clicáveis (medido a
++  354 px, com áudios recebidos).
++- A janela que volta à vista desliza da última posição em que esteve visível (120 ms, enquanto a opacidade
++  sobe), como na reexibição do RF-03.
++- O balão em parte sob a caixa de escrita não oculta a janela (a Adição 1 trata só o balão em parte sob o
++  cabeçalho): achado do BUG-20261004-TTLJ, candidato a registro próprio.
++- A alternativa que deixaria todas as janelas à vista sem cobrir balão algum, reservando espaço na
++  conversa sob cada balão, foi descartada neste bug pelo risco (mudaria o RF-02 de "sobreposta" para
++  "intercalada" e o adaptador do WhatsApp); fica como candidata a feature.
++
++## Por quê
++
++Decisão de iago em 2026-10-04, por volta das 16:15, na estratégia do BUG-20261004-TTLJ ("uma por vez"),
++diante das medidas do WhatsApp Web real: balão de voz fixo em 336 px, área da conversa de 656, 476 e 354 px
++a 1200, 900 e 760 px de navegador, cinco janelas somando 1120 px numa área de 704.
++
++## Evidências
++
++- `_reversa_bugs/janela-flutuante/bugs/BUG-20261004-TTLJ-pilha-cobre-baloes-no-modo-abaixo/evidence/reproduction.md`
++- `_reversa_bugs/janela-flutuante/bugs/BUG-20261004-TTLJ-pilha-cobre-baloes-no-modo-abaixo/evidence/diagnostico.md`
++- `_reversa_bugs/janela-flutuante/bugs/BUG-20261004-TTLJ-pilha-cobre-baloes-no-modo-abaixo/evidence/gate1-vermelho.txt` e `gate2-verde.txt`
++- `_reversa_bugs/janela-flutuante/bugs/BUG-20261004-TTLJ-pilha-cobre-baloes-no-modo-abaixo/fix/CHG-001.diff` a `CHG-005.diff`
++- `extension/src/content/JANELAS.md`, passo 4 do algoritmo
++
++## Aprovação
++
++- Veredito `spec-desatualizada` escolhido por iago em 2026-10-04 16:43 -03.
++- Texto deste adendo aprovado por iago em 2026-10-04 16:43 -03, na mesma resposta.
++- Delta 3 e Limites conhecidos emendados em 2026-10-04, antes do primeiro commit, depois da medida com
++  áudios recebidos (diagnóstico §5); emenda aprovada por iago em 2026-10-04 16:51 -03.

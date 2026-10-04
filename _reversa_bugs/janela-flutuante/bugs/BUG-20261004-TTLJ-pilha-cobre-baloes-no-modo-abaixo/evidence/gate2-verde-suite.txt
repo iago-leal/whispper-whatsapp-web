@@ -1,0 +1,9 @@
+# Suíte completa no fechamento: 2026-10-04 17:10 -0300, commit a7b6bdd + CHG-001 a CHG-006
+# .claude/skills/verificar/scripts/verificar.sh rapido (sem o build, para manter o carimbo da aceitação: build: 2026-10-04 17:01:08 -0300)
+Verificação de a7b6bdd+alterações · modo rapido
+✓ typecheck                 1s  
+✓ testes-extensao          16s  tests 192 pass 190 fail 0 skipped 2 
+✓ ruff-auxiliar             0s  All checks passed!
+✓ pytest-auxiliar          26s  126 passed, 6 skipped in 25.41s
+Registros completos em /var/folders/wy/6ny1w8792fl9r6jkww89352c0000gn/T//verificar.lN01GR
+# saída: 0

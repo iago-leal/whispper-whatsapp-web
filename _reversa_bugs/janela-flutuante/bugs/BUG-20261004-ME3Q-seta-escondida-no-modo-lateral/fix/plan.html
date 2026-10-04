@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plano de correção · #14 ME3Q</title>
+  <style>
+body { background-color: #121212; color: #e0e0e0; font-family: sans-serif; padding: 20px; max-width: 1100px; margin: 0 auto; line-height: 1.5; }
+a { color: #bb86fc; text-decoration: none; } a:hover { text-decoration: underline; }
+table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+th, td { border: 1px solid #333; padding: 8px 10px; text-align: left; vertical-align: top; }
+th { background-color: #1e1e1e; }
+.card { background-color: #1e1e1e; padding: 12px 16px; border-radius: 8px; margin: 0 12px 12px 0; display: inline-block; min-width: 120px; }
+.card b { display: block; font-size: 1.3em; }
+.meta { color: #9e9e9e; font-size: 0.9em; }
+.tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 0.85em; background: #2a2a2a; border: 1px solid #444; }
+.ok { color: #81c784; } .alerta { color: #ffb74d; } .erro { color: #ef5350; } .novo { color: #64b5f6; }
+.aviso { background: #2a2210; border-left: 4px solid #ffb74d; padding: 10px 14px; border-radius: 6px; }
+.decisao { background: #10221a; border-left: 4px solid #81c784; padding: 10px 14px; border-radius: 6px; }
+code { background: #1e1e1e; padding: 1px 5px; border-radius: 4px; }
+ol li, ul li { margin-bottom: 4px; }
+svg { background: #181818; border-radius: 8px; max-width: 100%; height: auto; }
+pre.bloco { background: #0d0d0d; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.82em; line-height: 1.35; }
+h2 { margin-top: 32px; }
+  </style>
+</head>
+<body>
+  <h1>Plano de correção · #14 ME3Q</h1>
+  <p class="meta">Contexto <code>janela-flutuante</code> · 2026-10-04 · gerado por /reversa-debugger-fix antes de qualquer alteração no projeto · <a href="../bug.md">bug.md</a> · <a href="../evidence/reproduction.md">reprodução</a> · <a href="../evidence/diagnostico.md">diagnóstico</a></p>
+
+  <table>
+    <thead><tr><th>Bug</th><th>Severidade</th><th>Prioridade</th><th>Causa raiz</th><th>Reprodução</th><th>Spec</th></tr></thead>
+    <tbody>
+      <tr><td><a href="../bug.md">#14 BUG-20261004-ME3Q</a><br>Modo lateral: a janela de um áudio enviado esconde a seta e cobre o balão de um recebido</td><td class="alerta">medium</td><td class="alerta">P2</td><td class="ok">confirmed</td><td>1/1 no WhatsApp Web (rodada 3 do TTLJ); 3/3 isolada, com as mesmas posições e a mesma contagem de pontos</td><td class="alerta">RF-01, RF-05 e §8 (veredito no passo 7)</td></tr>
+    </tbody>
+  </table>
+  <div style="margin-top:12px">
+    <div class="card"><b class="alerta">média</b>Risco da mudança</div>
+    <div class="card"><b>local-software</b>Closure policy</div>
+    <div class="card"><b>2 gates</b>testes, depois o change set</div>
+    <div class="card"><b>1 arquivo</b>de código: o posicionador</div>
+  </div>
+
+  <h2>1. Defeito</h2>
+  <p>No modo lateral, numa conversa com áudios dos dois lados, a janela de um áudio enviado abre à esquerda do balão dele, na faixa dos balões recebidos. Mais alta que o próprio balão, desce sobre o balão recebido seguinte e sobre o corredor de 8 px da seta dele. A camada das setas fica atrás das janelas, e por isso a seta do recebido perde a ponta. Na rodada 3 da aceitação do TTLJ (área de 944 px), a janela 5 cobre 175 × 69 px do balão 6, e a seta 6 tem 4 de 9 pontos visíveis. No navegador de teste, com o CSS real, <code>elementFromPoint</code> na ponta da seta 6 devolve a janela 5.</p>
+
+  <h2>2. Causa raiz <span class="tag ok">confirmed</span></h2>
+  <p><b>Onde nasceu.</b> Em <code>posicionador-colisoes.ts</code>, três decisões se somam. <code>xAoLado</code> mede o "espaço livre" do RF-01 só na horizontal, entre o balão e a borda da área. A colisão de <code>calcularPosicoesJanelas</code> só considera janelas que se cruzam (decisão do K3DY), e balões e corredores de outros áudios não contam como obstáculo. <code>calcularSeta</code> mira o balão sem saber se outra janela o cobre. A camada das setas atrás das janelas (critério do OW7G) é onde o defeito <i>aparece</i>, e não onde ele nasce.</p>
+  <p><b>Faixa afetada.</b> A janela de um recebido termina em esquerda + 726, e o balão de um enviado começa em direita − 393. Com a área da conversa de 726 a 1118 px, a janela de cada lado fica sobre a coluna dos balões do outro. No navegador de 1440 px com a lista de conversas, a área tem 944 px.</p>
+  <table>
+    <thead><tr><th>Evidência</th><th>Medida</th></tr></thead>
+    <tbody>
+      <tr><td>Posicionador puro com as entradas da rodada 3 (<a href="../evidence/reproduction.md">reprodução §1</a>)</td><td class="erro">719/64, 902/304, 902/554, 902/794, 902/1034: as posições lidas no WhatsApp real; ponta da seta 6 sob a janela 5; 4 de 9 pontos visíveis</td></tr>
+      <tr><td>Gerenciador no Chrome for Testing, CSS real (<a href="../evidence/reproduction.md">reprodução §2</a>)</td><td class="erro"><code>elementFromPoint</code> 2 px dentro da ponta da seta 6 devolve a janela 5; as outras setas têm 9 de 9 pontos</td></tr>
+      <tr><td>Conversa alternada sem folga, balões a 28 px (<a href="../evidence/reproduction.md">reprodução §3</a>)</td><td class="erro">uma pilha só, enviados e recebidos; a ponta de toda seta, exceto a primeira, fica sob a janela de cima, que cobre a borda inteira do balão</td></tr>
+      <tr><td>Partes da janela (<a href="../evidence/diagnostico.md">diagnóstico §3</a>)</td><td class="alerta">sem texto, a janela já tem 109 px (cabeçalho 39, rodapé 48, respiro 20, borda 2): encolher a janela até o balão seguinte, sem folga, não deixa linha de texto</td></tr>
+    </tbody>
+  </table>
+
+  <h2>3. Estratégia: uma por vez no conflito lateral</h2>
+  <div class="aviso">
+    <p><b>A restrição geométrica.</b> De 726 a 1118 px, a coluna livre ao lado de um enviado, nas linhas de um recebido, tem 137 px, e a janela tem 320. Nenhuma posição lateral evita o balão seguinte do outro lado, e a janela não encolhe abaixo de 109 px. Sem folga entre os balões, não há como manter todas as janelas à vista e todas as setas com ponta (<a href="../evidence/diagnostico.md">diagnóstico §4</a>).</p>
+  </div>
+  <div class="decisao" style="margin-top:12px">
+    <p><b>Decisão registrada por volta das 17:41:</b> estratégia A, recomendada entre quatro opções. As outras eram encolher a janela de cima, de risco alto e inútil sem folga; apontar a ponta para a parte descoberta, que falha sem folga; e o debate multiagente. Severidade medium e prioridade P2 confirmadas.</p>
+    <ol>
+      <li><b>Conflito</b>: uma janela lateral à vista cobre o balão de outra janela à vista, na parte dele dentro da área das mensagens, ou o corredor da seta dela, da cauda à ponta, com a base do triângulo.</li>
+      <li><b>Quem fica à vista</b>: havendo conflito, as janelas laterais entram em ordem de foco, do último abrir ou destacar para trás. A que criaria um conflito ao entrar fica <b>aberta e oculta</b>, como no RF-03, até o próximo destaque. Empate, com as duas sem foco depois de fechar a de foco: entra primeiro a de cima, na ordem de leitura.</li>
+      <li><b>Troca pelo ícone</b>: clicar no ícone do áudio oculto (<code>destacar</code>, já existente) o põe à vista e oculta a janela com que ele conflita. As outras ficam como estão.</li>
+      <li><b>Fechar a janela que causava o conflito</b> devolve a outra, porque o conflito acaba. É o modo lateral comum, em que toda janela sem conflito fica à vista. No modo abaixo, a regra do TTLJ segue igual: fechar a janela à vista não traz outra.</li>
+      <li><b>Sem conflito, nada muda</b>: conversa de um lado só, área de 1119 px ou mais e modo abaixo dão as mesmas posições de hoje. Os 22 testes atuais do posicionador passam num protótipo da regra.</li>
+    </ol>
+  </div>
+
+  <h3>3.1 Rodada 3, calculada pelo protótipo</h3>
+  <svg viewBox="0 0 960 316" width="960" height="316" role="img" aria-label="Rodada 3: hoje, depois da correção e depois do clique no ícone do áudio 5">
+    <text x="20" y="34" fill="#e0e0e0" font-size="12" font-weight="bold">Hoje: a janela 5 cobre B6 e a seta 6</text>
+    <clipPath id="c20"><rect x="20" y="60" width="236.0" height="176.0"/></clipPath>
+    <rect x="20" y="60" width="236.0" height="176.0" fill="#151a1d" stroke="#555" stroke-dasharray="4 3"/>
+    <g clip-path="url(#c20)">
+    <rect x="157.8" y="58.0" width="84.0" height="22.2" rx="3" fill="#005c4b"/>
+    <text x="227.8" y="69.0" fill="#81c784" font-size="9">B5</text>
+    <rect x="35.5" y="100.8" width="84.0" height="22.2" rx="3" fill="#2a3942"/>
+    <text x="38.5" y="111.8" fill="#81c784" font-size="9">B6</text>
+    <rect x="35.5" y="130.0" width="84.0" height="29.2" rx="3" fill="#2a3942"/>
+    <text x="38.5" y="141.0" fill="#81c784" font-size="9">B7</text>
+    <rect x="35.5" y="166.2" width="84.0" height="29.0" rx="3" fill="#2a3942"/>
+    <text x="38.5" y="177.2" fill="#81c784" font-size="9">B8</text>
+    <rect x="35.5" y="202.2" width="84.0" height="22.2" rx="3" fill="#2a3942"/>
+    <text x="38.5" y="213.2" fill="#81c784" font-size="9">B9</text>
+    <rect x="75.8" y="60.0" width="80.0" height="58.0" rx="3" fill="#202c33" fill-opacity="0.94" stroke="#bb86fc" stroke-width="1.2"/>
+    <text x="79.8" y="71.0" fill="#e0e0e0" font-size="9">janela 5</text>
+    <rect x="121.5" y="120.0" width="80.0" height="60.5" rx="3" fill="#202c33" fill-opacity="0.94" stroke="#bb86fc" stroke-width="1.2"/>
+    <text x="125.5" y="131.0" fill="#e0e0e0" font-size="9">janela 6</text>
+    <rect x="121.5" y="182.5" width="80.0" height="58.0" rx="3" fill="#202c33" fill-opacity="0.94" stroke="#bb86fc" stroke-width="1.2"/>
+    <text x="125.5" y="193.5" fill="#e0e0e0" font-size="9">janela 7</text>
+    <path d="M 155.8 70.1 L 157.8 70.1" fill="none" stroke="#00a884" stroke-width="2"/>
+    <circle cx="157.8" cy="70.1" r="2.6" fill="#00a884"/>
+    <path d="M 121.5 122.5 L 120.6 122.5 L 120.6 118.0" fill="none" stroke="#00a884" stroke-width="2"/>
+    <circle cx="120.6" cy="118.0" r="2.6" fill="#00a884"/>
+    <path d="M 120.6 118.0 L 120.6 111.9 L 119.5 111.9" fill="none" stroke="#ef5350" stroke-width="2" stroke-dasharray="3 2"/>
+    <circle cx="119.5" cy="111.9" r="2.6" fill="#ef5350"/>
+    <path d="M 121.5 185.0 L 121.2 185.0 L 121.2 144.6 L 119.5 144.6" fill="none" stroke="#00a884" stroke-width="2"/>
+    <circle cx="119.5" cy="144.6" r="2.6" fill="#00a884"/>
+    </g>
+    <text x="20" y="252.0" fill="#9e9e9e" font-size="10">vermelho tracejado: trecho e ponta sob a janela 5</text>
+    <text x="20" y="265.0" fill="#9e9e9e" font-size="10">(4 de 9 pontos visíveis)</text>
+    <text x="360" y="34" fill="#e0e0e0" font-size="12" font-weight="bold">Depois: a janela 5 cede (foco mais antigo)</text>
+    <clipPath id="c360"><rect x="360" y="60" width="236.0" height="176.0"/></clipPath>
+    <rect x="360" y="60" width="236.0" height="176.0" fill="#151a1d" stroke="#555" stroke-dasharray="4 3"/>
+    <g clip-path="url(#c360)">
+    <rect x="497.8" y="58.0" width="84.0" height="22.2" rx="3" fill="#005c4b"/>
+    <text x="567.8" y="69.0" fill="#81c784" font-size="9">B5</text>
+    <rect x="375.5" y="100.8" width="84.0" height="22.2" rx="3" fill="#2a3942"/>
+    <text x="378.5" y="111.8" fill="#81c784" font-size="9">B6</text>
+    <rect x="375.5" y="130.0" width="84.0" height="29.2" rx="3" fill="#2a3942"/>
+    <text x="378.5" y="141.0" fill="#81c784" font-size="9">B7</text>
+    <rect x="375.5" y="166.2" width="84.0" height="29.0" rx="3" fill="#2a3942"/>
+    <text x="378.5" y="177.2" fill="#81c784" font-size="9">B8</text>
+    <rect x="375.5" y="202.2" width="84.0" height="22.2" rx="3" fill="#2a3942"/>
+    <text x="378.5" y="213.2" fill="#81c784" font-size="9">B9</text>
+    <rect x="461.5" y="60.0" width="80.0" height="60.5" rx="3" fill="#202c33" fill-opacity="0.94" stroke="#bb86fc" stroke-width="1.2"/>
+    <text x="465.5" y="71.0" fill="#e0e0e0" font-size="9">janela 6</text>
+    <rect x="461.5" y="122.5" width="80.0" height="58.0" rx="3" fill="#202c33" fill-opacity="0.94" stroke="#bb86fc" stroke-width="1.2"/>
+    <text x="465.5" y="133.5" fill="#e0e0e0" font-size="9">janela 7</text>
+    <rect x="461.5" y="182.5" width="80.0" height="58.0" rx="3" fill="#202c33" fill-opacity="0.94" stroke="#bb86fc" stroke-width="1.2"/>
+    <text x="465.5" y="193.5" fill="#e0e0e0" font-size="9">janela 8</text>
+    <path d="M 461.5 111.9 L 459.5 111.9" fill="none" stroke="#00a884" stroke-width="2"/>
+    <circle cx="459.5" cy="111.9" r="2.6" fill="#00a884"/>
+    <path d="M 461.5 144.6 L 459.5 144.6" fill="none" stroke="#00a884" stroke-width="2"/>
+    <circle cx="459.5" cy="144.6" r="2.6" fill="#00a884"/>
+    <path d="M 461.5 185.0 L 460.8 185.0 L 460.8 180.8 L 459.5 180.8" fill="none" stroke="#00a884" stroke-width="2"/>
+    <circle cx="459.5" cy="180.8" r="2.6" fill="#00a884"/>
+    </g>
+    <text x="360" y="252.0" fill="#9e9e9e" font-size="10">janela 5 aberta e oculta; volta pelo ícone do áudio 5</text>
+    <text x="360" y="265.0" fill="#9e9e9e" font-size="10">a pilha 6–9 começa no topo da área (Adição 2)</text>
+    <text x="360" y="278.0" fill="#ffb74d" font-size="10">a janela 6 cobre parte de B5, cuja janela está oculta (seção 6)</text>
+    <text x="700" y="34" fill="#e0e0e0" font-size="12" font-weight="bold">Depois de clicar no ícone do 5</text>
+    <clipPath id="c700"><rect x="700" y="60" width="236.0" height="176.0"/></clipPath>
+    <rect x="700" y="60" width="236.0" height="176.0" fill="#151a1d" stroke="#555" stroke-dasharray="4 3"/>
+    <g clip-path="url(#c700)">
+    <rect x="837.8" y="58.0" width="84.0" height="22.2" rx="3" fill="#005c4b"/>
+    <text x="907.8" y="69.0" fill="#81c784" font-size="9">B5</text>
+    <rect x="715.5" y="100.8" width="84.0" height="22.2" rx="3" fill="#2a3942"/>
+    <text x="718.5" y="111.8" fill="#81c784" font-size="9">B6</text>
+    <rect x="715.5" y="130.0" width="84.0" height="29.2" rx="3" fill="#2a3942"/>
+    <text x="718.5" y="141.0" fill="#81c784" font-size="9">B7</text>
+    <rect x="715.5" y="166.2" width="84.0" height="29.0" rx="3" fill="#2a3942"/>
+    <text x="718.5" y="177.2" fill="#81c784" font-size="9">B8</text>
+    <rect x="715.5" y="202.2" width="84.0" height="22.2" rx="3" fill="#2a3942"/>
+    <text x="718.5" y="213.2" fill="#81c784" font-size="9">B9</text>
+    <rect x="755.8" y="60.0" width="80.0" height="58.0" rx="3" fill="#202c33" fill-opacity="0.94" stroke="#bb86fc" stroke-width="1.2"/>
+    <text x="759.8" y="71.0" fill="#e0e0e0" font-size="9">janela 5</text>
+    <rect x="801.5" y="120.0" width="80.0" height="58.0" rx="3" fill="#202c33" fill-opacity="0.94" stroke="#bb86fc" stroke-width="1.2"/>
+    <text x="805.5" y="131.0" fill="#e0e0e0" font-size="9">janela 7</text>
+    <rect x="801.5" y="180.0" width="80.0" height="58.0" rx="3" fill="#202c33" fill-opacity="0.94" stroke="#bb86fc" stroke-width="1.2"/>
+    <text x="805.5" y="191.0" fill="#e0e0e0" font-size="9">janela 8</text>
+    <path d="M 835.8 70.1 L 837.8 70.1" fill="none" stroke="#00a884" stroke-width="2"/>
+    <circle cx="837.8" cy="70.1" r="2.6" fill="#00a884"/>
+    <path d="M 801.5 144.6 L 799.5 144.6" fill="none" stroke="#00a884" stroke-width="2"/>
+    <circle cx="799.5" cy="144.6" r="2.6" fill="#00a884"/>
+    <path d="M 801.5 182.5 L 800.8 182.5 L 800.8 180.8 L 799.5 180.8" fill="none" stroke="#00a884" stroke-width="2"/>
+    <circle cx="799.5" cy="180.8" r="2.6" fill="#00a884"/>
+    </g>
+    <text x="700" y="252.0" fill="#9e9e9e" font-size="10">janela 6 aberta e oculta: a 5 cobriria B6</text>
+    <text x="700" y="265.0" fill="#9e9e9e" font-size="10">as janelas 7 a 9 seguem à vista</text>
+    <text x="20" y="306" fill="#9e9e9e" font-size="10">escala 1:4 · verde-escuro: balão enviado · cinza-azulado: balão recebido · roxo: janela à vista · verde-água: seta · área das mensagens tracejada (y = 64 a 768)</text>
+  </svg>
+  <table>
+    <thead><tr><th>Cenário (protótipo no scratchpad)</th><th>À vista</th><th>Oculta</th></tr></thead>
+    <tbody>
+      <tr><td>Rodada 3, abertos em ordem ou com os focos reais (5 sem foco)</td><td>6 (64, seta reta em 271,5), 7 (314, reta), 8 (554, cotovelo de 17 px), 9 (794). A pilha, mais alta que a área, começa no topo (Adição 2), e a janela 6 cobre a parte visível de B5, cuja janela está oculta</td><td>5</td></tr>
+      <tr><td>Rodada 3, depois de clicar no ícone do 5</td><td>5 (64, reta), 7 (304, reta), 8 (544), 9 (784)</td><td>6</td></tr>
+      <tr><td>Rodada 3, depois de fechar o 5</td><td>6, 7, 8 e 9, nas posições da primeira linha</td><td></td></tr>
+      <tr><td>Alternada sem folga (E1, R2, E3), abertos em ordem</td><td>E1 (120, reta), E3 (360, reta)</td><td>R2</td></tr>
+      <tr><td>Alternada sem folga, depois de clicar no ícone de R2</td><td>R2 (237, reta)</td><td>E1 e E3</td></tr>
+    </tbody>
+  </table>
+  <p class="meta">Custo: com conflito, o posicionador refaz a disposição uma vez por janela lateral, e cabem de 6 a 8 na área das mensagens. No protótipo, 0,05 ms por cálculo, sem tocar a página.</p>
+
+  <h3>3.2 Esboço do código</h3>
+  <pre class="bloco">// posicionador-colisoes.ts (único arquivo de código)
+interface Posta { req: RequisicaoPosicionamento; ... }      // a requisição, para ler o foco
+
+export function calcularPosicoesJanelas(...) {
+  // ordenação, ordemDeFoco e focadaAbaixo: sem mudança
+  const dispor = (cedidas) =&gt; disporJanelas(ordenadas, cedidas, focadaAbaixo, ...);
+  const todas = dispor(new Set());
+  if (!haConflito(todas.postas, faixaVertical)) return todas.resultados;   // o caso comum, como hoje
+
+  // Laterais por foco, do mais recente ao mais antigo; empate na ordem dos balões (sort estável)
+  const laterais = todas.postas.filter(lateral).map(req).sort(foco decrescente);
+  const cedidas = new Set(laterais);
+  for (const req of laterais) {
+    cedidas.delete(req);
+    if (haConflito(dispor(cedidas).postas, faixaVertical)) cedidas.add(req);
+  }
+  return dispor(cedidas).resultados;
+}
+
+// O corpo de hoje, extraído sem mudar a regra; a cedida sai oculta e sem seta, como a do RF-03
+function disporJanelas(ordenadas, cedidas, focadaAbaixo, direita, esquerda, faixa): { resultados, postas }
+
+// Janela lateral sobre o balão (parte na área) ou sobre o corredor da seta (cauda à ponta, ± 3,5 px) de outra
+function haConflito(postas, faixa): boolean</pre>
+  <p class="meta">Sem mudança no gerenciador: <code>abrir</code> e <code>destacar</code> já dão o foco, e <code>recalcularPosicoes</code> já o repassa (TTLJ). Sem mudança no CSS nem na camada das setas: a janela cedida usa a classe do RF-03, e a seta dela some (<code>desenharSeta</code>). A janela oculta tem <code>pointer-events: none</code> e não cobre nada para <code>elementFromPoint</code>.</p>
+
+  <h2>4. Correction Change Set proposto</h2>
+  <table>
+    <thead><tr><th>CHG</th><th>Tipo</th><th>Artefato</th><th>Propósito</th><th>Gate</th></tr></thead>
+    <tbody>
+      <tr><td>CHG-001</td><td>test</td><td><code>extension/test/posicionador-colisoes.test.ts</code></td><td>Reproduções (rodada 3 e alternada) e regressões do cálculo (seção 5)</td><td>1</td></tr>
+      <tr><td>CHG-002</td><td>test</td><td><code>extension/test/janelas-no-navegador.test.ts</code></td><td>Reprodução no Chrome for Testing com o CSS real e a geometria da rodada 3; troca por <code>destacar</code> e fechamento no gerenciador real</td><td>1</td></tr>
+      <tr><td>CHG-003</td><td>code</td><td><code>extension/src/content/posicionador-colisoes.ts</code></td><td><code>disporJanelas</code> extraída sem mudar a regra; <code>haConflito</code>; entrada das janelas laterais por foco quando há conflito</td><td>2</td></tr>
+      <tr><td>CHG-004</td><td>documentation</td><td><code>extension/src/content/JANELAS.md</code></td><td>Passo 3 do algoritmo com a regra do conflito lateral</td><td>2</td></tr>
+      <tr><td>CHG-005</td><td>specification</td><td><code>_reversa_sdd/addenda/bug-BUG-20261004-ME3Q-v001.md</code></td><td>Adendo com a leitura do RF-05 no modo lateral em conflito e os limites; depende do veredito, que é seu (passo 7)</td><td>veredito</td></tr>
+    </tbody>
+  </table>
+  <p class="meta">Sem <code>data-repair</code>: as janelas vivem só na memória da aba. Nenhum arquivo das pastas travadas do OW7G, do K3DY e do TTLJ é tocado.</p>
+
+  <h2>5. Testes planejados</h2>
+  <table>
+    <thead><tr><th>Teste</th><th>Tipo</th><th>Arquivo</th><th>O que prova</th><th>Hoje</th></tr></thead>
+    <tbody>
+      <tr><td>Reprodução: na rodada 3, nenhuma janela lateral à vista cobre o balão de outra à vista nem o corredor da seta dela, e a ponta de cada seta fica fora das janelas</td><td class="novo">reprodução</td><td>posicionador</td><td>Critérios 1 e 2 no cálculo</td><td class="erro">falha: a janela 5 cobre o balão 6 e a ponta da seta 6</td></tr>
+      <tr><td>Reprodução: o mesmo na conversa alternada sem folga (E1, R2, E3)</td><td class="novo">reprodução</td><td>posicionador</td><td>O caso comum, em que a borda inteira do balão fica coberta</td><td class="erro">falha: pontas de R2 e E3 sob janelas</td></tr>
+      <tr><td>No conflito, fica à vista a janela de foco mais recente, e a outra sai oculta e sem seta; com o foco invertido, a escolha se inverte; a que fica alinha-se ao próprio balão, com seta reta</td><td>regressão</td><td>posicionador</td><td>A regra nova e o destaque pelo ícone</td><td class="erro">falha: as duas à vista</td></tr>
+      <tr><td>A janela de foco mais antigo que não conflita com as de foco maior fica à vista (E1 e E3 à vista, R2 oculta)</td><td>regressão</td><td>posicionador</td><td>Só cede quem conflita, e não toda janela de foco menor</td><td class="erro">falha: as três à vista</td></tr>
+      <tr><td>Empate sem foco: fica à vista a de cima</td><td>regressão</td><td>posicionador</td><td>Desempate pela ordem de leitura, depois de fechar a janela de foco</td><td class="erro">falha: as duas à vista</td></tr>
+      <tr><td>Reprodução no navegador, rodada 3: a ponta de cada seta à vista fora das janelas (<code>elementFromPoint</code>), 9 de 9 pontos visíveis, nenhum balão de janela à vista coberto</td><td class="novo">reprodução</td><td>janelas-no-navegador</td><td>Critérios 1 e 2 na tela, com a camada das setas atrás das janelas</td><td class="erro">falha: ponta da seta 6 sob a janela 5, 4 de 9</td></tr>
+      <tr><td>No navegador: abrir 5 e depois 6 deixa à vista a 6; <code>destacar</code> o 5 o põe à vista e oculta a 6, com as setas; fechar o 5 devolve a 6</td><td>regressão</td><td>janelas-no-navegador</td><td>Troca pelo ícone e fechamento, no gerenciador real</td><td class="erro">falha: 5 e 6 à vista</td></tr>
+      <tr><td>Guardas já existentes: modo lateral de um lado só com qualquer foco (TTLJ), enviado e recebido que não se cruzam numa área de 1512 px (K3DY), seta reta no recebido e no enviado (OW7G), regras do modo abaixo (TTLJ)</td><td>regressão (guarda)</td><td>ambos</td><td>Critérios 3 e 4: o modo lateral de um lado só e o modo abaixo não regridem</td><td class="ok">passam, e passam no protótipo</td></tr>
+    </tbody>
+  </table>
+  <p class="meta">Depois do Gate 2: <code>/verificar</code> completo (testes, typecheck, ruff e build carimbado). A aceitação no WhatsApp real, pela <code>/aceitacao-real</code>, quem invoca é você: mede a rodada 3 de novo, agora com <code>elementFromPoint</code> na ponta.</p>
+
+  <h2>6. Riscos e o que fica de fora</h2>
+  <p><b>Risco da mudança: <span class="alerta">média</span>.</b> Um arquivo de código, o núcleo do posicionador, usado em todos os modos. Não toca porta, contrato externo, dados nem concorrência, e reverte por <code>git revert</code>. Pesam contra o comportamento visível novo no modo lateral, com janela aberta e oculta, que pede adendo à leitura do RF-05, e a extração do corpo do cálculo para <code>disporJanelas</code>, que os 22 testes atuais guardam.</p>
+  <ul>
+    <li><b>Balão de áudio sem janela à vista, e mensagem de texto, do outro lado</b>: a janela lateral pode seguir cobrindo-os, inclusive o balão de um áudio cuja janela cedeu (na rodada 3, a janela 6 sobre a parte visível de B5). O posicionador só conhece os balões dos áudios com janela, e conhecer os demais exigiria mudar o adaptador do WhatsApp. Fica para o veredito e para os limites do adendo, e pode virar candidato a registro.</li>
+    <li><b>Conversa alternada sem folga</b>: na prática, fica à vista uma janela a cada duas mensagens alternadas, e a leitura segue pelo ícone, como no modo abaixo.</li>
+    <li><b>Janela que volta à vista</b>: desliza da última posição em que esteve visível (120 ms), como na reexibição do RF-03 e no TTLJ. Fica como está.</li>
+    <li><b>Faixa de 721 a 725 px</b>, em que o enviado ainda abre ao lado e o recebido já cai no modo abaixo: o conflito só considera pares de janelas laterais, e a janela do modo abaixo segue o Delta 3 do TTLJ. Registro nas Agent Notes.</li>
+    <li><b>Achado do TTLJ ainda aberto</b>: o balão em parte sob a caixa de escrita não oculta a janela. Esta regra não o absorve, e ele segue candidato a <code>/reversa-debugger</code>.</li>
+  </ul>
+
+  <h2>7. Mini-grafo do bug</h2>
+  <svg viewBox="0 0 920 300" width="920" height="300" role="img" aria-label="Mini-grafo do ME3Q com o OW7G e o K3DY">
+    <line x1="330" y1="150" x2="590" y2="70" stroke="#9e9e9e" stroke-width="1.5"/>
+    <text x="400" y="96" fill="#9e9e9e" font-size="11">related-to (supported)</text>
+    <line x1="330" y1="150" x2="590" y2="230" stroke="#9e9e9e" stroke-width="1.5"/>
+    <text x="400" y="218" fill="#9e9e9e" font-size="11">related-to (supported)</text>
+    <a href="../bug.md"><rect x="40" y="95" width="290" height="110" rx="8" fill="#1e1e1e" stroke="#bb86fc" stroke-width="3"/>
+      <text x="52" y="120" fill="#bb86fc" font-size="13" font-weight="bold">#14 BUG-20261004-ME3Q</text>
+      <text x="52" y="142" fill="#e0e0e0" font-size="12">Modo lateral: seta escondida</text>
+      <text x="52" y="162" fill="#ffb74d" font-size="11">medium · P2 · active · awaiting-human</text>
+      <text x="52" y="182" fill="#81c784" font-size="11">causa confirmed</text></a>
+    <a href="../../BUG-20261002-OW7G-janela-sem-seta-ate-o-balao/bug.md"><rect x="590" y="25" width="290" height="90" rx="8" fill="#1e1e1e" stroke="#9e9e9e" stroke-width="2"/>
+      <text x="602" y="50" fill="#bb86fc" font-size="13" font-weight="bold">#12 BUG-20261002-OW7G</text>
+      <text x="602" y="72" fill="#e0e0e0" font-size="12">Janela deslocada sem a seta</text>
+      <text x="602" y="92" fill="#81c784" font-size="11">medium · P1 · resolved (travado)</text></a>
+    <a href="../../BUG-20261002-K3DY-janelas-sobrepostas/bug.md"><rect x="590" y="185" width="290" height="90" rx="8" fill="#1e1e1e" stroke="#9e9e9e" stroke-width="2"/>
+      <text x="602" y="210" fill="#bb86fc" font-size="13" font-weight="bold">#8 BUG-20261002-K3DY</text>
+      <text x="602" y="232" fill="#e0e0e0" font-size="12">Janelas flutuantes se sobrepõem</text>
+      <text x="602" y="252" fill="#81c784" font-size="11">medium · P2 · resolved (travado)</text></a>
+  </svg>
+
+  <h2>8. Matriz de relações</h2>
+  <table>
+    <thead><tr><th>Origem</th><th>Tipo</th><th>Destino</th><th>Estado</th><th>Evidência</th></tr></thead>
+    <tbody>
+      <tr><td><a href="../bug.md">#14 ME3Q</a></td><td>related-to</td><td><a href="../../BUG-20261002-OW7G-janela-sem-seta-ate-o-balao/bug.md">#12 OW7G</a></td><td class="ok">supported</td><td>a camada das setas, atrás das janelas pelo critério 3 do OW7G, esconde a ponta; mudá-la não resolve (estratégia D do diagnóstico)</td></tr>
+      <tr><td><a href="../bug.md">#14 ME3Q</a></td><td>related-to</td><td><a href="../../BUG-20261002-K3DY-janelas-sobrepostas/bug.md">#8 K3DY</a></td><td class="ok">supported</td><td>a colisão só entre janelas que se cruzam (decisão do K3DY) não trata balão nem corredor de outro áudio como obstáculo; a regra fica, e o conflito é tratado à parte</td></tr>
+    </tbody>
+  </table>
+  <p class="meta">As relações eram <code>proposed</code> no registro e foram promovidas com o diagnóstico. OW7G e K3DY têm <code>DONE.md</code>: nada nas pastas deles muda, e as decisões deles seguem valendo.</p>
+
+  <h2>9. Ordem de correção</h2>
+  <p>Bug único nesta sessão, sem encadeamento: os dois vizinhos do grafo estão travados. Na fila seguem o YUB4 (#10) e os candidatos a registro: direção sempre "recebido", ícone ausente, balão sob a caixa de escrita e, se você quiser, a cobertura de balões sem janela do outro lado.</p>
+
+  <h2>10. Próximos passos</h2>
+  <ol>
+    <li>Você aprova este plano ou pede mudanças, e eu o regenero.</li>
+    <li><b>Gate 1:</b> mostro o diff de CHG-001 e CHG-002; aprovados, aplico e mostro os testes falhando.</li>
+    <li><b>Gate 2:</b> mostro os diffs de CHG-003 e CHG-004; aprovados, aplico, mostro os testes passando e rodo o <code>/verificar</code>.</li>
+    <li><b>Veredito de spec:</b> minha recomendação provável é <code>spec-desatualizada</code>. O "espaço livre" do RF-01 e o Decision Log ("não cobre os balões seguintes") já pediam o que a correção entrega, mas a janela aberta e oculta no modo lateral muda a leitura do RF-05, que o adendo do TTLJ deixou "sem mudança" nesse modo. A decisão é sua, e o adendo (CHG-005) vem com ela.</li>
+    <li>Fechamento pela closure policy (<code>local-software</code>), trava <code>DONE.md</code> e views do contexto.</li>
+  </ol>
+</body>
+</html>

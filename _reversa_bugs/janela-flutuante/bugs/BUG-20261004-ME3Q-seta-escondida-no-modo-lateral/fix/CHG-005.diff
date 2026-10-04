@@ -1,0 +1,98 @@
+diff --git a/_reversa_sdd/addenda/bug-BUG-20261004-ME3Q-v001.md b/_reversa_sdd/addenda/bug-BUG-20261004-ME3Q-v001.md
+new file mode 100644
+index 0000000..d6d02f9
+--- /dev/null
++++ b/_reversa_sdd/addenda/bug-BUG-20261004-ME3Q-v001.md
+@@ -0,0 +1,92 @@
++# Adendo: conflito entre janelas no modo lateral
++
++> Identificador: `bug-BUG-20261004-ME3Q-v001`
++> Data: 2026-10-04
++> Origem: veredito `spec-desatualizada` do BUG-20261004-ME3Q (`/reversa-debugger-fix`)
++> Spec alvo: `_reversa_sdd/sdd/janela-flutuante.md` e o adendo `bug-BUG-20261004-TTLJ-v001` (nenhum dos dois é
++> editado)
++
++## Vigência
++
++Vigente desde 2026-10-04. Imutável: mudança posterior exige um adendo `v002`.
++
++## Contexto
++
++O BUG-20261004-ME3Q mostrou que, no modo lateral, numa conversa com áudios dos dois lados, a janela de um lado
++cobria o balão de um áudio do outro e o corredor da seta dele, e a seta ficava sem a ponta. A causa é
++geométrica: a janela de um recebido termina 726 px à direita da borda esquerda da área da conversa, e o balão
++de um enviado começa 393 px antes da borda direita; com a área de 726 a 1118 px, a janela de cada lado fica
++sobre a coluna dos balões do outro, livre só nas linhas do próprio balão. Mais alta que o balão (de 171 a 242
++px contra 89 a 117), a janela desce sobre o balão seguinte do outro lado. A janela não encolhe abaixo de 109
++px, a altura dela sem texto, e numa conversa alternada sem folga (balões a 28 px) não há posição lateral que
++evite o balão seguinte. O navegador de 1440 px com a lista de conversas dá 944 px de área, dentro da faixa.
++
++O "espaço livre" do RF-01 e o Decision Log ("não cobre os balões seguintes") já pediam que a janela não cobrisse
++outros balões; o adendo do TTLJ, por sua vez, deixou o RF-05 "sem mudança" no modo lateral, isto é, todas as
++janelas à vista. As duas leituras não cabem juntas nessa faixa.
++
++## Delta 1: RF-05 no modo lateral (seção 6.1, Fluxo Alternativo A da seção 6.3 e Delta 1 do adendo do TTLJ)
++
++**Antes:** "O sistema deve permitir várias janelas abertas ao mesmo tempo, uma por áudio, deslocando para
++baixo a janela cuja posição ideal colidir com outra e mantendo uma seta que a liga ao balão de origem."
++Critério: "Cinco áudios consecutivos de 3 s transcritos resultam em 5 janelas, nenhuma sobreposta, cada seta
++apontando para o balão correto." No adendo do TTLJ: "no modo lateral, sem mudança".
++
++**Como deve ser lido agora:** no modo lateral, as janelas seguem abertas ao mesmo tempo, uma por áudio, e à
++vista, salvo em **conflito**: uma janela lateral à vista cobriria o balão de outra janela à vista, na parte
++dele dentro da área das mensagens, ou o corredor da seta dela, da cauda à ponta. Havendo conflito, as janelas
++laterais entram em ordem de foco, da aberta ou destacada por último para trás, e a que criaria o conflito fica
++**aberta e oculta**, como no RF-03, até o usuário clicar no ícone do áudio dela; a janela com que ela conflita
++se oculta então. No empate, com as janelas sem foco depois de fechada a de foco, entra primeiro a de cima.
++Fechar a janela que causava o conflito devolve a outra à vista, porque o conflito acaba. Sem conflito (conversa
++de um lado só, área de 1119 px ou mais), todas as janelas laterais ficam à vista, como antes.
++
++Critério no modo lateral: numa conversa com os dois lados, a seta de cada janela à vista tem a ponta no balão
++de origem e o trecho no corredor fora de qualquer janela, e nenhuma janela à vista cobre o balão de outra à
++vista; as janelas à vista não se sobrepõem e mantêm os vãos de 8 px. Clicar no ícone de um áudio cuja janela
++cedeu a põe à vista.
++
++## Delta 2: o que a janela lateral pode cobrir (RF-01 e Decision Log, seção 15)
++
++**Antes:** RF-01, "ao lado do balão do áudio, no espaço livre da área da conversa"; Decision Log, "Janela ao
++lado do balão, no espaço livre", com o racional "Não cobre os balões seguintes, que costumam ser os próximos
++áudios da sequência."
++
++**Como deve ser lido agora:** o espaço livre ao lado do balão é medido na horizontal, entre o balão e a borda
++da área da conversa. Numa conversa com os dois lados, com a área de 726 a 1118 px, a janela lateral pode cobrir
++mensagens do outro lado, como um balão de ajuda: balões de texto e balões de áudio **sem janela à vista**,
++inclusive o de um áudio cuja janela cedeu pelo Delta 1. Não cobre o balão nem a seta de outra janela à vista.
++O racional do Decision Log segue valendo para a conversa de um lado só e para a área de 1119 px ou mais.
++
++## Limites conhecidos deste adendo
++
++- Conversa alternada sem folga: na prática, fica à vista uma janela a cada duas mensagens alternadas, e a
++  leitura segue pelo ícone, como no modo abaixo.
++- O posicionador conhece só os balões dos áudios com janela aberta: evitar também os balões de texto e de
++  áudios sem janela exigiria que o adaptador do WhatsApp os informasse. Candidato a registro próprio.
++- O conflito considera só pares de janelas laterais. Na faixa de 721 a 725 px, em que o enviado ainda abre ao
++  lado e o recebido já cai no modo abaixo, a janela do modo abaixo segue o Delta 3 do adendo do TTLJ.
++- A janela que volta à vista desliza da última posição em que esteve visível (120 ms, enquanto a opacidade
++  sobe), como na reexibição do RF-03.
++- O balão em parte sob a caixa de escrita não oculta a janela: achado do BUG-20261004-TTLJ, ainda candidato a
++  registro próprio.
++
++## Por quê
++
++Decisão de iago em 2026-10-04, por volta das 17:41, na estratégia do BUG-20261004-ME3Q ("uma por vez no
++conflito"), entre encolher a janela de cima (inútil sem folga: sobram 109 px, nenhuma linha de texto), apontar
++a ponta para a parte descoberta do balão (falha sem folga, porque a borda inteira fica coberta) e o debate
++multiagente.
++
++## Evidências
++
++- `_reversa_bugs/janela-flutuante/bugs/BUG-20261004-ME3Q-seta-escondida-no-modo-lateral/evidence/reproduction.md`
++- `_reversa_bugs/janela-flutuante/bugs/BUG-20261004-ME3Q-seta-escondida-no-modo-lateral/evidence/diagnostico.md`
++- `_reversa_bugs/janela-flutuante/bugs/BUG-20261004-ME3Q-seta-escondida-no-modo-lateral/evidence/gate1-vermelho.txt`, `gate2-verde.txt` e `gate2-verde-suite.txt`
++- `_reversa_bugs/janela-flutuante/bugs/BUG-20261004-ME3Q-seta-escondida-no-modo-lateral/fix/CHG-001.diff` a `CHG-004.diff`
++- `extension/src/content/JANELAS.md`, passo 3 do algoritmo
++
++## Aprovação
++
++- Veredito `spec-desatualizada` escolhido por iago em 2026-10-04 17:57 -03.
++- Texto deste adendo aprovado por iago em 2026-10-04 17:57 -03, na mesma resposta.

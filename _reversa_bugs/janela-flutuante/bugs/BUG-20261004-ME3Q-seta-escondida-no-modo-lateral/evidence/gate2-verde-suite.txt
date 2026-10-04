@@ -1,0 +1,9 @@
+# /verificar completo, 2026-10-04 17:55 -03, depois do Gate 2 (CHG-001 a CHG-004 aplicados)
+# .claude/skills/verificar/scripts/verificar.sh
+Verificação de b0c3408+alterações · modo completo
+✓ typecheck                 0s
+✓ testes-extensao          16s  tests 199 pass 197 fail 0 skipped 2
+✓ ruff-auxiliar             0s  All checks passed!
+✓ pytest-auxiliar          22s  126 passed, 6 skipped in 20.21s
+✓ build                     1s  Instalador gerado em extension/dist/instaladores/whispper-macos-apple-silicon.pkg
+  carimbo: build: 2026-10-04 17:55:14 -0300 commit: b0c3408 alterações não commitadas em extension/ ou auxiliar/

@@ -1,0 +1,134 @@
+diff --git a/extension/src/content/posicionador-colisoes.ts b/extension/src/content/posicionador-colisoes.ts
+index a270eff..20708af 100644
+--- a/extension/src/content/posicionador-colisoes.ts
++++ b/extension/src/content/posicionador-colisoes.ts
+@@ -56,9 +56,12 @@ const MARGEM_DA_CAUDA = 10;
+ // Comprimento da ponta da seta e folga do trilho até a borda da janela
+ const COMPRIMENTO_DA_PONTA = 4;
+ const FOLGA_DO_TRILHO = 1;
++// Metade da base do triângulo da ponta, de 7 px
++const MEIA_BASE_DA_PONTA = 3.5;
+ 
+ // Janela já posta, com a posição ainda sem arredondar
+ interface Posta {
++  req: RequisicaoPosicionamento;
+   resultado: PosicaoCalculada;
+   ancora: CoordenadasAncora;
+   lateral: boolean;
+@@ -93,7 +96,8 @@ function xAoLado(ancora: CoordenadasAncora, req: RequisicaoPosicionamento, direi
+  * O espaço livre ao lado do balão é medido entre as bordas da área da conversa (RF-01 da janela); sem
+  * elas, vale a tela inteira. Com a faixa vertical das mensagens, a janela cabe entre o cabeçalho e a caixa
+  * de escrita, e a do balão fora dela se oculta (BUG-20261002-HVT4). No modo abaixo, só a janela de foco
+- * mais recente fica à vista (BUG-20261004-TTLJ).
++ * mais recente fica à vista (BUG-20261004-TTLJ); no lateral, a janela em conflito cede à de foco mais recente
++ * (BUG-20261004-ME3Q).
+  */
+ export function calcularPosicoesJanelas(
+   requisicoes: RequisicaoPosicionamento[],
+@@ -116,6 +120,41 @@ export function calcularPosicoesJanelas(
+     .filter((req) => ordemDeFoco.get(req)! > 0 && req.ancora && xAoLado(req.ancora, req, direitaDaArea, esquerdaDaArea) === null)
+     .reduce<RequisicaoPosicionamento | undefined>((focada, req) => (!focada || ordemDeFoco.get(req)! > ordemDeFoco.get(focada)! ? req : focada), undefined);
+ 
++  const dispor = (cedidas: ReadonlySet<RequisicaoPosicionamento>) =>
++    disporJanelas(ordenadas, cedidas, focadaAbaixo, direitaDaArea, esquerdaDaArea, faixaVertical);
++
++  // No modo lateral, com a área da conversa abaixo de 1119 px, a janela de um lado da conversa fica sobre a
++  // coluna dos balões do outro e, mais alta que o próprio balão, pode cobrir o balão ou a seta de outra janela.
++  // Havendo conflito, as janelas laterais entram em ordem de foco, da mais recente à mais antiga (no empate,
++  // de cima para baixo), e a que criaria um conflito ao entrar fica oculta até o próximo destaque
++  // (BUG-20261004-ME3Q)
++  const todas = dispor(new Set());
++  if (!haConflito(todas.postas, faixaVertical)) return todas.resultados;
++
++  const laterais = todas.postas
++    .filter((posta) => posta.lateral)
++    .map((posta) => posta.req)
++    .sort((a, b) => ordemDeFoco.get(b)! - ordemDeFoco.get(a)!);
++  const cedidas = new Set(laterais);
++  for (const req of laterais) {
++    cedidas.delete(req);
++    if (haConflito(dispor(cedidas).postas, faixaVertical)) cedidas.add(req);
++  }
++  return dispor(cedidas).resultados;
++}
++
++/**
++ * Põe as janelas na ordem dos balões, com as cedidas ocultas: ao lado do balão ou abaixo dele, empurradas
++ * pelas de cima que as cruzam e contidas na área das mensagens, cada uma com a sua seta.
++ */
++function disporJanelas(
++  ordenadas: RequisicaoPosicionamento[],
++  cedidas: ReadonlySet<RequisicaoPosicionamento>,
++  focadaAbaixo: RequisicaoPosicionamento | undefined,
++  direitaDaArea: number,
++  esquerdaDaArea: number,
++  faixaVertical?: FaixaVertical
++): { resultados: PosicaoCalculada[]; postas: Posta[] } {
+   const resultados: PosicaoCalculada[] = [];
+   const postas: Posta[] = [];
+ 
+@@ -124,7 +163,7 @@ export function calcularPosicoesJanelas(
+     const foraDaFaixa = !!req.ancora && !!faixaVertical &&
+       (req.ancora.y + req.ancora.altura <= faixaVertical.topo || req.ancora.y >= faixaVertical.fundo);
+     const xLateral = req.ancora ? xAoLado(req.ancora, req, direitaDaArea, esquerdaDaArea) : null;
+-    if (!req.ancora || !req.ancora.visivel || foraDaFaixa || (xLateral === null && req !== focadaAbaixo)) {
++    if (!req.ancora || !req.ancora.visivel || foraDaFaixa || cedidas.has(req) || (xLateral === null && req !== focadaAbaixo)) {
+       resultados.push({
+         idAudio: req.idAudio,
+         x: 0,
+@@ -173,7 +212,7 @@ export function calcularPosicoesJanelas(
+       deslocadaPorColisao: deslocada,
+       seta: null
+     };
+-    postas.push({ resultado, ancora, lateral, x, y, largura, altura });
++    postas.push({ req, resultado, ancora, lateral, x, y, largura, altura });
+     resultados.push(resultado);
+   }
+ 
+@@ -184,7 +223,45 @@ export function calcularPosicoesJanelas(
+   }
+   distribuirTrilhos(postas.map((posta) => posta.resultado.seta!));
+ 
+-  return resultados;
++  return { resultados, postas };
++}
++
++interface Caixa {
++  x: number;
++  y: number;
++  fimX: number;
++  fimY: number;
++}
++
++const sobrepoem = (a: Caixa, b: Caixa) => a.x < b.fimX && b.x < a.fimX && a.y < b.fimY && b.y < a.fimY;
++
++/**
++ * Uma janela lateral cobre o que liga outra ao balão de origem: o balão, na parte dele dentro da área das
++ * mensagens, ou o corredor da seta, da cauda à ponta, com a base do triângulo (BUG-20261004-ME3Q).
++ */
++function haConflito(postas: Posta[], faixa?: FaixaVertical): boolean {
++  const laterais = postas.filter((posta) => posta.lateral);
++  return laterais.some((outra) => {
++    const { ancora, resultado: { seta } } = outra;
++    const ligacao: Caixa[] = [
++      {
++        x: ancora.x,
++        y: faixa ? Math.max(ancora.y, faixa.topo) : ancora.y,
++        fimX: ancora.x + ancora.largura,
++        fimY: faixa ? Math.min(ancora.y + ancora.altura, faixa.fundo) : ancora.y + ancora.altura
++      },
++      {
++        x: Math.min(seta!.pontaX, seta!.caudaX),
++        y: Math.min(seta!.pontaY, seta!.caudaY) - MEIA_BASE_DA_PONTA,
++        fimX: Math.max(seta!.pontaX, seta!.caudaX),
++        fimY: Math.max(seta!.pontaY, seta!.caudaY) + MEIA_BASE_DA_PONTA
++      }
++    ];
++    return laterais.some((janela) =>
++      janela !== outra &&
++      ligacao.some((caixa) => sobrepoem({ x: janela.x, y: janela.y, fimX: janela.x + janela.largura, fimY: janela.y + janela.altura }, caixa))
++    );
++  });
+ }
+ 
+ /**

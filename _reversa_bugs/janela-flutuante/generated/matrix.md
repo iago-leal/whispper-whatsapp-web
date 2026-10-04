@@ -1,4 +1,4 @@
-<!-- GENERATED, DO NOT EDIT: regenerado por /reversa-debugger-graph em 2026-10-04T20:12Z a partir de 6 bugs -->
+<!-- GENERATED, DO NOT EDIT: regenerado por /reversa-debugger-graph em 2026-10-04T21:10Z a partir de 7 bugs -->
 
 # Matriz de relações · janela-flutuante
 
@@ -13,3 +13,5 @@
 | BUG-20261002-OW7G | related-to | BUG-20261002-HVT4 | supported | sim |
 | BUG-20261004-TTLJ | related-to | BUG-20261002-HVT4 | supported | sim |
 | BUG-20261004-TTLJ | related-to | BUG-20261002-OW7G | supported | sim |
+| BUG-20261004-ME3Q | related-to | BUG-20261002-OW7G | supported | sim |
+| BUG-20261004-ME3Q | related-to | BUG-20261002-K3DY | supported | sim |

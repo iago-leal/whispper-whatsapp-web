@@ -1,0 +1,215 @@
+# Gate 1, vermelho: 2026-10-04 17:52 -0300, commit b0c3408 com CHG-001 e CHG-002 aplicados
+# node --test test/posicionador-colisoes.test.ts test/janelas-no-navegador.test.ts
+▶ janelas flutuantes no navegador, com a altura desenhada
+  ✔ reprodução: cinco áudios consecutivos concluídos, com textos de alturas diferentes e um no limite de 240 px, resultam em cinco janelas sem sobreposição (RF-05, RF-07) (325.2365ms)
+  ✔ reprodução: quando a janela de cima cresce ao concluir, a de baixo desce e nenhuma se sobrepõe (RF-05) (348.363791ms)
+  ✔ a janela aberta acima de outra já aberta a empurra pela altura desenhada, a 8 px (RF-05) (96.73775ms)
+  ✔ a janela nova entra na página já na posição, sem deslizar do canto da tela (RF-01) (87.381417ms)
+  ✔ reprodução: a janela do último áudio, no pé da conversa, fica inteira na área das mensagens, com "Copiar" visível (critérios 1 e 2 do HVT4) (328.48525ms)
+  ✔ reprodução: quatro áudios no pé da conversa empilham-se dentro da área das mensagens, sem sobreposição (EC-05, RF-05) (76.668792ms)
+  ✔ a janela nova aberta no pé da conversa entra na página já no lugar, sem deslizar (RF-01; lição do K3DY) (73.545875ms)
+  ✔ reprodução: cinco áudios consecutivos resultam em cinco janelas, nenhuma sobreposta, cada seta apontando para o balão correto (critério do RF-05) (72.491792ms)
+  ✔ reprodução: na rolagem, cada seta acompanha o seu balão e a sua janela (RF-03, critério 1 do OW7G) (336.171417ms)
+  ✔ a seta não rouba cliques e fica por trás das janelas (critério 3 do OW7G) (77.423959ms)
+  ✔ a seta da janela nova nasce no lugar, mesmo quando a altura medida a move, e fechar a janela leva a seta junto (OW7G) (69.221ms)
+  ✔ reprodução: no modo abaixo, com cinco áudios abertos, nenhuma janela à vista cobre o próprio balão, e a seta de cada uma tem trecho visível (critérios 1 e 2 do TTLJ) (332.071584ms)
+  ✔ no modo abaixo, só a janela aberta por último fica à vista; destacar outra a põe à vista e oculta a anterior, e fechar a janela à vista não traz outra (TTLJ) (78.900167ms)
+  ✖ reprodução: no modo lateral, numa conversa com os dois lados, a seta de cada janela à vista tem a ponta e o trecho no corredor fora das janelas, e nenhuma janela cobre o balão de outra à vista (critérios 1 e 2 do ME3Q) (327.914042ms)
+  ✖ no modo lateral, abrir o enviado 5 e depois o recebido 6 deixa à vista só a janela 6; destacar o 5 o põe à vista e oculta a 6, com as setas; fechar o 5 devolve a 6 (ME3Q) (86.827916ms)
+✖ janelas flutuantes no navegador, com a altura desenhada (3522.802792ms)
+✔ calcularPosicoesJanelas posiciona janela ao lado da âncora em espaço suficiente (1.767916ms)
+✔ calcularPosicoesJanelas desloca verticalmente janela para resolver colisão (0.314875ms)
+✔ calcularPosicoesJanelas usa fallback abaixo do balão quando espaço lateral for insuficiente (0.118875ms)
+✔ calcularPosicoesJanelas mede o espaço lateral dentro da área da conversa e, sem ele, abre abaixo do balão (0.107291ms)
+✔ calcularPosicoesJanelas não desloca a janela que não cruza, na horizontal, a janela de cima (0.123125ms)
+✔ calcularPosicoesJanelas desloca a janela pela de cima que a cruza, mesmo com outra, de lado oposto, entre as duas (0.242208ms)
+✔ calcularPosicoesJanelas sobe a janela que passaria do fim da área das mensagens até terminar 8 px acima dele (0.1965ms)
+✔ calcularPosicoesJanelas sobe em bloco a pilha que passaria do fim da área, mantendo os vãos de 8 px (0.774333ms)
+✔ calcularPosicoesJanelas começa no topo da área a pilha mais alta que ela, sem sobreposição, e só o excesso passa do fim (0.181042ms)
+✔ calcularPosicoesJanelas mantém no topo do balão a janela que cabe na área das mensagens (RF-01) (0.200542ms)
+✔ calcularPosicoesJanelas oculta a janela do balão sob a caixa de escrita ou sob o cabeçalho, e começa no topo da área a do balão em parte sob o cabeçalho (RF-03) (0.202792ms)
+✔ calcularPosicoesJanelas abre acima do balão, sem cobri-lo, a janela do modo abaixo (RF-02) que não cabe abaixo dele no pé da conversa (0.085667ms)
+✔ calcularPosicoesJanelas liga por uma seta reta a janela à altura do seu balão, com a ponta na borda dele, no recebido e no enviado (RF-05, seção 8) (0.126459ms)
+✔ calcularPosicoesJanelas liga a janela deslocada ao centro do seu balão por um cotovelo no corredor, saindo 10 px abaixo do topo da janela (RF-05) (0.2245ms)
+✔ calcularPosicoesJanelas põe em trilhos distintos, sem cruzamento, os cotovelos que se sobrepõem, subindo ou descendo até o balão (0.473291ms)
+✔ calcularPosicoesJanelas liga por uma seta vertical a janela do modo abaixo (RF-02), abaixo ou acima do balão (0.117208ms)
+✔ calcularPosicoesJanelas não dá seta à janela oculta, e a seta da janela do balão em parte sob o cabeçalho mira a parte visível dele (0.14875ms)
+✔ reprodução: no modo abaixo, com cinco áudios abertos, nenhuma janela à vista cobre o próprio balão, e nenhuma seta atravessa janela à vista (critérios 1 e 2 do TTLJ) (0.293792ms)
+✔ calcularPosicoesJanelas deixa à vista, no modo abaixo, só a janela de foco mais recente, 8 px abaixo do próprio balão e ligada a ele por uma seta vertical de 8 px (RF-02, RF-05) (0.115ms)
+✔ calcularPosicoesJanelas abre acima do próprio balão a janela de foco do modo abaixo que não cabe abaixo dele, mesmo com outras abertas (Adição 3 do HVT4) (0.059125ms)
+✔ calcularPosicoesJanelas oculta a janela de foco do modo abaixo cujo balão sai da área, sem pôr outra à vista no lugar (RF-03) (0.035792ms)
+✔ calcularPosicoesJanelas deixa à vista todas as janelas do modo lateral, qualquer que seja o foco (critério 4 do TTLJ) (0.234042ms)
+✖ reprodução: no modo lateral, numa conversa com os dois lados, nenhuma janela à vista cobre o balão de outra à vista nem a seta dela (critérios 1 e 2 do ME3Q) (1.038334ms)
+✖ reprodução: numa conversa alternada sem folga, nenhuma janela à vista cobre o balão de outra à vista nem a seta dela (ME3Q) (0.563792ms)
+✖ calcularPosicoesJanelas deixa à vista, no conflito lateral, a janela de foco mais recente, no topo do próprio balão, e oculta a outra sem seta; com o foco invertido, a escolha se inverte (ME3Q) (0.67375ms)
+✖ calcularPosicoesJanelas deixa à vista, no conflito lateral, a janela de foco mais antigo que não conflita com as de foco maior (ME3Q) (0.1575ms)
+✖ calcularPosicoesJanelas deixa à vista, no conflito lateral entre janelas sem foco, a de cima (ME3Q) (0.302959ms)
+ℹ tests 43
+ℹ suites 0
+ℹ pass 35
+ℹ fail 8
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8747.987959
+
+✖ failing tests:
+
+test at test/janelas-no-navegador.test.ts:471:11
+✖ reprodução: no modo lateral, numa conversa com os dois lados, a seta de cada janela à vista tem a ponta e o trecho no corredor fora das janelas, e nenhuma janela cobre o balão de outra à vista (critérios 1 e 2 do ME3Q) (327.914042ms)
+  AssertionError [ERR_ASSERTION]: a ponta da seta de 6 está sob uma janela: {"id":"6","aVista":true,"janela":{"id":"6","x":902,"y":314,"largura":322,"altura":242},"seta":{"id":"6","caudaX":902,"caudaY":324,"trilho":898.5,"pontaY":271.5,"pontaX":894,"bico":[894,271.5],"oculta":false},"pontaSob":"Transcrição do áudio 5","pontosVisiveis":3}
+  + actual - expected
+  
+  + 'Transcrição do áudio 5'
+  - null
+  
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/janelas-no-navegador.test.ts:494:14)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/janelas-no-navegador.test.ts:471:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'Transcrição do áudio 5',
+    expected: null,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/janelas-no-navegador.test.ts:505:11
+✖ no modo lateral, abrir o enviado 5 e depois o recebido 6 deixa à vista só a janela 6; destacar o 5 o põe à vista e oculta a 6, com as setas; fechar o 5 devolve a 6 (ME3Q) (86.827916ms)
+  AssertionError [ERR_ASSERTION]: depois de abrir as duas: {"aposAbrir":["5","6"],"aposDestacar":["5","6"],"setasAposDestacar":["5","6"],"aposFechar":["6"]}
+  + actual - expected
+  
+    [
+  +   '5',
+      '6'
+    ]
+  
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/janelas-no-navegador.test.ts:525:12)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/janelas-no-navegador.test.ts:505:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ '5', '6' ],
+    expected: [ '6' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at test/posicionador-colisoes.test.ts:469:1
+✖ reprodução: no modo lateral, numa conversa com os dois lados, nenhuma janela à vista cobre o balão de outra à vista nem a seta dela (critérios 1 e 2 do ME3Q) (1.038334ms)
+  AssertionError [ERR_ASSERTION]: a janela 5 cobre o balão de 6: {"janela":{"x":719,"y":64,"fimX":1039,"fimY":296},"balao":{"x":558,"y":227,"fimX":894,"fimY":316}}
+      at semCobertura (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/posicionador-colisoes.test.ts:463:14)
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/posicionador-colisoes.test.ts:472:3)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at test/posicionador-colisoes.test.ts:475:1
+✖ reprodução: numa conversa alternada sem folga, nenhuma janela à vista cobre o balão de outra à vista nem a seta dela (ME3Q) (0.563792ms)
+  AssertionError [ERR_ASSERTION]: a janela E1 cobre o balão de R2: {"janela":{"x":719,"y":64,"fimX":1039,"fimY":296},"balao":{"x":558,"y":237,"fimX":894,"fimY":326}}
+      at semCobertura (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/posicionador-colisoes.test.ts:463:14)
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/posicionador-colisoes.test.ts:477:3)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at test/posicionador-colisoes.test.ts:480:1
+✖ calcularPosicoesJanelas deixa à vista, no conflito lateral, a janela de foco mais recente, no topo do próprio balão, e oculta a outra sem seta; com o foco invertido, a escolha se inverte (ME3Q) (0.67375ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   '5',
+      '6'
+    ]
+  
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/posicionador-colisoes.test.ts:483:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ '5', '6' ],
+    expected: [ '6' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at test/posicionador-colisoes.test.ts:497:1
+✖ calcularPosicoesJanelas deixa à vista, no conflito lateral, a janela de foco mais antigo que não conflita com as de foco maior (ME3Q) (0.1575ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+      'E1',
+  +   'R2',
+      'E3'
+    ]
+  
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/posicionador-colisoes.test.ts:499:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'E1', 'R2', 'E3' ],
+    expected: [ 'E1', 'E3' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at test/posicionador-colisoes.test.ts:502:1
+✖ calcularPosicoesJanelas deixa à vista, no conflito lateral entre janelas sem foco, a de cima (ME3Q) (0.302959ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+      '5',
+  +   '6'
+    ]
+  
+      at TestContext.<anonymous> (file:///Users/iagoleal/dev/whispper-whatsapp-web/extension/test/posicionador-colisoes.test.ts:504:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ '5', '6' ],
+    expected: [ '5' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+# exit=1

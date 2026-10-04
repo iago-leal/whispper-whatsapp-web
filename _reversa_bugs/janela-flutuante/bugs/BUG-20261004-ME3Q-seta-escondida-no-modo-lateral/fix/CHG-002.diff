@@ -1,0 +1,91 @@
+diff --git a/extension/test/janelas-no-navegador.test.ts b/extension/test/janelas-no-navegador.test.ts
+index d526de2..a172032 100644
+--- a/extension/test/janelas-no-navegador.test.ts
++++ b/extension/test/janelas-no-navegador.test.ts
+@@ -68,6 +68,15 @@ const AJUDANTES = `
+     return new W.GerenciadorDeJanelas(new W.CronometroDeEspera(), function (id) { return balaoEnviado(id, ysDosBaloes[id]); }, function () { return AREA_ESTREITA; });
+   }
+   function aVista(id) { var el = janela(id); return !!el && !el.classList.contains("whispper-janela-oculta"); }
++  // Geometria da rodada 3 da aceitação do BUG-20261004-TTLJ, numa tela de 1440 × 832: área da conversa de x = 496
++  // a 1440 (944 px, modo lateral), mensagens de y = 64 a 768; balões de 336 px, o enviado 5 em x = 1047, em parte
++  // sob o cabeçalho, e os recebidos 6 a 9 em x = 558 (BUG-20261004-ME3Q)
++  var AREA_LARGA = { esquerda: 496, direita: 1440, topo: 64, fundo: 768 };
++  var RODADA_3 = { "5": [1047, 56, 89, "enviado"], "6": [558, 227, 89, "recebido"], "7": [558, 344, 117, "recebido"], "8": [558, 489, 116, "recebido"], "9": [558, 633, 89, "recebido"] };
++  function balaoRodada3(id) { var b = RODADA_3[id]; return { idAudio: id, x: b[0], y: b[1], largura: 336, altura: b[2], visivel: true }; }
++  function gerenciadorLargo() {
++    return new W.GerenciadorDeJanelas(new W.CronometroDeEspera(), balaoRodada3, function () { return AREA_LARGA; });
++  }
+   // Seta da janela (BUG-20261002-OW7G), lida do traçado-alvo, que não depende da transição: a linha vai da
+   // cauda, na lateral da janela, ao trilho, sobe ou desce até a altura da ponta e entra no balão
+   // (M cauda H trilho V ponta H ponta); o triângulo da ponta começa no bico.
+@@ -452,4 +461,70 @@ test("janelas flutuantes no navegador, com a altura desenhada", {
+     assert.deepEqual(leitura.setasAposDestacar, ["D1"], `setas à vista depois de destacar a primeira: ${JSON.stringify(leitura)}`);
+     assert.deepEqual(leitura.aposFechar, [], `depois de fechar a janela à vista: ${JSON.stringify(leitura)}`);
+   });
++
++  // BUG-20261004-ME3Q: no modo lateral, numa conversa com os dois lados, a janela do enviado 5 descia sobre o balão
++  // do recebido 6 e sobre o corredor da seta dele; com a camada das setas atrás das janelas, a ponta sumia (no
++  // WhatsApp Web, 4 de 9 pontos visíveis). Cenário da rodada 3 da aceitação do TTLJ, abertos em ordem.
++  const TELA_LARGA = { largura: 1440, altura: 832 };
++  const BALOES_RODADA_3: Record<string, [number, number, number]> = { "5": [1047, 56, 89], "6": [558, 227, 89], "7": [558, 344, 117], "8": [558, 489, 116], "9": [558, 633, 89] };
++
++  await t.test("reprodução: no modo lateral, numa conversa com os dois lados, a seta de cada janela à vista tem a ponta e o trecho no corredor fora das janelas, e nenhuma janela cobre o balão de outra à vista (critérios 1 e 2 do ME3Q)", async () => {
++    const p = await abrirPagina(TELA_LARGA);
++    await p.avaliar<void>(`(() => {
++      window.IDS = ["5", "6", "7", "8", "9"];
++      const g = gerenciadorLargo();
++      for (const id of IDS) g.abrir(id, RODADA_3[id][3]);
++      [T.longo, T.longo, T.medio, T.medio, T.curto].forEach((texto, i) => g.definirEstado(IDS[i], concluido(texto)));
++    })()`);
++    // A tela, e não só o alvo: a seta some quando uma janela desenhada está por cima dela
++    await p.aguardar(`[...document.querySelectorAll(".whispper-janela, .whispper-setas path")].every((e) => e.getAnimations().length === 0)`, 5_000, "as janelas e as setas pararem");
++    const leituras = await p.avaliar<Array<{ id: string; aVista: boolean; janela: Retangulo; seta: SetaLida | null; pontaSob: string | null; pontosVisiveis: number }>>(`IDS.map((id) => {
++      const s = seta(id);
++      const sob = (x, y) => { const j = document.elementFromPoint(x, y)?.closest(".whispper-janela"); return j ? j.getAttribute("aria-label") : null; };
++      // A ponta, 2 px para dentro do triângulo, e nove pontos do trecho no corredor, como na reprodução
++      const pontaSob = s ? sob(s.pontaX + Math.sign(s.caudaX - s.pontaX) * 2, s.pontaY) : null;
++      const pontos = s ? Array.from({ length: 9 }, (_, k) => s.caudaY + ((s.pontaY - s.caudaY) * (k + 1)) / 10) : [];
++      return { id, aVista: aVista(id), janela: desenhado(id), seta: s, pontaSob, pontosVisiveis: pontos.filter((y) => !sob(s.trilho, y)).length };
++    })`);
++
++    const visiveis = leituras.filter((l) => l.aVista);
++    assert.ok(visiveis.length > 0, "nenhuma janela à vista");
++    for (const l of visiveis) {
++      assert.ok(l.seta && !l.seta.oculta, `a janela ${l.id} não tem seta visível: ${JSON.stringify(l)}`);
++      assert.equal(l.pontaSob, null, `a ponta da seta de ${l.id} está sob uma janela: ${JSON.stringify(l)}`);
++      assert.equal(l.pontosVisiveis, 9, `a seta de ${l.id} some sob uma janela: ${JSON.stringify(l)}`);
++      // O balão, na parte dele dentro da área das mensagens
++      const [x, y, altura] = BALOES_RODADA_3[l.id]!;
++      const balao = { id: `balão de ${l.id}`, x, y: Math.max(y, 64), largura: 336, altura: Math.min(y + altura, 768) - Math.max(y, 64) };
++      for (const outra of visiveis.filter((o) => o !== l)) {
++        assert.deepEqual(cruzamentos([outra.janela, balao]), [], `a janela ${outra.id} cobre o balão de ${l.id}: ${JSON.stringify(leituras)}`);
++      }
++    }
++  });
++
++  await t.test("no modo lateral, abrir o enviado 5 e depois o recebido 6 deixa à vista só a janela 6; destacar o 5 o põe à vista e oculta a 6, com as setas; fechar o 5 devolve a 6 (ME3Q)", async () => {
++    const p = await abrirPagina(TELA_LARGA);
++    const leitura = await p.avaliar<{ aposAbrir: string[]; aposDestacar: string[]; setasAposDestacar: string[]; aposFechar: string[] }>(`(() => {
++      const ids = ["5", "6"];
++      const g = gerenciadorLargo();
++      for (const id of ids) {
++        g.abrir(id, RODADA_3[id][3]);
++        g.definirEstado(id, concluido(T.longo));
++      }
++      const visiveis = () => ids.filter(aVista);
++      const setasVisiveis = () => ids.filter((id) => { const s = seta(id); return !!s && !s.oculta; });
++      const aposAbrir = visiveis();
++      // O clique no ícone de um áudio com janela aberta chega ao gerenciador como destacar
++      g.destacar("5");
++      const aposDestacar = visiveis();
++      const setasAposDestacar = setasVisiveis();
++      g.fechar("5");
++      return { aposAbrir, aposDestacar, setasAposDestacar, aposFechar: visiveis() };
++    })()`);
++
++    assert.deepEqual(leitura.aposAbrir, ["6"], `depois de abrir as duas: ${JSON.stringify(leitura)}`);
++    assert.deepEqual(leitura.aposDestacar, ["5"], `depois de destacar a 5: ${JSON.stringify(leitura)}`);
++    assert.deepEqual(leitura.setasAposDestacar, ["5"], `setas à vista depois de destacar a 5: ${JSON.stringify(leitura)}`);
++    assert.deepEqual(leitura.aposFechar, ["6"], `depois de fechar a 5: ${JSON.stringify(leitura)}`);
++  });
+ });

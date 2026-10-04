@@ -1,4 +1,4 @@
-<!-- GENERATED, DO NOT EDIT: regenerado por /reversa-debugger-graph em 2026-10-04T20:12Z a partir de 13 bugs -->
+<!-- GENERATED, DO NOT EDIT: regenerado por /reversa-debugger-graph em 2026-10-04T21:10Z a partir de 14 bugs -->
 
 # Bugs por artefato de spec
 
@@ -19,6 +19,7 @@ Espelho gerado a partir de `_reversa_bugs/`; o vínculo é registrado aqui, a mu
 ## `_reversa_sdd/addenda/bug-BUG-20261004-TTLJ-v001.md`
 
 - BUG-20261004-TTLJ (resolved/fixed, P1): Modo abaixo: a pilha de janelas que sobe para caber cobre os próprios balões e esconde as setas · `_reversa_bugs/janela-flutuante/bugs/BUG-20261004-TTLJ-pilha-cobre-baloes-no-modo-abaixo/` · adendo `_reversa_sdd/addenda/bug-BUG-20261004-TTLJ-v001.md`
+- BUG-20261004-ME3Q (resolved/fixed, P2): Modo lateral: a janela de um áudio enviado esconde a seta e cobre o balão de um recebido · `_reversa_bugs/janela-flutuante/bugs/BUG-20261004-ME3Q-seta-escondida-no-modo-lateral/` · adendo `_reversa_sdd/addenda/bug-BUG-20261004-ME3Q-v001.md`
 
 ## `_reversa_sdd/sdd/compatibilidade-instalacao.md`
 
@@ -42,6 +43,7 @@ Espelho gerado a partir de `_reversa_bugs/`; o vínculo é registrado aqui, a mu
 - BUG-20261002-HVT4 (resolved/fixed, P1): Janela flutuante cortada na borda inferior: o posicionador não tem limite vertical · `_reversa_bugs/janela-flutuante/bugs/BUG-20261002-HVT4-janela-cortada-na-borda-inferior/` · adendo `_reversa_sdd/addenda/bug-BUG-20261002-HVT4-v001.md`
 - BUG-20261002-OW7G (resolved/fixed, P1): Janela deslocada sem a seta até o balão de origem (RF-05) · `_reversa_bugs/janela-flutuante/bugs/BUG-20261002-OW7G-janela-sem-seta-ate-o-balao/`
 - BUG-20261004-TTLJ (resolved/fixed, P1): Modo abaixo: a pilha de janelas que sobe para caber cobre os próprios balões e esconde as setas · `_reversa_bugs/janela-flutuante/bugs/BUG-20261004-TTLJ-pilha-cobre-baloes-no-modo-abaixo/` · adendo `_reversa_sdd/addenda/bug-BUG-20261004-TTLJ-v001.md`
+- BUG-20261004-ME3Q (resolved/fixed, P2): Modo lateral: a janela de um áudio enviado esconde a seta e cobre o balão de um recebido · `_reversa_bugs/janela-flutuante/bugs/BUG-20261004-ME3Q-seta-escondida-no-modo-lateral/` · adendo `_reversa_sdd/addenda/bug-BUG-20261004-ME3Q-v001.md`
 
 ## `_reversa_sdd/sdd/nucleo-transcricao.md`
 

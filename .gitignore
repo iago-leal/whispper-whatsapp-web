@@ -1,6 +1,9 @@
 # Skills dos agentes (instaladas localmente pelo Reversa)
 .agents/
-.claude/
+.claude/skills/reversa*/
+
+# Claude Code: permissões pessoais da máquina
+.claude/settings.local.json
 
 # Reversa: configurações pessoais
 .reversa/config.user.toml

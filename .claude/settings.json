@@ -1,0 +1,47 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__whatsapp-cft"
+    ],
+    "deny": [
+      "mcp__whatsapp-cft__type_text",
+      "mcp__whatsapp-cft__fill",
+      "mcp__whatsapp-cft__fill_form",
+      "mcp__whatsapp-cft__press_key",
+      "mcp__whatsapp-cft__upload_file",
+      "mcp__whatsapp-cft__drag"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/verificar-edicao.sh",
+            "timeout": 60,
+            "statusMessage": "Verificando tipos e lint do arquivo editado…"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/barrar-dados-pessoais.py",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "security-guidance@claude-plugins-official": true,
+    "pyright-lsp@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true
+  }
+}

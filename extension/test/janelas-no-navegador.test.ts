@@ -59,6 +59,15 @@ const AJUDANTES = `
   function gerenciadorReal(ysDosBaloes) {
     return new W.GerenciadorDeJanelas(new W.CronometroDeEspera(), function (id) { return balao(id, ysDosBaloes[id]); }, function () { return AREA_REAL; });
   }
+  // Geometria da reprodução do BUG-20261004-TTLJ, numa tela de 1200 × 832: área da conversa de x = 544 a 1200
+  // (656 px, abaixo dos 726 do modo lateral), mensagens de y = 64 a 768, balões de voz enviados de 336 × 89 px
+  // em x = 807. Toda janela cai no modo abaixo (RF-02).
+  var AREA_ESTREITA = { esquerda: 544, direita: 1200, topo: 64, fundo: 768 };
+  function balaoEnviado(id, y) { return { idAudio: id, x: 807, y: y, largura: 336, altura: 89, visivel: true }; }
+  function gerenciadorEstreito(ysDosBaloes) {
+    return new W.GerenciadorDeJanelas(new W.CronometroDeEspera(), function (id) { return balaoEnviado(id, ysDosBaloes[id]); }, function () { return AREA_ESTREITA; });
+  }
+  function aVista(id) { var el = janela(id); return !!el && !el.classList.contains("whispper-janela-oculta"); }
   // Seta da janela (BUG-20261002-OW7G), lida do traçado-alvo, que não depende da transição: a linha vai da
   // cauda, na lateral da janela, ao trilho, sobe ou desce até a altura da ponta e entra no balão
   // (M cauda H trilho V ponta H ponta); o triângulo da ponta começa no bico.
@@ -386,5 +395,61 @@ test("janelas flutuantes no navegador, com a altura desenhada", {
     assert.equal(leitura.animacoes, 0, `a seta da janela nova abriu com transição: ${JSON.stringify(leitura)}`);
     assert.equal(leitura.desenhado, leitura.alvo, "a seta da janela nova não nasceu no alvo");
     assert.equal(leitura.restantes, 0, "a seta ficou na página depois de a janela fechar");
+  });
+
+  // BUG-20261004-TTLJ: no modo abaixo, a pilha de janelas subia sobre os balões, inclusive o de cada uma, e a
+  // seta vertical corria por trás da janela vizinha (no WhatsApp Web, três setas sem ponto visível em nove).
+  // Cenário da reprodução: cinco áudios enviados, abertos em sequência, com textos de alturas diferentes.
+  const TELA_ESTREITA = { largura: 1200, altura: 832 };
+  const BALOES_ESTREITOS = [293, 410, 528, 645, 763];
+
+  await t.test("reprodução: no modo abaixo, com cinco áudios abertos, nenhuma janela à vista cobre o próprio balão, e a seta de cada uma tem trecho visível (critérios 1 e 2 do TTLJ)", async () => {
+    const p = await abrirPagina(TELA_ESTREITA);
+    await p.avaliar<void>(`(() => {
+      window.IDS = ["T1", "T2", "T3", "T4", "T5"];
+      const g = gerenciadorEstreito({ T1: 293, T2: 410, T3: 528, T4: 645, T5: 763 });
+      for (const id of IDS) g.abrir(id, "enviado");
+      [concluido(T.medio), ERRO, concluido(T.medio), concluido(T.longo), concluido(T.medio)].forEach((estado, i) => g.definirEstado(IDS[i], estado));
+    })()`);
+    // A tela, e não só o alvo: a seta some quando uma janela desenhada está por cima dela
+    await p.aguardar(`[...document.querySelectorAll(".whispper-janela, .whispper-setas path")].every((e) => e.getAnimations().length === 0)`, 5_000, "as janelas e as setas pararem");
+    const leituras = await p.avaliar<Array<{ id: string; aVista: boolean; janela: Retangulo; seta: SetaLida | null; pontosVisiveis: number }>>(`IDS.map((id) => {
+      const s = seta(id);
+      // Nove pontos ao longo da seta, como na reprodução: visível onde nenhuma janela está por cima
+      const pontos = s ? Array.from({ length: 9 }, (_, k) => s.caudaY + ((s.pontaY - s.caudaY) * (k + 1)) / 10) : [];
+      const pontosVisiveis = pontos.filter((y) => !document.elementFromPoint(s.trilho, y)?.closest(".whispper-janela")).length;
+      return { id, aVista: aVista(id), janela: desenhado(id), seta: s, pontosVisiveis };
+    })`);
+
+    const visiveis = leituras.filter((l) => l.aVista);
+    assert.ok(visiveis.length > 0, "nenhuma janela à vista");
+    for (const l of visiveis) {
+      const balao = { id: `balão de ${l.id}`, x: 807, y: BALOES_ESTREITOS[Number(l.id.slice(1)) - 1]!, largura: 336, altura: 89 };
+      assert.deepEqual(cruzamentos([l.janela, balao]), [], `a janela ${l.id} cobre o próprio balão: ${JSON.stringify(leituras)}`);
+      assert.ok(l.seta && !l.seta.oculta && l.pontosVisiveis > 0, `a seta de ${l.id} não tem trecho visível: ${JSON.stringify(l)}`);
+    }
+  });
+
+  await t.test("no modo abaixo, só a janela aberta por último fica à vista; destacar outra a põe à vista e oculta a anterior, e fechar a janela à vista não traz outra (TTLJ)", async () => {
+    const p = await abrirPagina(TELA_ESTREITA);
+    const leitura = await p.avaliar<{ aposAbrir: string[]; aposDestacar: string[]; setasAposDestacar: string[]; aposFechar: string[] }>(`(() => {
+      const ids = ["D1", "D2", "D3"];
+      const g = gerenciadorEstreito({ D1: 293, D2: 410, D3: 528 });
+      for (const id of ids) g.abrir(id, "enviado");
+      const visiveis = () => ids.filter(aVista);
+      const setasVisiveis = () => ids.filter((id) => { const s = seta(id); return !!s && !s.oculta; });
+      const aposAbrir = visiveis();
+      // O clique no ícone de um áudio com janela aberta chega ao gerenciador como destacar
+      g.destacar("D1");
+      const aposDestacar = visiveis();
+      const setasAposDestacar = setasVisiveis();
+      g.fechar("D1");
+      return { aposAbrir, aposDestacar, setasAposDestacar, aposFechar: visiveis() };
+    })()`);
+
+    assert.deepEqual(leitura.aposAbrir, ["D3"], `depois de abrir as três: ${JSON.stringify(leitura)}`);
+    assert.deepEqual(leitura.aposDestacar, ["D1"], `depois de destacar a primeira: ${JSON.stringify(leitura)}`);
+    assert.deepEqual(leitura.setasAposDestacar, ["D1"], `setas à vista depois de destacar a primeira: ${JSON.stringify(leitura)}`);
+    assert.deepEqual(leitura.aposFechar, [], `depois de fechar a janela à vista: ${JSON.stringify(leitura)}`);
   });
 });

@@ -11,6 +11,8 @@ interface RegistroJanela {
   direcao: 'recebido' | 'enviado';
   ancora?: CoordenadasAncora;
   seta: SVGGElement | null;
+  // Ordem do último abrir ou destacar (BUG-20261004-TTLJ)
+  foco: number;
 }
 
 const LIMITE_MAXIMO_JANELAS = 20;
@@ -26,6 +28,7 @@ export class GerenciadorDeJanelas implements ExibicaoDeTranscricao {
   private container: HTMLElement | null = null;
   private ouvintesFechar: Array<(idAudio: string) => void> = [];
   private ouvintesReexecutar: Array<(idAudio: string) => void> = [];
+  private ultimoFoco = 0;
 
   private readonly cronometro: CronometroDeEspera;
 
@@ -120,7 +123,8 @@ export class GerenciadorDeJanelas implements ExibicaoDeTranscricao {
       estado: estadoInicial,
       direcao,
       ancora: ancoraAtual,
-      seta: null
+      seta: null,
+      foco: ++this.ultimoFoco
     });
 
     // A janela recebe a posição antes de entrar na página e só depois é medida: medida antes, ainda sem
@@ -162,9 +166,14 @@ export class GerenciadorDeJanelas implements ExibicaoDeTranscricao {
     }
   }
 
+  // O clique no ícone de um áudio com janela aberta chega aqui: no modo abaixo, em que só a janela de foco
+  // mais recente fica à vista, ela volta e a anterior se oculta (BUG-20261004-TTLJ)
   destacar(idAudio: string): void {
     const reg = this.janelas.get(idAudio);
-    if (reg && reg.elemento) {
+    if (!reg) return;
+    reg.foco = ++this.ultimoFoco;
+    this.recalcularPosicoes();
+    if (reg.elemento) {
       aplicarDestaqueJanela(reg.elemento);
     }
   }
@@ -179,6 +188,11 @@ export class GerenciadorDeJanelas implements ExibicaoDeTranscricao {
     }
     reg.seta?.remove();
     this.janelas.delete(idAudio);
+    // Fechar a janela de foco não põe outra à vista no modo abaixo: as demais ficam sem foco até o próximo
+    // destaque (BUG-20261004-TTLJ)
+    if (reg.foco === this.ultimoFoco) {
+      for (const outra of this.janelas.values()) outra.foco = 0;
+    }
 
     for (const ouvinte of this.ouvintesFechar) {
       ouvinte(idAudio);
@@ -208,7 +222,8 @@ export class GerenciadorDeJanelas implements ExibicaoDeTranscricao {
       direcao: reg.direcao,
       largura: 320,
       altura: reg.elemento?.isConnected ? reg.elemento.offsetHeight : ALTURA_SEM_MEDIDA,
-      ancora: reg.ancora
+      ancora: reg.ancora,
+      foco: reg.foco
     }));
 
     const faixaVertical = area?.topo !== undefined && area.fundo !== undefined ? { topo: area.topo, fundo: area.fundo } : undefined;

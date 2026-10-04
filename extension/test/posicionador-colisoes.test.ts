@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { calcularPosicoesJanelas } from '../src/content/posicionador-colisoes.ts';
-import type { RequisicaoPosicionamento } from '../src/content/posicionador-colisoes.ts';
+import type { PosicaoCalculada, RequisicaoPosicionamento } from '../src/content/posicionador-colisoes.ts';
 
 test('calcularPosicoesJanelas posiciona janela ao lado da âncora em espaço suficiente', () => {
   const reqs: RequisicaoPosicionamento[] = [
@@ -393,4 +393,113 @@ test('calcularPosicoesJanelas deixa à vista todas as janelas do modo lateral, q
   const posicoes = calcularPosicoesJanelas(reqs, 1624, 551, MENSAGENS);
   assert.deepEqual(aVista(posicoes), ['Q1', 'Q2', 'Q3', 'Q4']);
   assert.deepEqual(ys(posicoes), [153, 300, 550, 697]);
+});
+
+// BUG-20261004-ME3Q: no modo lateral, com a área da conversa de 726 a 1118 px, a janela de um lado da conversa
+// fica sobre a coluna dos balões do outro e, mais alta que o próprio balão, desce sobre o balão seguinte do
+// outro lado e o corredor da seta dele; a camada das setas, atrás das janelas, esconde a ponta. Nenhuma janela
+// lateral à vista cobre o balão de outra janela à vista nem o corredor da seta dela: em conflito, fica à vista a
+// de foco mais recente. Geometria da rodada 3 da aceitação do TTLJ no WhatsApp Web: área da conversa de x = 496 a
+// 1440 (944 px), mensagens de y = 64 a 768, balões de 336 px, os enviados em x = 1047 e os recebidos em x = 558,
+// janelas da altura medida.
+const MENSAGENS_RODADA_3 = { topo: 64, fundo: 768 };
+
+function deUmLado(idAudio: string, direcao: 'recebido' | 'enviado', yBalao: number, alturaBalao: number, altura: number, foco: number): RequisicaoPosicionamento {
+  return {
+    idAudio,
+    direcao,
+    largura: 320,
+    altura,
+    foco,
+    ancora: { idAudio, x: direcao === 'enviado' ? 1047 : 558, y: yBalao, largura: 336, altura: alturaBalao, visivel: true }
+  };
+}
+
+// O enviado 5, em parte sob o cabeçalho, e os recebidos 6 a 9, com os focos dados
+const rodada3 = (focos: number[]) => [
+  deUmLado('5', 'enviado', 56, 89, 232, focos[0]!),
+  deUmLado('6', 'recebido', 227, 89, 242, focos[1]!),
+  deUmLado('7', 'recebido', 344, 117, 232, focos[2]!),
+  deUmLado('8', 'recebido', 489, 116, 232, focos[3]!),
+  deUmLado('9', 'recebido', 633, 89, 171, focos[4]!)
+];
+
+// Enviado, recebido e enviado, a 28 px um do outro, sem folga entre os balões
+const alternada = (focos: number[]) => [
+  deUmLado('E1', 'enviado', 120, 89, 232, focos[0]!),
+  deUmLado('R2', 'recebido', 237, 89, 232, focos[1]!),
+  deUmLado('E3', 'enviado', 354, 89, 232, focos[2]!)
+];
+
+const naAreaLarga = (reqs: RequisicaoPosicionamento[]) => calcularPosicoesJanelas(reqs, 1440, 496, MENSAGENS_RODADA_3);
+
+interface Caixa {
+  x: number;
+  y: number;
+  fimX: number;
+  fimY: number;
+}
+
+const sobrepoem = (a: Caixa, b: Caixa) => a.x < b.fimX && b.x < a.fimX && a.y < b.fimY && b.y < a.fimY;
+
+// Nenhuma janela à vista cobre o que liga outra janela à vista ao seu balão: o balão, na parte dele dentro da
+// área das mensagens, e o corredor da seta, da cauda à ponta, com a base de 7 px do triângulo
+function semCobertura(reqs: RequisicaoPosicionamento[], posicoes: PosicaoCalculada[]): void {
+  const porId = new Map(reqs.map((req) => [req.idAudio, req]));
+  const visiveis = posicoes.filter((p) => p.visivel);
+  assert.ok(visiveis.length > 0, 'nenhuma janela à vista');
+  for (const p of visiveis) {
+    const ancora = porId.get(p.idAudio)!.ancora!;
+    const seta = p.seta!;
+    const balao = { x: ancora.x, y: Math.max(ancora.y, 64), fimX: ancora.x + ancora.largura, fimY: Math.min(ancora.y + ancora.altura, 768) };
+    const corredor = {
+      x: Math.min(seta.pontaX, seta.caudaX),
+      y: Math.min(seta.pontaY, seta.caudaY) - 3.5,
+      fimX: Math.max(seta.pontaX, seta.caudaX),
+      fimY: Math.max(seta.pontaY, seta.caudaY) + 3.5
+    };
+    for (const outra of visiveis.filter((o) => o !== p)) {
+      const janela = { x: outra.x, y: outra.y, fimX: outra.x + 320, fimY: outra.y + porId.get(outra.idAudio)!.altura };
+      assert.ok(!sobrepoem(janela, balao), `a janela ${outra.idAudio} cobre o balão de ${p.idAudio}: ${JSON.stringify({ janela, balao })}`);
+      assert.ok(!sobrepoem(janela, corredor), `a janela ${outra.idAudio} cobre a seta de ${p.idAudio}: ${JSON.stringify({ janela, seta })}`);
+    }
+  }
+}
+
+test('reprodução: no modo lateral, numa conversa com os dois lados, nenhuma janela à vista cobre o balão de outra à vista nem a seta dela (critérios 1 e 2 do ME3Q)', () => {
+  // Abertos na ordem dos balões
+  const reqs = rodada3([1, 2, 3, 4, 5]);
+  semCobertura(reqs, naAreaLarga(reqs));
+});
+
+test('reprodução: numa conversa alternada sem folga, nenhuma janela à vista cobre o balão de outra à vista nem a seta dela (ME3Q)', () => {
+  const reqs = alternada([1, 2, 3]);
+  semCobertura(reqs, naAreaLarga(reqs));
+});
+
+test('calcularPosicoesJanelas deixa à vista, no conflito lateral, a janela de foco mais recente, no topo do próprio balão, e oculta a outra sem seta; com o foco invertido, a escolha se inverte (ME3Q)', () => {
+  // Só os áudios 5 e 6: a janela do enviado desceria sobre o balão do recebido
+  const seis = naAreaLarga(rodada3([1, 2, 0, 0, 0]).slice(0, 2));
+  assert.deepEqual(aVista(seis), ['6']);
+  const j6 = seis.find((p) => p.idAudio === '6')!;
+  // No topo do balão, com a seta reta até o centro dele: 227 + 89 / 2 = 271,5
+  assert.deepEqual([j6.x, j6.y, j6.seta!.caudaY, j6.seta!.pontaY], [902, 227, 271.5, 271.5]);
+  assert.equal(seis.find((p) => p.idAudio === '5')!.seta, null);
+
+  const cinco = naAreaLarga(rodada3([2, 1, 0, 0, 0]).slice(0, 2));
+  assert.deepEqual(aVista(cinco), ['5']);
+  // Com o balão em parte sob o cabeçalho, a janela começa no topo da área
+  const j5 = cinco.find((p) => p.idAudio === '5')!;
+  assert.deepEqual([j5.x, j5.y], [719, 64]);
+  assert.equal(cinco.find((p) => p.idAudio === '6')!.seta, null);
+});
+
+test('calcularPosicoesJanelas deixa à vista, no conflito lateral, a janela de foco mais antigo que não conflita com as de foco maior (ME3Q)', () => {
+  // E3, a de foco mais recente, fica; R2 cobriria o balão dela e cede; E1, do mesmo lado de E3, não conflita com ela
+  assert.deepEqual(aVista(naAreaLarga(alternada([1, 2, 3]))), ['E1', 'E3']);
+});
+
+test('calcularPosicoesJanelas deixa à vista, no conflito lateral entre janelas sem foco, a de cima (ME3Q)', () => {
+  // Depois de fechar a janela de foco, as demais ficam sem foco (BUG-20261004-TTLJ)
+  assert.deepEqual(aVista(naAreaLarga(rodada3([0, 0, 0, 0, 0]).slice(0, 2))), ['5']);
 });

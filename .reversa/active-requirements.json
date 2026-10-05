@@ -1,9 +1,9 @@
 {
   "schema-version": 1,
-  "feature-dir": "_reversa_forward/006-cronometro-transcricao",
-  "feature-id": "006",
-  "short-name": "cronometro-transcricao",
-  "started-at": "2026-10-01T17:46:16-03:00",
+  "feature-dir": "_reversa_forward/007-motor-whisper-navegador",
+  "feature-id": "007",
+  "short-name": "motor-whisper-navegador",
+  "started-at": "2026-10-04T19:45:17-03:00",
   "current-stage": "requirements",
   "stages-completed": [],
   "paused-features": []

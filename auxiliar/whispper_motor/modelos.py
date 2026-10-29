@@ -9,7 +9,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-ARQUIVOS_DE_PESOS = ("weights.safetensors", "weights.npz")
+# Os pesos do mlx-whisper, no Mac, e os do CTranslate2, que o faster-whisper lê no Windows.
+ARQUIVOS_DE_PESOS = ("weights.safetensors", "weights.npz", "model.bin")
 
 
 class ModeloNaoEncontrado(Exception):

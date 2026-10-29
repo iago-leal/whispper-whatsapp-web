@@ -1,0 +1,3 @@
+# O cmd.exe exige CRLF nos scripts em lote: com LF, os rótulos e os saltos falham.
+*.cmd text eol=crlf
+*.bat text eol=crlf

@@ -1,7 +1,7 @@
 import pytest
 
 from whispper_motor import VERSAO_APP
-from whispper_motor.configuracao import Configuracao
+from whispper_motor.configuracao import MODELO_PADRAO, Configuracao
 from whispper_motor.modelos import ModeloNaoEncontrado
 
 from .suporte.falsos import (
@@ -53,7 +53,7 @@ def test_carregando_e_depois_pronto(servidor, fabrica, coletor):
         "tipo": "estado",
         "protocolo": 1,
         "versaoApp": VERSAO_APP,
-        "modelo": "mlx-community/whisper-large-v3-turbo",
+        "modelo": MODELO_PADRAO,
         "estado": "carregando",
         "motivo": None,
     }
@@ -147,7 +147,7 @@ def test_modelo_ausente_deixa_o_motor_indisponivel(servidor, coletor):
         "tipo": "estado",
         "protocolo": 1,
         "versaoApp": None,
-        "modelo": "mlx-community/whisper-large-v3-turbo",
+        "modelo": MODELO_PADRAO,
         "estado": "erro",
         "motivo": "modelo não encontrado",
     }

@@ -29,6 +29,7 @@ _PASTA_TEMPORARIA_DE_HOST = re.compile(re.escape(PREFIXO_TEMPORARIO) + r"(\d+)-[
 def principal(argv: list[str] | None = None, fabrica_trabalhador=None) -> int:
     plataforma.preparar_entrada_e_saida_binarias()
     saida = _proteger_saida_padrao()
+    entrada = _proteger_entrada_padrao()
     pasta = Path(os.environ.get("WHISPPER_MOTOR_PASTA") or plataforma.pasta_padrao_do_app()).expanduser()
     _desviar_saida_de_erro(pasta / "diagnostico.log")
 
@@ -74,7 +75,6 @@ def principal(argv: list[str] | None = None, fabrica_trabalhador=None) -> int:
     codigo = 0
     try:
         servidor.iniciar()
-        entrada = sys.stdin.buffer
         while (bruto := protocolo.ler_mensagem(entrada)) is not None:
             servidor.receber(bruto)
     except protocolo.EnquadramentoInvalido:
@@ -155,17 +155,43 @@ def _proteger_saida_padrao():
     escrita acidental, do Python, de biblioteca nativa ou de processo filho, alcance o Chrome.
     """
     privado = os.dup(1)
-    os.dup2(2, 1)
+    try:
+        os.dup2(2, 1)
+    except OSError:
+        # No Windows, o navegador pode iniciar o host sem saída de erro válida.
+        nulo = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(nulo, 1)
+        os.close(nulo)
     return os.fdopen(privado, "wb")
+
+
+def _proteger_entrada_padrao():
+    """O protocolo lê de um duplicado privado da entrada padrão, e o descritor 0 passa a
+    apontar para o nulo.
+
+    No Windows, um filho criado sem herdar descritores, como o trabalhador do
+    multiprocessing, ainda recebe a entrada padrão do host e a examina ao iniciar; o exame
+    espera a leitura pendente do host, que só termina com a próxima mensagem da extensão.
+    Sem a troca, o trabalhador recriado depois da ociosidade ou de uma queda ficaria parado
+    até lá. No macOS, onde o trabalhador já põe o nulo na própria entrada, a troca é inócua.
+    """
+    privado = os.dup(0)
+    nulo = os.open(os.devnull, os.O_RDONLY)
+    os.dup2(nulo, 0)
+    os.close(nulo)
+    return os.fdopen(privado, "rb")
 
 
 def _desviar_saida_de_erro(caminho: Path) -> None:
     """Aponta os descritores 1 e 2 para o `diagnostico.log`, podado ao iniciar (DT-05).
 
     Sem a pasta do aplicativo, a saída de erro herdada fica como está: o host não cria
-    a pasta, para não deixar resíduo depois da desinstalação.
+    a pasta, para não deixar resíduo depois da desinstalação. O caminho vai ao ambiente,
+    de onde o trabalhador do Windows, que não herda os descritores, o lê. No Windows, o
+    Python ganha fluxos novos sobre os descritores desviados, porque os herdados seguem a
+    página de código do sistema; e também onde o host nasceu sem saída padrão ou de erro.
     """
-    from .registro import abrir_diagnostico
+    from .registro import VARIAVEL_DO_DIAGNOSTICO, abrir_diagnostico, fluxo_do_diagnostico
 
     try:
         descritor = abrir_diagnostico(caminho)
@@ -174,6 +200,11 @@ def _desviar_saida_de_erro(caminho: Path) -> None:
     os.dup2(descritor, 2)
     os.dup2(descritor, 1)
     os.close(descritor)
+    os.environ[VARIAVEL_DO_DIAGNOSTICO] = str(caminho)
+    if plataforma.WINDOWS or sys.stdout is None:
+        sys.stdout = fluxo_do_diagnostico(1)
+    if plataforma.WINDOWS or sys.stderr is None:
+        sys.stderr = fluxo_do_diagnostico(2)
 
 
 def _ao_receber_sigterm(sinal, quadro):

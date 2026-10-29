@@ -1,10 +1,13 @@
 """Instalação, desinstalação e diagnóstico do aplicativo auxiliar (RF-16, DT-07, DT-08).
 
-Chamado pelo `auxiliar/motor.sh`, que escolhe o interpretador em que o mlx-whisper
-está instalado: `python -m whispper_motor.instalacao instalar | desinstalar | diagnosticar`.
+Chamado pelo `auxiliar/motor.sh` no Mac e pelo `auxiliar\\motor.cmd` no Windows, que
+escolhem o interpretador em que o motor está instalado:
+`python -m whispper_motor.instalacao instalar | desinstalar | diagnosticar`.
 
-Nada aqui acessa a rede: o modelo precisa estar no cache local e, se faltar, a
-recusa mostra como baixá-lo por fora. A desinstalação não toca no cache de modelos.
+No Mac, o registro no Chrome é um manifesto na pasta dele; no Windows, o manifesto fica
+na pasta do aplicativo, e o Chrome e o Brave o encontram por uma entrada no registro do
+usuário (D-13). Nada aqui acessa a rede: o modelo precisa estar no cache local e, se
+faltar, a recusa mostra como baixá-lo por fora. A desinstalação não toca no cache de modelos.
 """
 
 from __future__ import annotations
@@ -15,6 +18,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import shutil
 import struct
 import subprocess
@@ -26,11 +30,12 @@ from pathlib import Path
 from typing import NamedTuple
 
 from . import NOME_DO_HOST, PROTOCOLO, configuracao, modelos, plataforma, protocolo
-from .__main__ import ENTRADA_CORROMPIDA, ORIGEM_RECUSADA, PASTA_DE_HOSTS
+from .__main__ import ENTRADA_CORROMPIDA, ORIGEM_RECUSADA, PASTA_DE_HOSTS, varrer_temporarios_orfaos
 from .configuracao import Configuracao, ConfiguracaoInvalida
 
 PYTHON_MINIMO = (3, 11)
-NOME_DO_LANCADOR = "whispper-motor"
+NOME_DO_LANCADOR = "whispper-motor.bat" if plataforma.WINDOWS else "whispper-motor"
+MOTOR = "motor.cmd" if plataforma.WINDOWS else "motor.sh"
 DESCRICAO_DO_HOST = "Motor de transcrição local do whispper-whatsapp-web"
 MANIFESTO_DA_EXTENSAO = Path(__file__).resolve().parents[2] / "extension" / "manifest.json"
 
@@ -40,6 +45,21 @@ INTERVALO_ENTRE_VERIFICACOES_S = 0.5
 ESPERA_DO_ENCERRAMENTO_S = 15.0
 # O host encerra o trabalhador em até 0,5 s e o despachante em até 5 s depois do SIGTERM.
 ESPERA_DOS_HOSTS_S = 6.0
+# No Windows, um arquivo aberto por um processo recém-encerrado leva um instante a ser solto.
+TENTATIVAS_DE_APAGAR = 10
+INTERVALO_ENTRE_TENTATIVAS_S = 0.5
+
+# Registro do Windows, sob HKEY_CURRENT_USER: a raiz é injetável para os testes (D-20).
+RAIZ_DO_REGISTRO = "Software"
+NAVEGADORES_DO_WINDOWS = (
+    ("Chrome", r"Google\Chrome\NativeMessagingHosts"),
+    ("Brave", r"BraveSoftware\Brave-Browser\NativeMessagingHosts"),
+)
+# O cmd.exe interpreta estes caracteres mesmo entre aspas: o lançador recusa, em vez de escapar (D-14).
+CARACTERES_DO_CMD = "%^&|<>!"
+FFMPEG_PELO_WINGET = "winget install --id Gyan.FFmpeg --exact --source winget"
+FASTER_WHISPER = '"faster-whisper>=1.2,<1.3"'
+BIBLIOTECAS_DA_NVIDIA = 'nvidia-cublas-cu12 "nvidia-cudnn-cu12>=9,<10"'
 
 _HEXADECIMAL_PARA_LETRAS = str.maketrans("0123456789abcdef", "abcdefghijklmnop")
 
@@ -56,6 +76,10 @@ class Ambiente:
     ffmpeg: Path | None
     mlx_whisper: bool
     pasta_de_modelos: Path
+    faster_whisper: bool = False
+    placa_cuda: bool = False
+    bibliotecas_da_placa: bool = False
+    raiz_do_registro: str = RAIZ_DO_REGISTRO
 
 
 class Verificacao(NamedTuple):
@@ -79,8 +103,15 @@ def pasta_app(home: Path) -> Path:
 
 
 def caminho_manifesto_host(home: Path) -> Path:
+    if plataforma.WINDOWS:
+        return pasta_app(home) / f"{NOME_DO_HOST}.json"
     pasta = Path(home) / "Library" / "Application Support" / "Google" / "Chrome" / "NativeMessagingHosts"
     return pasta / f"{NOME_DO_HOST}.json"
+
+
+def chaves_do_registro(raiz: str = RAIZ_DO_REGISTRO) -> list[tuple[str, str]]:
+    """As entradas do host no registro do Windows, sob HKEY_CURRENT_USER: a do Chrome e a do Brave."""
+    return [(navegador, rf"{raiz}\{relativa}\{NOME_DO_HOST}") for navegador, relativa in NAVEGADORES_DO_WINDOWS]
 
 
 # Identificador da extensão (DT-12)
@@ -108,6 +139,15 @@ def detectar_ambiente(home: Path | None = None) -> Ambiente:
         existente = _configuracao_existente(home)
     except ConfiguracaoInvalida:
         existente = None
+    windows = {}
+    if plataforma.WINDOWS:
+        faster_whisper = _importa_faster_whisper()
+        placa = faster_whisper and _placas_cuda() > 0
+        windows = {
+            "faster_whisper": faster_whisper,
+            "placa_cuda": placa,
+            "bibliotecas_da_placa": placa and _bibliotecas_da_placa(),
+        }
     return Ambiente(
         home=home,
         python=Path(sys.executable),
@@ -115,31 +155,47 @@ def detectar_ambiente(home: Path | None = None) -> Ambiente:
         sistema=platform.system(),
         arquitetura=platform.machine(),
         ffmpeg=_detectar_ffmpeg(existente),
-        mlx_whisper=_importa_mlx_whisper(),
+        mlx_whisper=False if plataforma.WINDOWS else _importa_mlx_whisper(),
         pasta_de_modelos=existente.pasta_de_modelos if existente else _pasta_de_modelos_padrao(home),
+        **windows,
     )
 
 
 def conferir_prerequisitos(ambiente: Ambiente, modelo: str) -> list[Verificacao]:
+    """Os pré-requisitos do sistema do `ambiente`, e não da máquina que confere, um a um."""
     python = ambiente.python
-    versao = ".".join(map(str, ambiente.versao_python))
-    minimo = ".".join(map(str, PYTHON_MINIMO))
-    plataforma = f"{ambiente.sistema} {ambiente.arquitetura}"
+    sistema = f"{ambiente.sistema} {ambiente.arquitetura}"
+    if ambiente.sistema == "Windows":
+        return [
+            _item(
+                "Windows de 64 bits",
+                ambiente.arquitetura == "AMD64",
+                sistema,
+                f"é preciso o Windows de 64 bits num processador x86-64, e este sistema é {sistema}: "
+                "o faster-whisper e as bibliotecas da NVIDIA só existem para essa arquitetura",
+            ),
+            _conferir_python(ambiente),
+            _conferir_ffmpeg(ambiente.ffmpeg, f"instale-o com {FFMPEG_PELO_WINGET}"),
+            _item(
+                "faster-whisper",
+                ambiente.faster_whisper,
+                f"importável por {python}",
+                f"faster-whisper ausente: {python} não o importa; instale-o com "
+                f"& {_aspas_do_powershell(python)} -m pip install {FASTER_WHISPER} "
+                "ou defina WHISPPER_PYTHON com o Python em que ele está instalado",
+            ),
+            _conferir_modelo(ambiente, modelo),
+        ]
     return [
         _item(
             "Mac com Apple Silicon",
             (ambiente.sistema, ambiente.arquitetura) == ("Darwin", "arm64"),
-            plataforma,
-            f"é preciso um Mac com Apple Silicon, e este sistema é {plataforma}: "
+            sistema,
+            f"é preciso um Mac com Apple Silicon, e este sistema é {sistema}: "
             "o MLX só roda em macOS com processador Apple",
         ),
-        _item(
-            f"Python {minimo} ou superior",
-            ambiente.versao_python >= PYTHON_MINIMO,
-            f"{versao} em {python}",
-            f"é preciso Python {minimo} ou superior, e {python} é {versao}; defina WHISPPER_PYTHON com outro interpretador",
-        ),
-        _conferir_ffmpeg(ambiente.ffmpeg),
+        _conferir_python(ambiente),
+        _conferir_ffmpeg(ambiente.ffmpeg, "instale-o (por exemplo, com brew install ffmpeg)"),
         _item(
             "mlx-whisper",
             ambiente.mlx_whisper,
@@ -151,16 +207,33 @@ def conferir_prerequisitos(ambiente: Ambiente, modelo: str) -> list[Verificacao]
     ]
 
 
+def avisos_de_prerequisitos(ambiente: Ambiente) -> list[str]:
+    """O que não impede a instalação, mas a deixa mais lenta: no Windows, a placa e as bibliotecas dela (D-16)."""
+    if ambiente.sistema != "Windows":
+        return []
+    if not ambiente.placa_cuda:
+        return ["sem placa NVIDIA: o motor vai transcrever no processador, mais devagar que na placa"]
+    if not ambiente.bibliotecas_da_placa:
+        return [
+            "bibliotecas da placa ausentes: o motor vai transcrever no processador; para usar a placa, "
+            f"instale-as com & {_aspas_do_powershell(ambiente.python)} -m pip install {BIBLIOTECAS_DA_NVIDIA}"
+        ]
+    return []
+
+
 def verificar_prerequisitos(ambiente: Ambiente, modelo: str) -> list[str]:
     """As mensagens dos pré-requisitos que faltam; lista vazia quando tudo está presente."""
     return [item.detalhe for item in conferir_prerequisitos(ambiente, modelo) if not item.ok]
 
 
 def comando_de_download(ambiente: Ambiente, modelo: str) -> str:
-    prefixo = ""
-    if ambiente.pasta_de_modelos != _pasta_de_modelos_padrao(ambiente.home, respeitar_variaveis=False):
-        prefixo = f"HF_HUB_CACHE={_aspas(ambiente.pasta_de_modelos)} "
+    """O comando que baixa o modelo uma vez, fora do aplicativo: no sh do Mac ou no PowerShell do Windows."""
+    fora_do_padrao = ambiente.pasta_de_modelos != _pasta_de_modelos_padrao(ambiente.home, respeitar_variaveis=False)
     codigo = f"from huggingface_hub import snapshot_download; snapshot_download({modelo!r})"
+    if ambiente.sistema == "Windows":
+        prefixo = f"$env:HF_HUB_CACHE={_aspas_do_powershell(ambiente.pasta_de_modelos)}; " if fora_do_padrao else ""
+        return f'{prefixo}& {_aspas_do_powershell(ambiente.python)} -c "{codigo}"'
+    prefixo = f"HF_HUB_CACHE={_aspas(ambiente.pasta_de_modelos)} " if fora_do_padrao else ""
     return f'{prefixo}{_aspas(ambiente.python)} -c "{codigo}"'
 
 
@@ -168,10 +241,11 @@ def comando_de_download(ambiente: Ambiente, modelo: str) -> str:
 
 
 def instalar(ambiente: Ambiente, extensao_id: str, codigo: Path) -> Configuracao:
-    """Grava o código, a configuração, o lançador e o manifesto do host no Chrome.
+    """Grava o código, a configuração, o lançador e o manifesto do host, e o registra no navegador.
 
     Tudo é conferido antes do primeiro arquivo: faltando um pré-requisito, nada é
     gravado. Numa reinstalação, o modelo e a ociosidade escolhidos são preservados.
+    No Windows, as entradas do Chrome e do Brave no registro vêm por último (D-13).
     """
     pasta = pasta_app(ambiente.home)
     try:
@@ -182,6 +256,8 @@ def instalar(ambiente: Ambiente, extensao_id: str, codigo: Path) -> Configuracao
         ) from None
     modelo = existente.modelo if existente else configuracao.MODELO_PADRAO
     faltas = verificar_prerequisitos(ambiente, modelo)
+    if plataforma.WINDOWS:
+        faltas += _caminhos_recusados_pelo_cmd(pasta, ambiente.python)
     if faltas:
         raise PrerequisitosAusentes(faltas)
 
@@ -196,33 +272,49 @@ def instalar(ambiente: Ambiente, extensao_id: str, codigo: Path) -> Configuracao
     _copiar_codigo(Path(codigo), pasta / "whispper_motor")
     configuracao.gravar(config, pasta / "config.toml")
     lancador = pasta / NOME_DO_LANCADOR
-    _gravar(lancador, _texto_do_lancador(ambiente.python, pasta), modo=0o755)
-    # O manifesto vem por último: o Chrome só encontra o host quando ele já está completo.
+    if plataforma.WINDOWS:
+        # O cmd.exe lê o lançador na página de código OEM do console, e não em UTF-8.
+        _gravar(lancador, _texto_do_lancador_do_windows(ambiente.python, pasta), codificacao="oem", fim_de_linha="\r\n")
+    else:
+        _gravar(lancador, _texto_do_lancador(ambiente.python, pasta), modo=0o755)
+    # O registro vem por último: o navegador só encontra o host quando ele já está completo.
     manifesto = caminho_manifesto_host(ambiente.home)
     manifesto.parent.mkdir(parents=True, exist_ok=True)
     _gravar(manifesto, json.dumps(_manifesto_do_host(lancador, extensao_id), ensure_ascii=False, indent=2) + "\n")
+    if plataforma.WINDOWS:
+        for _, chave in chaves_do_registro(ambiente.raiz_do_registro):
+            _gravar_registro(chave, str(manifesto))
     return config
 
 
-def desinstalar(home: Path, hosts_encerrados: list[int] | None = None) -> list[Path]:
-    """Remove o manifesto do host e a pasta do aplicativo; devolve o que existia e foi removido.
+def desinstalar(
+    home: Path, hosts_encerrados: list[int] | None = None, *, raiz_do_registro: str = RAIZ_DO_REGISTRO
+) -> list[Path | str]:
+    """Remove o registro do host e a pasta do aplicativo; devolve o que existia e foi removido.
 
     Os hosts desta instalação em execução são encerrados antes que a pasta suma: sem
     isso, a extensão conectada seguiria vendo o motor "pronto", com o modelo na
-    memória (RF-16). Com `hosts_encerrados`, a lista recebe os PIDs deles.
+    memória (RF-16). Com `hosts_encerrados`, a lista recebe os PIDs deles. As pastas
+    temporárias de hosts derrubados à força, que no Windows não as apagam, saem também.
     """
-    removidos = []
-    # O manifesto sai primeiro, para que o Chrome deixe de lançar o host antes que o código suma.
-    manifesto = caminho_manifesto_host(home)
-    if manifesto.exists():
-        manifesto.unlink()
-        removidos.append(manifesto)
+    removidos: list[Path | str] = []
+    # O registro sai primeiro, para que o navegador deixe de lançar o host antes que o código suma.
+    if plataforma.WINDOWS:
+        for _, chave in chaves_do_registro(raiz_do_registro):
+            if _apagar_registro(chave):
+                removidos.append(rf"HKEY_CURRENT_USER\{chave}")
+    else:
+        manifesto = caminho_manifesto_host(home)
+        if manifesto.exists():
+            manifesto.unlink()
+            removidos.append(manifesto)
     pasta = pasta_app(home)
     encerrados = encerrar_hosts(pasta)
     if hosts_encerrados is not None:
         hosts_encerrados.extend(encerrados)
+    varrer_temporarios_orfaos(Path(tempfile.gettempdir()))
     if pasta.exists():
-        shutil.rmtree(pasta)
+        _apagar_pasta(pasta)
         removidos.append(pasta)
     return removidos
 
@@ -230,14 +322,18 @@ def desinstalar(home: Path, hosts_encerrados: list[int] | None = None) -> list[P
 def encerrar_hosts(pasta: Path) -> list[int]:
     """Encerra os hosts vivos registrados em `<pasta>/hosts` e devolve os PIDs deles.
 
-    Cada host recebe SIGTERM, que ele converte em encerramento limpo, com o
-    trabalhador junto; o que não sair no prazo é morto com os filhos.
+    No Mac, cada host recebe SIGTERM, que ele converte em encerramento limpo, com o
+    trabalhador junto; o que não sair no prazo é morto com os filhos. No Windows, sem
+    sinal que o host possa tratar, cada um é encerrado à força depois de conferido
+    contra o próprio registro, e o job dele leva os filhos (D-17).
     """
     registros = pasta / PASTA_DE_HOSTS
     try:
         pids = sorted(int(registro.name) for registro in registros.iterdir() if registro.name.isdigit())
     except OSError:
         return []
+    if plataforma.WINDOWS:
+        return [pid for pid in pids if _encerrar_registrado(registros / str(pid), pid)]
     vivos = [pid for pid in pids if plataforma.host_vivo(pid)]
     for pid in vivos:
         plataforma.pedir_encerramento(pid)
@@ -255,23 +351,28 @@ def encerrar_hosts(pasta: Path) -> list[int]:
 # Diagnóstico
 
 
-def diagnosticar(home: Path, extensao_id: str, *, aguardar_pronto_s: float = 0.0) -> list[Verificacao]:
-    """Confere a instalação como o Chrome a encontrará e termina falando com o próprio host.
+def diagnosticar(
+    home: Path, extensao_id: str, *, aguardar_pronto_s: float = 0.0, raiz_do_registro: str = RAIZ_DO_REGISTRO
+) -> list[Verificacao]:
+    """Confere a instalação como o navegador a encontrará e termina falando com o próprio host.
 
     O host é lançado pelo caminho do manifesto, com a origem que ele autoriza. Com
     `aguardar_pronto_s`, a verificação se repete até o modelo sair de "carregando";
-    sem ele, basta a primeira resposta sem erro.
+    sem ele, basta a primeira resposta sem erro. No Windows, conferem-se antes as
+    entradas do Chrome e do Brave no registro.
     """
     home = Path(home)
     esperada = f"chrome-extension://{extensao_id}/"
+    registros = _conferir_registros(home, raiz_do_registro) if plataforma.WINDOWS else []
     manifesto, sobre_o_manifesto = _ler_manifesto_do_host(caminho_manifesto_host(home))
     if manifesto is None:
         return [
+            *registros,
             Verificacao("manifesto do host", False, sobre_o_manifesto),
             Verificacao("lançador", False, "sem manifesto do host"),
             Verificacao("allowed_origins", False, "sem manifesto do host"),
             _conferir_configuracao(home, None),
-            Verificacao("host", False, "não lançado: sem manifesto do host; instale com motor.sh instalar"),
+            Verificacao("host", False, f"não lançado: sem manifesto do host; instale com {MOTOR} instalar"),
         ]
 
     lancador = Path(manifesto["path"])
@@ -283,6 +384,7 @@ def diagnosticar(home: Path, extensao_id: str, *, aguardar_pronto_s: float = 0.0
     else:
         host = Verificacao("host", False, "não lançado: falta o lançador ou uma origem autorizada")
     return [
+        *registros,
         Verificacao("manifesto do host", True, sobre_o_manifesto),
         _item("lançador", lancador_ok, str(lancador), f"{lancador} ausente ou sem permissão de execução"),
         _item(
@@ -290,7 +392,7 @@ def diagnosticar(home: Path, extensao_id: str, *, aguardar_pronto_s: float = 0.0
             origens == [esperada],
             esperada,
             f"o manifesto autoriza {', '.join(origens) or 'nenhuma origem'}, e a extensão é {esperada}; "
-            "reinstale com motor.sh instalar",
+            f"reinstale com {MOTOR} instalar",
         ),
         _conferir_configuracao(home, autorizada),
         host,
@@ -298,17 +400,26 @@ def diagnosticar(home: Path, extensao_id: str, *, aguardar_pronto_s: float = 0.0
 
 
 def verificar_host(lancador: Path, origem: str, home: Path, aguardar_pronto_s: float = 0.0) -> Verificacao:
-    """Lança o host como o Chrome o lança e lhe pede o estado pelo protocolo 1.
+    """Lança o host como o navegador o lança e lhe pede o estado pelo protocolo 1.
 
-    Como no Chrome: pelo lançador, com a origem como único argumento, na pasta do
-    lançador, com o PATH mínimo dos aplicativos do macOS e mensagens precedidas de
-    4 bytes de tamanho. O fim da entrada, como a porta fechada, deve encerrá-lo com 0.
+    Como no Chrome do macOS: pelo lançador, com a origem como único argumento, na pasta
+    do lançador, com o PATH mínimo dos aplicativos e mensagens precedidas de 4 bytes de
+    tamanho. No Windows, pelo `cmd.exe`, com o `--parent-window` depois da origem e o
+    ambiente de quem diagnostica. O fim da entrada, como a porta fechada, deve encerrá-lo
+    com 0. No estado pronto, mostra o dispositivo que o host anotou no diagnóstico (D-18).
     """
-    ambiente = {"HOME": str(home), "PATH": PATH_DO_CHROME, "TMPDIR": tempfile.gettempdir()}
+    if plataforma.WINDOWS:
+        comando = f'cmd.exe /d /s /c ""{lancador}" {origem} --parent-window=0"'
+        ambiente = None
+    else:
+        comando = [str(lancador), origem]
+        ambiente = {"HOME": str(home), "PATH": PATH_DO_CHROME, "TMPDIR": tempfile.gettempdir()}
+    log = pasta_app(home) / "diagnostico.log"
+    desde = _tamanho(log)
     with tempfile.TemporaryFile() as saida_de_erro:
         try:
             processo = subprocess.Popen(
-                [str(lancador), origem],
+                comando,
                 cwd=lancador.parent,
                 env=ambiente,
                 stdin=subprocess.PIPE,
@@ -352,11 +463,9 @@ def verificar_host(lancador: Path, origem: str, home: Path, aguardar_pronto_s: f
     if codigo != 0:
         como = f"código {codigo}" if codigo is not None else f"não saiu em {ESPERA_DO_ENCERRAMENTO_S:.0f} s"
         return Verificacao("host", False, f"respondeu {respondeu}, mas não encerrou limpo no fim da entrada ({como})")
-    return Verificacao(
-        "host",
-        True,
-        f"respondeu {respondeu} em {decorrido:.1f} s (versão {resposta.get('versaoApp')}, modelo {resposta.get('modelo')})",
-    )
+    detalhe = f"respondeu {respondeu} em {decorrido:.1f} s (versão {resposta.get('versaoApp')}, modelo {resposta.get('modelo')})"
+    dispositivo = _dispositivo_no_diagnostico(log, desde) if resposta["estado"] == "pronto" else None
+    return Verificacao("host", True, f"{detalhe}; {dispositivo}" if dispositivo else detalhe)
 
 
 # Apoio
@@ -366,9 +475,21 @@ def _item(nome: str, ok: bool, sucesso: str, falta: str) -> Verificacao:
     return Verificacao(nome, ok, sucesso if ok else falta)
 
 
-def _conferir_ffmpeg(ffmpeg: Path | None) -> Verificacao:
+def _conferir_python(ambiente: Ambiente) -> Verificacao:
+    versao = ".".join(map(str, ambiente.versao_python))
+    minimo = ".".join(map(str, PYTHON_MINIMO))
+    return _item(
+        f"Python {minimo} ou superior",
+        ambiente.versao_python >= PYTHON_MINIMO,
+        f"{versao} em {ambiente.python}",
+        f"é preciso Python {minimo} ou superior, e {ambiente.python} é {versao}; "
+        "defina WHISPPER_PYTHON com outro interpretador",
+    )
+
+
+def _conferir_ffmpeg(ffmpeg: Path | None, como_instalar: str) -> Verificacao:
     if ffmpeg is None:
-        return Verificacao("ffmpeg", False, "ffmpeg ausente: instale-o (por exemplo, com brew install ffmpeg) e instale de novo")
+        return Verificacao("ffmpeg", False, f"ffmpeg ausente: {como_instalar} e instale de novo")
     if not _executavel(ffmpeg):
         return Verificacao("ffmpeg", False, f"ffmpeg ausente: {ffmpeg} não é um executável")
     return Verificacao("ffmpeg", True, str(ffmpeg))
@@ -379,7 +500,8 @@ def _conferir_modelo(ambiente: Ambiente, modelo: str) -> Verificacao:
         snapshot = modelos.resolver(modelo, ambiente.pasta_de_modelos)
     except modelos.ModeloNaoEncontrado:
         if Path(modelo).expanduser().is_absolute():
-            falta = f"modelo não encontrado: {modelo} não tem config.json e os pesos (weights.safetensors ou weights.npz)"
+            *primeiros, ultimo = modelos.ARQUIVOS_DE_PESOS
+            falta = f"modelo não encontrado: {modelo} não tem config.json e os pesos ({', '.join(primeiros)} ou {ultimo})"
         else:
             falta = (
                 f"modelo não encontrado: {modelo} não está em {ambiente.pasta_de_modelos}. "
@@ -404,7 +526,7 @@ def _conferir_configuracao(home: Path, origem_autorizada: str | None) -> Verific
             "configuração",
             False,
             f"o extensao_id da configuração ({config.extensao_id or 'ausente'}) não corresponde à origem "
-            "autorizada no manifesto, e o host recusaria o Chrome; reinstale com motor.sh instalar",
+            f"autorizada no manifesto, e o host recusaria o navegador; reinstale com {MOTOR} instalar",
         )
     return Verificacao("configuração", True, f"{caminho}, modelo {config.modelo}")
 
@@ -441,12 +563,66 @@ def _importa_mlx_whisper() -> bool:
     return True
 
 
+def _importa_faster_whisper() -> bool:
+    from .trabalhador import registrar_bibliotecas_da_nvidia
+
+    # As DLLs da NVIDIA ao alcance do CTranslate2 antes de importá-lo, como no trabalhador.
+    registrar_bibliotecas_da_nvidia()
+    try:
+        import faster_whisper  # noqa: F401
+    except Exception:  # noqa: BLE001 - instalação quebrada conta como ausente
+        return False
+    return True
+
+
+def _placas_cuda() -> int:
+    try:
+        import ctranslate2
+
+        return ctranslate2.get_cuda_device_count()
+    except Exception:  # noqa: BLE001 - driver ausente ou quebrado conta como sem placa
+        return 0
+
+
+def _bibliotecas_da_placa() -> bool:
+    from .trabalhador import bibliotecas_da_placa_presentes
+
+    return bibliotecas_da_placa_presentes()
+
+
 def _executavel(caminho: Path) -> bool:
     return Path(caminho).is_file() and os.access(caminho, os.X_OK)
 
 
 def _aspas(valor) -> str:
     return "'" + str(valor).replace("'", "'\\''") + "'"
+
+
+def _aspas_do_powershell(valor) -> str:
+    # Entre aspas simples, o PowerShell não interpreta nada; a própria aspa se escreve dobrada.
+    return "'" + str(valor).replace("'", "''") + "'"
+
+
+def _caminhos_recusados_pelo_cmd(pasta: Path, python: Path) -> list[str]:
+    """Os caminhos que o lançador `.bat` não representaria com segurança (D-14)."""
+    faltas = []
+    for caminho in (pasta, python):
+        texto = str(caminho)
+        especiais = sorted({caractere for caractere in texto if caractere in CARACTERES_DO_CMD})
+        if especiais:
+            faltas.append(
+                f"o caminho {texto} tem {' '.join(especiais)}, que o cmd.exe interpreta no lançador: "
+                "use uma pasta e um Python sem esses caracteres"
+            )
+            continue
+        try:
+            texto.encode("oem")
+        except UnicodeEncodeError:
+            faltas.append(
+                f"o caminho {texto} tem caracteres que o cmd.exe não representa na página de código do console: "
+                "use uma pasta e um Python sem eles"
+            )
+    return faltas
 
 
 def _copiar_codigo(origem: Path, destino: Path) -> None:
@@ -458,11 +634,127 @@ def _copiar_codigo(origem: Path, destino: Path) -> None:
     novo.rename(destino)
 
 
-def _gravar(caminho: Path, texto: str, modo: int = 0o644) -> None:
+def _gravar(
+    caminho: Path, texto: str, modo: int = 0o644, *, codificacao: str = "utf-8", fim_de_linha: str | None = None
+) -> None:
     temporario = caminho.with_name(caminho.name + ".tmp")
-    temporario.write_text(texto, encoding="utf-8")
+    temporario.write_text(texto, encoding=codificacao, newline=fim_de_linha)
     temporario.chmod(modo)
     temporario.replace(caminho)
+
+
+def _apagar_pasta(pasta: Path) -> None:
+    for tentativa in range(TENTATIVAS_DE_APAGAR):
+        try:
+            shutil.rmtree(pasta)
+            return
+        except FileNotFoundError:
+            return
+        except OSError:
+            if tentativa == TENTATIVAS_DE_APAGAR - 1:
+                raise
+            time.sleep(INTERVALO_ENTRE_TENTATIVAS_S)
+
+
+def _gravar_registro(chave: str, valor: str) -> None:
+    """Grava `valor` como valor padrão de `HKEY_CURRENT_USER\\<chave>`, criando as chaves do caminho."""
+    import winreg
+
+    with winreg.CreateKey(winreg.HKEY_CURRENT_USER, chave) as aberta:
+        winreg.SetValueEx(aberta, "", 0, winreg.REG_SZ, valor)
+
+
+def _ler_registro(chave: str) -> str | None:
+    import winreg
+
+    try:
+        return winreg.QueryValue(winreg.HKEY_CURRENT_USER, chave)
+    except FileNotFoundError:
+        return None
+
+
+def _apagar_registro(chave: str) -> bool:
+    """Apaga só a subchave do host, nunca a `NativeMessagingHosts`, que guarda os de outros aplicativos."""
+    import winreg
+
+    try:
+        winreg.DeleteKey(winreg.HKEY_CURRENT_USER, chave)
+    except FileNotFoundError:
+        return False
+    return True
+
+
+def _conferir_registros(home: Path, raiz: str) -> list[Verificacao]:
+    esperado = caminho_manifesto_host(home)
+    verificacoes = []
+    for navegador, chave in chaves_do_registro(raiz):
+        nome, completa = f"registro no {navegador}", rf"HKEY_CURRENT_USER\{chave}"
+        valor = _ler_registro(chave)
+        if valor is None:
+            detalhe = f"{completa} ausente, e o {navegador} não encontra o host; reinstale com {MOTOR} instalar"
+            verificacoes.append(Verificacao(nome, False, detalhe))
+        elif Path(valor) != esperado:
+            detalhe = f"{completa} aponta para {valor}, e não para {esperado}; reinstale com {MOTOR} instalar"
+            verificacoes.append(Verificacao(nome, False, detalhe))
+        else:
+            verificacoes.append(Verificacao(nome, True, completa))
+    return verificacoes
+
+
+def _encerrar_registrado(registro: Path, pid: int) -> bool:
+    try:
+        registrado_em = registro.stat().st_mtime
+    except OSError:
+        return False
+    if not plataforma.encerrar_conferido(pid, registrado_em):
+        return False
+    # Encerrado à força, o host não apaga o próprio registro.
+    registro.unlink(missing_ok=True)
+    return True
+
+
+def _tamanho(caminho: Path) -> int:
+    try:
+        return caminho.stat().st_size
+    except OSError:
+        return 0
+
+
+# A linha que o trabalhador manda ao diagnóstico quando o modelo carrega (D-05).
+_LINHA_DO_DISPOSITIVO = re.compile(r"\S+ (?:info|aviso) (modelo carregado (?:na placa de vídeo|no processador: .+))")
+
+
+def _dispositivo_no_diagnostico(log: Path, desde: int) -> str | None:
+    """O dispositivo que o host lançado pelo diagnóstico anotou, nas linhas escritas depois de `desde`.
+
+    Se o host podou o diagnóstico ao iniciar, ele ficou menor que `desde`, e vale o que
+    restou; a última linha de dispositivo é a do host que acabou de carregar.
+    """
+    try:
+        with log.open("rb") as arquivo:
+            tamanho = arquivo.seek(0, os.SEEK_END)
+            arquivo.seek(desde if desde <= tamanho else 0)
+            texto = arquivo.read().decode("utf-8", "replace")
+    except OSError:
+        return None
+    encontrados = [casamento[1] for linha in texto.splitlines() if (casamento := _LINHA_DO_DISPOSITIVO.fullmatch(linha.strip()))]
+    return encontrados[-1] if encontrados else None
+
+
+def _texto_do_lancador_do_windows(python: Path, pasta: Path) -> str:
+    # As mesmas variáveis do lançador do Mac; o PYTHONUTF8 fixa o UTF-8 que o macOS já usa.
+    linhas = [
+        "@echo off",
+        "rem Lançador do host de Native Messaging do whispper-whatsapp-web, gravado por motor.cmd instalar.",
+        'set "HF_HUB_OFFLINE=1"',
+        'set "HF_HUB_DISABLE_TELEMETRY=1"',
+        f'set "WHISPPER_MOTOR_PASTA={pasta}"',
+        f'set "PYTHONPATH={pasta}"',
+        'set "PYTHONSAFEPATH=1"',
+        'set "PYTHONUTF8=1"',
+        f'"{python}" -m whispper_motor %*',
+    ]
+    return "\n".join(linhas) + "\n"
 
 
 def _texto_do_lancador(python: Path, pasta: Path) -> str:
@@ -494,7 +786,7 @@ def _ler_manifesto_do_host(caminho: Path) -> tuple[dict | None, str]:
     try:
         dados = json.loads(caminho.read_text(encoding="utf-8"))
     except FileNotFoundError:
-        return None, f"não encontrado em {caminho}; instale com motor.sh instalar"
+        return None, f"não encontrado em {caminho}; instale com {MOTOR} instalar"
     except (OSError, ValueError):
         return None, f"ilegível: {caminho}"
     if (
@@ -579,13 +871,13 @@ def _explicar_falha(falha: str, codigo: int | None, origem: str, saida_de_erro) 
 
 def principal(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="motor.sh",
+        prog=MOTOR,
         description="Instala, desinstala ou diagnostica o aplicativo auxiliar do whispper-whatsapp-web, sem acessar a rede.",
     )
     subcomandos = parser.add_subparsers(dest="comando", required=True, metavar="{instalar,desinstalar,diagnosticar}")
-    subcomandos.add_parser("instalar", help="confere os pré-requisitos e registra o aplicativo no Chrome")
-    subcomandos.add_parser("desinstalar", help="remove o aplicativo e o registro no Chrome, preservando o cache de modelos")
-    subcomandos.add_parser("diagnosticar", help="confere o registro no Chrome e fala diretamente com o host")
+    subcomandos.add_parser("instalar", help="confere os pré-requisitos e registra o aplicativo no navegador")
+    subcomandos.add_parser("desinstalar", help="remove o aplicativo e o registro no navegador, preservando o cache de modelos")
+    subcomandos.add_parser("diagnosticar", help="confere o registro no navegador e fala diretamente com o host")
     args = parser.parse_args(argv)
 
     home = Path.home()
@@ -595,13 +887,13 @@ def principal(argv: list[str] | None = None) -> int:
         try:
             extensao_id = identificador_da_extensao(ler_key(MANIFESTO_DA_EXTENSAO))
         except (OSError, ValueError) as erro:
-            print(f"motor.sh: não foi possível ler a key de {MANIFESTO_DA_EXTENSAO}: {erro}", file=sys.stderr)
+            print(f"{MOTOR}: não foi possível ler a key de {MANIFESTO_DA_EXTENSAO}: {erro}", file=sys.stderr)
             return 1
         if args.comando == "instalar":
             return _comando_instalar(home, extensao_id)
         return _comando_diagnosticar(home, extensao_id)
     except OSError as erro:
-        print(f"motor.sh: {erro}", file=sys.stderr)
+        print(f"{MOTOR}: {erro}", file=sys.stderr)
         return 1
 
 
@@ -613,17 +905,30 @@ def _comando_instalar(home: Path, extensao_id: str) -> int:
     except PrerequisitosAusentes as recusa:
         for falta in recusa.faltas:
             print(f"  falta  {falta}")
+        _mostrar_avisos(ambiente)
         print("Instalação recusada; nada foi gravado.")
         return 1
     for item in conferir_prerequisitos(ambiente, config.modelo):
         print(f"  ok     {item.nome}: {item.detalhe}")
+    _mostrar_avisos(ambiente)
     print(f"Interpretador: {ambiente.python}")
     print(f"Identificador da extensão: {extensao_id}")
     print("Gravados:")
-    print(f"  {pasta_app(home)} (código, config.toml e lançador {NOME_DO_LANCADOR})")
-    print(f"  {caminho_manifesto_host(home)}")
-    print("Confira com: auxiliar/motor.sh diagnosticar")
+    if plataforma.WINDOWS:
+        print(f"  {pasta_app(home)} (código, config.toml, lançador {NOME_DO_LANCADOR} e manifesto do host)")
+        for navegador, chave in chaves_do_registro(ambiente.raiz_do_registro):
+            print(f"  HKEY_CURRENT_USER\\{chave} ({navegador})")
+        print("Confira com: auxiliar\\motor.cmd diagnosticar")
+    else:
+        print(f"  {pasta_app(home)} (código, config.toml e lançador {NOME_DO_LANCADOR})")
+        print(f"  {caminho_manifesto_host(home)}")
+        print("Confira com: auxiliar/motor.sh diagnosticar")
     return 0
+
+
+def _mostrar_avisos(ambiente: Ambiente) -> None:
+    for aviso in avisos_de_prerequisitos(ambiente):
+        print(f"  aviso  {aviso}")
 
 
 def _comando_desinstalar(home: Path) -> int:
@@ -635,7 +940,8 @@ def _comando_desinstalar(home: Path) -> int:
         print(f"  encerrado  host em execução (PID {pid})")
     for caminho in removidos:
         print(f"  removido  {caminho}")
-    print("O cache de modelos foi preservado. A extensão se remove em chrome://extensions.")
+    extensoes = "brave://extensions ou chrome://extensions" if plataforma.WINDOWS else "chrome://extensions"
+    print(f"O cache de modelos foi preservado. A extensão se remove em {extensoes}.")
     return 0
 
 

@@ -87,7 +87,7 @@ def test_host_iniciado_como_pelo_navegador_mostra_o_dispositivo(ambiente_windows
 
     resultado = diagnosticar(ambiente_windows, aguardar_pronto_s=15)
 
-    assert falhas(resultado) == []
+    assert falhas(resultado) == [], "\n".join(detalhe for _, ok, detalhe in resultado if not ok)
     host = dict((nome, detalhe) for nome, _, detalhe in resultado)["host"]
     assert "pronto" in host
     assert host.endswith("modelo carregado no processador: sem placa NVIDIA")

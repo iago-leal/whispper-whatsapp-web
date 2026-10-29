@@ -192,10 +192,14 @@ def test_erro_da_placa_durante_um_pedido_encerra_o_laco_sem_responder(lacos):
     laco.conexao.send(("transcrever", FALA_E_SILENCIO))
     laco.linha.join(ESPERA_S)
 
-    # Sem resposta, o principal vê o trabalhador cair, responde FALHA_NA_TRANSCRICAO e
-    # recria o trabalhador, que escolhe de novo entre a placa e o processador (D-06).
+    # Sem resposta, só o fim do pipe, como quando o processo do trabalhador termina: o
+    # principal vê o trabalhador cair, responde FALHA_NA_TRANSCRICAO e o recria, e o novo
+    # escolhe outra vez entre a placa e o processador (D-06). O fim chega como EOFError na
+    # leitura no macOS e como BrokenPipeError já na consulta no Windows.
     assert not laco.linha.is_alive()
-    assert not laco.conexao.poll(0)
+    with pytest.raises((EOFError, BrokenPipeError)):
+        assert laco.conexao.poll(ESPERA_S)
+        laco.conexao.recv()
 
 
 def test_erro_no_processador_falha_o_pedido_e_mantem_o_laco(lacos):

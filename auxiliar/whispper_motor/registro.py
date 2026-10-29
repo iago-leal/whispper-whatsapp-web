@@ -114,10 +114,27 @@ def truncar_diagnostico(caminho: Path) -> None:
         arquivo.truncate()
 
 
+# No Windows, o host põe aqui o caminho do diagnostico.log, para onde o trabalhador desvia
+# as saídas: filho do multiprocessing, ele não herda as do host.
+VARIAVEL_DO_DIAGNOSTICO = "WHISPPER_MOTOR_DIAGNOSTICO"
+# Sem o modo binário, a biblioteca C do Windows trocaria cada "\n" escrito por "\r\n".
+_SEM_TRADUCAO_DE_LINHA = getattr(os, "O_BINARY", 0)
+
+
 def abrir_diagnostico(caminho: Path) -> int:
     """Poda o diagnóstico e o abre para acréscimo; o host aponta a saída de erro para ele."""
     truncar_diagnostico(caminho)
-    return os.open(caminho, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+    return abrir_para_acrescimo(caminho)
+
+
+def abrir_para_acrescimo(caminho: Path | str) -> int:
+    return os.open(caminho, os.O_WRONLY | os.O_CREAT | os.O_APPEND | _SEM_TRADUCAO_DE_LINHA, 0o600)
+
+
+def fluxo_do_diagnostico(descritor: int):
+    """Fluxo de texto sobre um descritor desviado para o diagnóstico: UTF-8 e "\n" nas duas
+    plataformas, e não a página de código nem o "\r\n" que o Windows daria aos herdados."""
+    return open(descritor, "w", encoding="utf-8", errors="backslashreplace", newline="\n", buffering=1, closefd=False)
 
 
 def diagnostico(mensagem: str, nivel: str = "info", erro: BaseException | None = None) -> None:

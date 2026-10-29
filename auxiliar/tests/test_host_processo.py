@@ -5,6 +5,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 
 import pytest
 
@@ -43,7 +44,10 @@ def test_protocolo_integro_apesar_de_escritas_na_saida_padrao(ambiente):
         codigo = proc.wait(timeout=10)
 
     assert codigo == 0
-    diagnostico = (pasta / "diagnostico.log").read_text(encoding="utf-8")
+    bruto = (pasta / "diagnostico.log").read_bytes()
+    # UTF-8 e "\n" nas duas plataformas, também no que o host e o trabalhador imprimem.
+    assert b"\r" not in bruto
+    diagnostico = bruto.decode("utf-8")
     assert "ruído do processo principal" in diagnostico
     assert "ruído do trabalhador" in diagnostico
     assert "ruido cru do trabalhador" in diagnostico
@@ -101,6 +105,21 @@ def test_origem_diferente_encerra_sem_responder(ambiente):
 
     assert codigo != 0
     assert proc.stdout.read() == b""
+
+
+def test_trabalhador_carrega_sem_esperar_outra_mensagem_da_extensao(ambiente):
+    # O trabalhador nasce com a leitura do host já pendente. No Windows, sem a troca da
+    # entrada padrão, ele só iniciava quando a mensagem seguinte chegava.
+    pasta, temporarios = ambiente
+    proc = lancar(pasta, temporarios)
+    try:
+        time.sleep(5)
+        enviar(proc, {"tipo": "verificar", "protocolo": 1})
+
+        assert ler(proc)["estado"] == "pronto"
+    finally:
+        proc.stdin.close()
+        proc.wait(timeout=10)
 
 
 def test_fim_da_entrada_encerra_e_apaga_temporarios(ambiente):

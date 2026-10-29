@@ -2,19 +2,26 @@
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
-MODELO_PADRAO = "mlx-community/whisper-large-v3-turbo"
+from . import plataforma
+
+# O mesmo large-v3-turbo nas duas plataformas: convertido para o MLX no Mac e para o
+# CTranslate2 no Windows, pelo repositório que o faster-whisper associa a esse nome (D-02).
+if plataforma.WINDOWS:
+    MODELO_PADRAO = "mobiuslabsgmbh/faster-whisper-large-v3-turbo"
+else:
+    MODELO_PADRAO = "mlx-community/whisper-large-v3-turbo"
 PASTA_DE_MODELOS_PADRAO = "~/.cache/huggingface/hub"
 OCIOSO_MIN_PADRAO = 30
 # Uma semana: sessão nenhuma do Chrome dura tanto, e o teto afasta valores que o relógio
 # das travas não representa.
 OCIOSO_MIN_MAXIMO = 7 * 24 * 60
-FFMPEG_CANDIDATOS = ("/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg")
 
 _ID_DE_EXTENSAO = re.compile(r"[a-p]{32}")
 
@@ -25,14 +32,27 @@ class ConfiguracaoInvalida(Exception):
         self.campo = campo
 
 
+def candidatos_do_ffmpeg() -> tuple[Path, ...]:
+    """Onde procurar o ffmpeg fora do PATH: as pastas do Homebrew no Mac e o atalho do winget no Windows.
+
+    O atalho em `WinGet\\Links` sobrevive às atualizações do pacote. A variável do perfil
+    é lida na chamada, e não na importação.
+    """
+    if plataforma.WINDOWS:
+        local = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
+        return (Path(local) / "Microsoft" / "WinGet" / "Links" / "ffmpeg.exe",)
+    return (Path("/opt/homebrew/bin/ffmpeg"), Path("/usr/local/bin/ffmpeg"))
+
+
 def ffmpeg_detectado() -> Path:
     encontrado = shutil.which("ffmpeg")
     if encontrado:
         return Path(encontrado)
-    for candidato in FFMPEG_CANDIDATOS:
-        if Path(candidato).is_file():
-            return Path(candidato)
-    return Path(FFMPEG_CANDIDATOS[0])
+    candidatos = candidatos_do_ffmpeg()
+    for candidato in candidatos:
+        if candidato.is_file():
+            return candidato
+    return candidatos[0]
 
 
 @dataclass(frozen=True)

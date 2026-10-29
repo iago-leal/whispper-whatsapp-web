@@ -6,7 +6,7 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { accessSync, constants, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { endianness, homedir, tmpdir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import { setTimeout as esperar } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
@@ -17,9 +17,11 @@ const ID_DA_EXTENSAO = "femjlfnijaboogbcdionddnjcjpfmieg";
 const ORIGEM = `chrome-extension://${ID_DA_EXTENSAO}/`;
 const AUXILIAR = fileURLToPath(new URL("../../../auxiliar", import.meta.url));
 
+const WINDOWS = process.platform === "win32";
 // PATH com que o macOS lança os aplicativos e, portanto, o Chrome lança o host.
 const PATH_DO_CHROME = "/usr/bin:/bin:/usr/sbin:/sbin";
-const FFMPEG_CANDIDATOS = ["/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg"] as const;
+// No Windows, o Chrome acrescenta a janela que o chamou aos argumentos do host.
+const ARGUMENTOS_DO_CHROME = WINDOWS ? [ORIGEM, "--parent-window=0"] : [ORIGEM];
 
 const ERROS_DO_CHROME = {
   encerrou: "Native host has exited.",
@@ -58,19 +60,18 @@ export class CanalNode implements CanalNativo {
     writeFileSync(join(this.pasta, "config.toml"), textoDaConfiguracao(opcoes));
     // O que o lançador instalado exporta, mas com o código do repositório em vez da cópia instalada.
     this.ambiente = {
-      HOME: homedir(),
-      PATH: PATH_DO_CHROME,
-      TMPDIR: temporarios,
+      ...ambienteDoSistema(temporarios),
       HF_HUB_OFFLINE: "1",
       HF_HUB_DISABLE_TELEMETRY: "1",
       WHISPPER_MOTOR_PASTA: this.pasta,
       PYTHONPATH: AUXILIAR,
       PYTHONSAFEPATH: "1",
+      ...(WINDOWS ? { PYTHONUTF8: "1" } : {}),
     };
     this.argumentos =
       opcoes.protocoloDoHost === undefined
-        ? ["-m", "whispper_motor", ORIGEM]
-        : ["-c", codigoComProtocolo(opcoes.protocoloDoHost), ORIGEM];
+        ? ["-m", "whispper_motor", ...ARGUMENTOS_DO_CHROME]
+        : ["-c", codigoComProtocolo(opcoes.protocoloDoHost), ...ARGUMENTOS_DO_CHROME];
   }
 
   get hostsLancados(): number {
@@ -78,19 +79,24 @@ export class CanalNode implements CanalNativo {
   }
 
   conectar(): PortaNativa {
-    // Grupo de processos próprio, para que `encerrar` alcance também o trabalhador do host.
+    // Grupo de processos próprio, para que `encerrar` alcance também o trabalhador do host. O
+    // Windows não tem grupo: lá, o job do host leva o trabalhador e o FFmpeg quando ele sai.
     const processo = spawn(this.python, this.argumentos, {
       cwd: this.pasta,
       env: this.ambiente,
       stdio: ["pipe", "pipe", "inherit"],
-      detached: true,
+      detached: !WINDOWS,
+      windowsHide: true,
     });
     const porta = new PortaDoHost(processo);
     this.portas.push(porta);
     return porta;
   }
 
-  /** Mata só o host da porta mais recente, como o `pkill -9` da verificação manual (RF-10). */
+  /**
+   * Mata só o host da porta mais recente, como o `pkill -9` da verificação manual (RF-10). No
+   * Windows, o sinal vira TerminateProcess, e o lançador do ambiente virtual leva o host consigo.
+   */
   derrubarHost(): void {
     this.portas.at(-1)?.processo.kill("SIGKILL");
   }
@@ -99,7 +105,8 @@ export class CanalNode implements CanalNativo {
   async encerrar(): Promise<void> {
     for (const porta of this.portas) porta.desconectar();
     await Promise.all(this.portas.map((porta) => porta.aguardarFim(PRAZO_DO_GRUPO_MS)));
-    rmSync(this.pasta, { recursive: true, force: true });
+    // No Windows, um arquivo ainda aberto pelo trabalhador que o job acaba de encerrar impede a remoção.
+    rmSync(this.pasta, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
   }
 }
 
@@ -147,7 +154,7 @@ class PortaDoHost implements PortaNativa {
   async aguardarFim(prazoMs: number): Promise<void> {
     await this.saiu;
     const grupo = this.processo.pid;
-    if (grupo === undefined) return;
+    if (grupo === undefined || WINDOWS) return;
     const limite = Date.now() + prazoMs;
     while (grupoVivo(grupo)) {
       if (Date.now() > limite) matarGrupo(grupo);
@@ -196,21 +203,31 @@ class PortaDoHost implements PortaNativa {
 /**
  * O interpretador do host, pela regra do motor.sh (DT-07): o de WHISPPER_PYTHON; senão, o primeiro
  * que importa o mlx-whisper entre o da primeira linha do executável mlx_whisper e o python3 do
- * PATH; senão, o primeiro deles, com que o host acusará "mlx-whisper ausente".
+ * PATH; senão, o primeiro deles, com que o host acusará "mlx-whisper ausente". No Windows, pela
+ * regra do motor.cmd (D-15): o do ambiente em %USERPROFILE%\.venvs\whispper-motor, se existir;
+ * senão, o primeiro python do PATH que importa o faster-whisper; senão, o primeiro encontrado.
  */
 export function escolherPython(ambiente: NodeJS.ProcessEnv = process.env): string {
   if (ambiente.WHISPPER_PYTHON) return ambiente.WHISPPER_PYTHON;
-  const candidatos = [interpretadorDoMlxWhisper(ambiente.PATH), procurarNoPath("python3", ambiente.PATH)].filter(
-    (candidato): candidato is string => candidato !== undefined && executavel(candidato),
-  );
-  const escolhido = candidatos.find(importaMlxWhisper) ?? candidatos[0];
+  if (WINDOWS) {
+    const doAmbiente = join(ambiente.USERPROFILE ?? homedir(), ".venvs", "whispper-motor", "Scripts", "python.exe");
+    if (executavel(doAmbiente)) return doAmbiente;
+  }
+  const candidatos = (
+    WINDOWS
+      ? todosNoPath("python.exe", ambiente.PATH)
+      : [interpretadorDoMlxWhisper(ambiente.PATH), procurarNoPath("python3", ambiente.PATH)]
+  ).filter((candidato): candidato is string => candidato !== undefined && executavel(candidato));
+  const escolhido = candidatos.find((python) => importa(python, MODULO_DO_MOTOR)) ?? candidatos[0];
   if (escolhido === undefined) {
     throw new Error(
-      "nenhum Python encontrado; defina WHISPPER_PYTHON com o interpretador em que o mlx-whisper está instalado",
+      `nenhum Python encontrado; defina WHISPPER_PYTHON com o interpretador em que o ${MODULO_DO_MOTOR} está instalado`,
     );
   }
   return escolhido;
 }
+
+const MODULO_DO_MOTOR = WINDOWS ? "faster_whisper" : "mlx_whisper";
 
 function interpretadorDoMlxWhisper(path: string | undefined): string | undefined {
   const executavelDoMlx = procurarNoPath("mlx_whisper", path);
@@ -223,17 +240,21 @@ function interpretadorDoMlxWhisper(path: string | undefined): string | undefined
   return undefined;
 }
 
-function importaMlxWhisper(python: string): boolean {
+function importa(python: string, modulo: string): boolean {
   const env = { ...process.env, HF_HUB_OFFLINE: "1" };
-  return spawnSync(python, ["-c", "import mlx_whisper"], { stdio: "ignore", env }).status === 0;
+  return spawnSync(python, ["-c", `import ${modulo}`], { stdio: "ignore", env }).status === 0;
 }
 
 function procurarNoPath(nome: string, path = ""): string | undefined {
+  return todosNoPath(nome, path)[0];
+}
+
+function todosNoPath(nome: string, path = ""): string[] {
   return path
-    .split(":")
+    .split(delimiter)
     .filter((pasta) => pasta !== "")
     .map((pasta) => join(pasta, nome))
-    .find(executavel);
+    .filter(executavel);
 }
 
 function executavel(caminho: string): boolean {
@@ -249,7 +270,8 @@ function executavel(caminho: string): boolean {
 function textoDaConfiguracao(opcoes: OpcoesDoCanalNode): string {
   const { HF_HUB_CACHE, HF_HOME, PATH } = process.env;
   const pastaDeModelos = HF_HUB_CACHE || (HF_HOME ? join(HF_HOME, "hub") : join(homedir(), ".cache", "huggingface", "hub"));
-  const ffmpeg = procurarNoPath("ffmpeg", PATH) ?? FFMPEG_CANDIDATOS.find(executavel) ?? FFMPEG_CANDIDATOS[0];
+  const candidatos = candidatosDoFfmpeg();
+  const ffmpeg = procurarNoPath(WINDOWS ? "ffmpeg.exe" : "ffmpeg", PATH) ?? candidatos.find(executavel) ?? candidatos[0];
   const campos: Array<[string, string]> = [
     ...(opcoes.modelo === undefined ? [] : [["modelo", opcoes.modelo] as [string, string]]),
     ["pasta_de_modelos", pastaDeModelos],
@@ -258,6 +280,29 @@ function textoDaConfiguracao(opcoes: OpcoesDoCanalNode): string {
   ];
   // Cadeia do JSON é cadeia básica válida em TOML.
   return campos.map(([campo, valor]) => `${campo} = ${JSON.stringify(valor)}\n`).join("");
+}
+
+// Fora do PATH, as pastas do Homebrew no Mac e o atalho do winget no Windows, como em configuracao.py.
+function candidatosDoFfmpeg(): string[] {
+  if (!WINDOWS) return ["/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg"];
+  const local = process.env.LOCALAPPDATA ?? join(homedir(), "AppData", "Local");
+  return [join(local, "Microsoft", "WinGet", "Links", "ffmpeg.exe")];
+}
+
+/**
+ * O ambiente com que o navegador lança o host: no macOS, o PATH dos aplicativos; no Windows, só o
+ * sem que o Python não inicia e a pasta do perfil, para que a bateria acuse o que dependa do resto.
+ */
+function ambienteDoSistema(temporarios: string): NodeJS.ProcessEnv {
+  if (!WINDOWS) return { HOME: homedir(), PATH: PATH_DO_CHROME, TMPDIR: temporarios };
+  const sistema = process.env.SystemRoot ?? "C:\\Windows";
+  return {
+    SystemRoot: sistema,
+    PATH: `${join(sistema, "System32")};${sistema}`,
+    TEMP: temporarios,
+    TMP: temporarios,
+    USERPROFILE: homedir(),
+  };
 }
 
 // O host verdadeiro com a constante trocada antes que os módulos do pacote a importem.

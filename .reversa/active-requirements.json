@@ -1,10 +1,21 @@
 {
   "schema-version": 1,
-  "feature-dir": "_reversa_forward/007-motor-whisper-navegador",
-  "feature-id": "007",
-  "short-name": "motor-whisper-navegador",
-  "started-at": "2026-10-04T19:45:17-03:00",
+  "feature-dir": "_reversa_forward/008-motor-local-windows",
+  "feature-id": "008",
+  "short-name": "motor-local-windows",
+  "started-at": "2026-10-29T13:30:00-03:00",
   "current-stage": "requirements",
   "stages-completed": [],
-  "paused-features": []
+  "paused-features": [
+    {
+      "feature-dir": "_reversa_forward/007-motor-whisper-navegador",
+      "feature-id": "007",
+      "short-name": "motor-whisper-navegador",
+      "started-at": "2026-10-04T19:45:17-03:00",
+      "current-stage": "requirements",
+      "stages-completed": [],
+      "paused-at": "2026-10-29T13:30:00-03:00",
+      "paused-from-stage": "plan"
+    }
+  ]
 }

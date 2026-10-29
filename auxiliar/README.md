@@ -182,7 +182,7 @@ As entradas do registro são gravadas por último, para que o navegador só enco
 
 ### Placa de vídeo e processador
 
-Ao carregar o modelo, o trabalhador tenta a placa NVIDIA, em `int8`; sem placa, sem as bibliotecas dela ou com falha ou falta de memória ao carregar, carrega no processador, também em `int8`, com uma linha de execução por núcleo físico. O `diagnostico.log` registra a escolha numa linha fixa: `modelo carregado na placa de vídeo` ou `modelo carregado no processador: <motivo>`, com o motivo entre `sem placa NVIDIA`, `bibliotecas da placa ausentes`, `memória da placa insuficiente` e `falha da placa`. Um erro da placa durante um pedido encerra o trabalhador: o pedido recebe `FALHA_NA_TRANSCRICAO`, e o trabalhador seguinte escolhe de novo entre a placa e o processador.
+Ao carregar o modelo, o trabalhador tenta a placa NVIDIA, em `int8`; sem placa, sem as bibliotecas dela ou com falha ou falta de memória ao carregar, carrega no processador, também em `int8`, com uma linha de execução por núcleo físico. O `diagnostico.log` registra a escolha numa linha fixa: `modelo carregado na placa de vídeo` ou `modelo carregado no processador: <motivo>`, com o motivo entre `sem placa NVIDIA`, `bibliotecas da placa ausentes`, `memória da placa insuficiente` e `falha da placa`. Um erro da placa durante um pedido encerra o trabalhador: o pedido recebe `FALHA_NA_TRANSCRICAO`, e o trabalhador seguinte escolhe de novo entre a placa e o processador. O lançador fixa em uma as linhas de execução da OpenBLAS do numpy (`OPENBLAS_NUM_THREADS=1`): sem isso, num processador de 16 linhas, ela comprometeria cerca de 0,5 GB de memória no host e outro tanto no trabalhador, sem ganho para a transcrição, que roda no CTranslate2.
 
 ### Diagnóstico e desinstalação
 

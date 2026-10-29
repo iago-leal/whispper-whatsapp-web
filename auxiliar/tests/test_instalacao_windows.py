@@ -46,6 +46,7 @@ def test_instalar_grava_codigo_configuracao_lancador_manifesto_e_registro(ambien
         f"PYTHONPATH={pasta}",
         "PYTHONSAFEPATH=1",
         "PYTHONUTF8=1",
+        "OPENBLAS_NUM_THREADS=1",
     ):
         assert f'set "{variavel}"' in linhas
     assert linhas[-1] == f'"{ambiente.python}" -m whispper_motor %*'

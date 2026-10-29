@@ -743,6 +743,9 @@ def _dispositivo_no_diagnostico(log: Path, desde: int) -> str | None:
 
 def _texto_do_lancador_do_windows(python: Path, pasta: Path) -> str:
     # As mesmas variáveis do lançador do Mac; o PYTHONUTF8 fixa o UTF-8 que o macOS já usa.
+    # A OpenBLAS do numpy, ao ser importada, compromete um buffer por linha lógica, cerca de
+    # 0,5 GB num i7 de 16 linhas, no host e no trabalhador; nenhum dos dois precisa de mais
+    # de uma linha nela, porque o CTranslate2 tem as próprias.
     linhas = [
         "@echo off",
         "rem Lançador do host de Native Messaging do whispper-whatsapp-web, gravado por motor.cmd instalar.",
@@ -752,6 +755,7 @@ def _texto_do_lancador_do_windows(python: Path, pasta: Path) -> str:
         f'set "PYTHONPATH={pasta}"',
         'set "PYTHONSAFEPATH=1"',
         'set "PYTHONUTF8=1"',
+        'set "OPENBLAS_NUM_THREADS=1"',
         f'"{python}" -m whispper_motor %*',
     ]
     return "\n".join(linhas) + "\n"

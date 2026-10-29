@@ -1,6 +1,6 @@
 # Aplicativo auxiliar (whispper-motor)
 
-O aplicativo auxiliar é o host de Native Messaging que transcreve, nesta máquina, as mensagens de voz enviadas pela extensão. O Chrome o lança quando a extensão se conecta; o host decodifica o áudio com o ffmpeg e o transcreve com o mlx-whisper num processo trabalhador, que mantém o modelo na memória entre um pedido e outro. Os comandos abaixo partem da raiz do repositório.
+O aplicativo auxiliar é o host de Native Messaging que transcreve, nesta máquina, as mensagens de voz enviadas pela extensão. O Chrome o lança quando a extensão se conecta; o host decodifica o áudio com o ffmpeg e o transcreve com o mlx-whisper num processo trabalhador, que mantém o modelo na memória entre um pedido e outro. Os comandos abaixo partem da raiz do repositório e valem para o Mac; o Windows, em que o host transcreve com o faster-whisper e também atende o Brave, tem seção própria.
 
 ## Instalação
 
@@ -145,9 +145,66 @@ De uma exceção entra apenas o nome do tipo. O arquivo tem permissão 0600 e, a
 
 O roteiro de verificação manual dessas garantias está na seção 6 de `_reversa_forward/001-motor-transcricao-local/onboarding.md`.
 
+## Windows
+
+No Windows 10 ou 11 de 64 bits, o mesmo host transcreve com o faster-whisper (CTranslate2) o mesmo modelo, o Whisper large-v3-turbo, convertido para esse formato. O protocolo é o 1, como no Mac, e a extensão não muda. Os comandos abaixo são do PowerShell e partem da raiz do repositório.
+
+### Preparação
+
+Uma vez por computador, sem precisar de administrador:
+
+```powershell
+python -m venv "$env:USERPROFILE\.venvs\whispper-motor"
+& "$env:USERPROFILE\.venvs\whispper-motor\Scripts\python.exe" -m pip install "faster-whisper>=1.2,<1.3" nvidia-cublas-cu12 "nvidia-cudnn-cu12>=9,<10"
+winget install --id Gyan.FFmpeg --exact --source winget
+& "$env:USERPROFILE\.venvs\whispper-motor\Scripts\python.exe" -c "from huggingface_hub import snapshot_download; snapshot_download('mobiuslabsgmbh/faster-whisper-large-v3-turbo')"
+```
+
+A versão medida é a do faster-whisper 1.2.1 com o CTranslate2 4.8.4, as bibliotecas da NVIDIA da geração 12 (cuBLAS) e o cuDNN 9. As duas últimas só servem à placa de vídeo e podem ficar de fora num computador sem placa NVIDIA. O download do modelo, de cerca de 1,6 GB, é o único passo com rede, e fica fora do aplicativo.
+
+### Instalação
+
+```powershell
+auxiliar\motor.cmd instalar
+```
+
+O `motor.cmd` usa o Python de `WHISPPER_PYTHON`, se definida; senão, o do ambiente em `%USERPROFILE%\.venvs\whispper-motor`, se existir; senão, o primeiro `python` do PATH que importa o faster-whisper. O instalador confere o Windows de 64 bits em x86-64, o Python 3.11 ou superior com o faster-whisper, o FFmpeg e o modelo; faltando algo, lista cada falta, termina com código 1 e não grava nada, e para o modelo mostra o comando de download na sintaxe do PowerShell. A falta da placa NVIDIA ou das suas bibliotecas sai como aviso, porque o host transcreve também no processador. A pasta do aplicativo e o Python com `%`, `^`, `&`, `|`, `<`, `>` ou `!` no caminho, que o `cmd.exe` interpretaria no lançador, são recusados, assim como os caminhos com caracteres que a página de código do console não representa.
+
+Com tudo presente, a instalação grava:
+
+| Caminho | Conteúdo |
+|---------|----------|
+| `%LOCALAPPDATA%\whispper-motor\` | cópia do código (`whispper_motor\`), `config.toml`, o lançador `whispper-motor.bat`, o manifesto `whispper_whatsapp_web.motor.json` e, depois, os registros do host |
+| `HKCU\Software\Google\Chrome\NativeMessagingHosts\whispper_whatsapp_web.motor` | entrada do Chrome, com o caminho do manifesto |
+| `HKCU\Software\BraveSoftware\Brave-Browser\NativeMessagingHosts\whispper_whatsapp_web.motor` | entrada do Brave, com o mesmo caminho |
+
+As entradas do registro são gravadas por último, para que o navegador só encontre o host com o manifesto completo. O padrão do `modelo` no Windows é `mobiuslabsgmbh/faster-whisper-large-v3-turbo`, e o do `ffmpeg`, o atalho do winget em `%LOCALAPPDATA%\Microsoft\WinGet\Links\ffmpeg.exe`.
+
+### Placa de vídeo e processador
+
+Ao carregar o modelo, o trabalhador tenta a placa NVIDIA, em `int8`; sem placa, sem as bibliotecas dela ou com falha ou falta de memória ao carregar, carrega no processador, também em `int8`, com uma linha de execução por núcleo físico. O `diagnostico.log` registra a escolha numa linha fixa: `modelo carregado na placa de vídeo` ou `modelo carregado no processador: <motivo>`, com o motivo entre `sem placa NVIDIA`, `bibliotecas da placa ausentes`, `memória da placa insuficiente` e `falha da placa`. Um erro da placa durante um pedido encerra o trabalhador: o pedido recebe `FALHA_NA_TRANSCRICAO`, e o trabalhador seguinte escolhe de novo entre a placa e o processador.
+
+### Diagnóstico e desinstalação
+
+```powershell
+auxiliar\motor.cmd diagnosticar
+auxiliar\motor.cmd desinstalar
+```
+
+O diagnóstico confere as duas entradas do registro, o manifesto, o lançador, o `allowed_origins` e o `config.toml`, e lança o host como o navegador o lança, pelo `cmd.exe`, com a origem e o `--parent-window=0` que o Chrome acrescenta. No estado `pronto`, mostra também a linha do dispositivo que esse host registrou. A desinstalação apaga primeiro as entradas do registro, para que nenhum navegador lance o host; depois encerra os hosts desta instalação em execução, informando o PID de cada um, varre as pastas temporárias órfãs e apaga `%LOCALAPPDATA%\whispper-motor\`. Antes de encerrar um host, confere que o PID é de um `python.exe` iniciado antes do seu registro, para não atingir outro processo que tenha herdado o número. O cache de modelos fica intacto, e a extensão se remove à parte, em `brave://extensions` ou `chrome://extensions`.
+
+### Garantias de privacidade no Windows
+
+As garantias da seção anterior valem no Windows, com estas diferenças de mecanismo:
+
+- **Sem rede.** O `motor.cmd` e o `whispper-motor.bat` definem `HF_HUB_OFFLINE=1` e `HF_HUB_DISABLE_TELEMETRY=1`, e o host entrega ao faster-whisper apenas o caminho local do modelo.
+- **Sem retenção.** A pasta privada `whispper-motor-<PID>-*` fica na pasta temporária do usuário, que o Windows reserva à própria conta e aos administradores. O MP4 vai a um arquivo temporário dessa pasta e chega ao FFmpeg pela entrada padrão. Como o Windows não apaga um arquivo aberto, o arquivo tem nome enquanto o pedido dura, mas é aberto para ser apagado no fechamento: o sistema o remove quando o último processo que o mantém aberto termina, mesmo que o host seja derrubado.
+- **Nenhum processo para trás.** O host se associa, ao iniciar, a um job do Windows que encerra o trabalhador e o FFmpeg quando ele sai, inclusive se for morto à força; o Windows não tem o SIGTERM do Mac.
+- **Só a extensão autorizada.** O Chrome e o Brave só lançam o host para a extensão listada em `allowed_origins`, e o host ainda confere a origem recebida contra o `extensao_id`.
+
 ## Desenvolvimento
 
-Os testes rodam de `auxiliar/`, com o Python que tem o mlx-whisper; com `MOTOR_REAL=1`, incluem os que usam o modelo real do cache local:
+Os testes rodam de `auxiliar/`, com o Python que tem o mlx-whisper no Mac ou o faster-whisper no Windows; com `MOTOR_REAL=1`, incluem os que usam o modelo real do cache local. Os que dependem de recurso de uma só plataforma são ignorados na outra, com o motivo que a nomeia:
 
 ```bash
 cd auxiliar

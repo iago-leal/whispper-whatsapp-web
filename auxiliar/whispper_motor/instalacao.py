@@ -15,9 +15,7 @@ import hashlib
 import json
 import os
 import platform
-import select
 import shutil
-import signal
 import struct
 import subprocess
 import sys
@@ -27,8 +25,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import NamedTuple
 
-from . import NOME_DO_HOST, PROTOCOLO, configuracao, modelos, protocolo
-from .__main__ import ENTRADA_CORROMPIDA, ORIGEM_RECUSADA, PASTA_DE_HOSTS, PASTA_PADRAO
+from . import NOME_DO_HOST, PROTOCOLO, configuracao, modelos, plataforma, protocolo
+from .__main__ import ENTRADA_CORROMPIDA, ORIGEM_RECUSADA, PASTA_DE_HOSTS
 from .configuracao import Configuracao, ConfiguracaoInvalida
 
 PYTHON_MINIMO = (3, 11)
@@ -77,7 +75,7 @@ class _HostFalhou(Exception):
 
 
 def pasta_app(home: Path) -> Path:
-    return Path(home) / Path(PASTA_PADRAO).relative_to("~")
+    return plataforma.pasta_padrao_do_app(Path(home))
 
 
 def caminho_manifesto_host(home: Path) -> Path:
@@ -240,19 +238,17 @@ def encerrar_hosts(pasta: Path) -> list[int]:
         pids = sorted(int(registro.name) for registro in registros.iterdir() if registro.name.isdigit())
     except OSError:
         return []
-    vivos = [pid for pid in pids if _host_vivo(pid)]
+    vivos = [pid for pid in pids if plataforma.host_vivo(pid)]
     for pid in vivos:
-        _sinalizar(pid, signal.SIGTERM)
+        plataforma.pedir_encerramento(pid)
     # O host apaga o próprio registro por último, já sem o trabalhador.
     pendentes = list(vivos)
     limite = time.monotonic() + ESPERA_DOS_HOSTS_S
     while pendentes and time.monotonic() < limite:
         time.sleep(0.1)
-        pendentes = [pid for pid in pendentes if (registros / str(pid)).exists() and _host_vivo(pid)]
+        pendentes = [pid for pid in pendentes if (registros / str(pid)).exists() and plataforma.host_vivo(pid)]
     for pid in pendentes:
-        filhos = _filhos(pid)
-        for alvo in (pid, *filhos):
-            _sinalizar(alvo, signal.SIGKILL)
+        plataforma.matar_com_filhos(pid)
     return vivos
 
 
@@ -326,9 +322,10 @@ def verificar_host(lancador: Path, origem: str, home: Path, aguardar_pronto_s: f
         percurso: list[str] = []
         resposta: dict = {}
         falha = None
+        leitor = plataforma.Leitor(processo.stdout)
         try:
             while True:
-                resposta = _pedir_estado(processo)
+                resposta = _pedir_estado(processo, leitor)
                 if not percurso or percurso[-1] != resposta["estado"]:
                     percurso.append(resposta["estado"])
                 if resposta["estado"] != "carregando" or time.monotonic() - inicio >= aguardar_pronto_s:
@@ -336,6 +333,8 @@ def verificar_host(lancador: Path, origem: str, home: Path, aguardar_pronto_s: f
                 time.sleep(INTERVALO_ENTRE_VERIFICACOES_S)
         except _HostFalhou as erro:
             falha = str(erro)
+        finally:
+            leitor.fechar()
         decorrido = time.monotonic() - inicio
         codigo = _encerrar_host(processo)
         if falha is not None:
@@ -442,28 +441,6 @@ def _importa_mlx_whisper() -> bool:
     return True
 
 
-def _host_vivo(pid: int) -> bool:
-    """O PID é de um host em execução? O comando é conferido porque o PID pode ter sido reaproveitado."""
-    resultado = subprocess.run(["/bin/ps", "-ww", "-o", "stat=,command=", "-p", str(pid)], capture_output=True, text=True)
-    partes = resultado.stdout.split()
-    if resultado.returncode != 0 or not partes or partes[0].startswith("Z"):
-        return False
-    # O lançador termina em `exec <python> -m whispper_motor <origem>`.
-    return any(a == "-m" and b == "whispper_motor" for a, b in zip(partes[1:], partes[2:]))
-
-
-def _filhos(pid: int) -> list[int]:
-    resultado = subprocess.run(["/usr/bin/pgrep", "-P", str(pid)], capture_output=True, text=True)
-    return [int(filho) for filho in resultado.stdout.split()]
-
-
-def _sinalizar(pid: int, sinal: int) -> None:
-    try:
-        os.kill(pid, sinal)
-    except OSError:
-        pass
-
-
 def _executavel(caminho: Path) -> bool:
     return Path(caminho).is_file() and os.access(caminho, os.X_OK)
 
@@ -532,16 +509,16 @@ def _ler_manifesto_do_host(caminho: Path) -> tuple[dict | None, str]:
     return dados, str(caminho)
 
 
-def _pedir_estado(processo: subprocess.Popen) -> dict:
+def _pedir_estado(processo: subprocess.Popen, leitor: plataforma.Leitor) -> dict:
     try:
         protocolo.escrever_mensagem(processo.stdin, {"tipo": "verificar", "protocolo": PROTOCOLO})
     except OSError:
         raise _HostFalhou("o host fechou a entrada") from None
-    (tamanho,) = struct.unpack("=I", _ler_exato(processo, 4))
+    (tamanho,) = struct.unpack("=I", _ler_exato(leitor, 4))
     if tamanho > protocolo.LIMITE_SAIDA:
         raise _HostFalhou("enquadramento inválido na saída do host")
     try:
-        resposta = json.loads(_ler_exato(processo, tamanho))
+        resposta = json.loads(_ler_exato(leitor, tamanho))
     except ValueError:
         raise _HostFalhou("resposta que não é JSON") from None
     if (
@@ -553,15 +530,14 @@ def _pedir_estado(processo: subprocess.Popen) -> dict:
     return resposta
 
 
-def _ler_exato(processo: subprocess.Popen, tamanho: int) -> bytes:
+def _ler_exato(leitor: plataforma.Leitor, tamanho: int) -> bytes:
     dados = b""
     limite = time.monotonic() + PRAZO_DE_RESPOSTA_S
-    descritor = processo.stdout.fileno()
     while len(dados) < tamanho:
-        restante = limite - time.monotonic()
-        if restante <= 0 or not select.select([descritor], [], [], restante)[0]:
-            raise _HostFalhou(f"sem resposta em {PRAZO_DE_RESPOSTA_S:.0f} s")
-        pedaco = os.read(descritor, tamanho - len(dados))
+        try:
+            pedaco = leitor.ler(tamanho - len(dados), limite)
+        except plataforma.PrazoEsgotado:
+            raise _HostFalhou(f"sem resposta em {PRAZO_DE_RESPOSTA_S:.0f} s") from None
         if not pedaco:
             raise _HostFalhou("o host encerrou sem responder")
         dados += pedaco

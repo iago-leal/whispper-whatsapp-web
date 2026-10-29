@@ -12,6 +12,7 @@ import pytest
 from whispper_motor import configuracao, instalacao, protocolo
 from whispper_motor.instalacao import Ambiente, PrerequisitosAusentes
 
+from .suporte import executavel_falso
 from .suporte.cache import criar_snapshot
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -25,10 +26,8 @@ def ambiente(tmp_path):
     home = tmp_path / "home"
     cache = home / ".cache" / "huggingface" / "hub"
     criar_snapshot(cache, MODELO)
-    ffmpeg = tmp_path / "bin" / "ffmpeg"
-    ffmpeg.parent.mkdir()
-    ffmpeg.write_text("#!/bin/sh\n")
-    ffmpeg.chmod(0o755)
+    (tmp_path / "bin").mkdir()
+    ffmpeg = executavel_falso.criar(tmp_path / "bin" / "ffmpeg", "")
     return Ambiente(
         home=home,
         python=Path("/Library/Frameworks/Python.framework/Versions/3.14/bin/python3"),

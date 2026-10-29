@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from whispper_motor import audio, configuracao, modelos
-from whispper_motor.trabalhador import TrabalhadorMlx
+from whispper_motor.trabalhador import TrabalhadorEmProcesso
 
 pytestmark = pytest.mark.real
 
@@ -14,7 +14,7 @@ pytestmark = pytest.mark.real
 @pytest.fixture(scope="module")
 def trabalhador():
     config = configuracao.carregar(Path("/inexistente/config.toml"))
-    t = TrabalhadorMlx(modelos.resolver(config.modelo, config.pasta_de_modelos))
+    t = TrabalhadorEmProcesso(modelos.resolver(config.modelo, config.pasta_de_modelos))
     t.iniciar()
     carregamento = t.aguardar_carregamento(timeout=180)
     assert carregamento.ok, carregamento.motivo

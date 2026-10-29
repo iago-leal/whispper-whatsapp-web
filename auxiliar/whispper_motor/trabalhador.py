@@ -62,10 +62,12 @@ class Transcricao:
     recarregou: bool = False
 
 
-class TrabalhadorMlx:
+class TrabalhadorEmProcesso:
+    """O trabalhador num processo separado, com o laço da plataforma ou o `alvo` dado."""
+
     def __init__(self, caminho_modelo: Path, alvo: Callable | None = None):
         self.caminho_modelo = Path(caminho_modelo)
-        self._alvo = alvo or laco_mlx
+        self._alvo = alvo or laco_padrao()
         self._processo: multiprocessing.process.BaseProcess | None = None
         self._conexao = None
 
@@ -173,6 +175,11 @@ def _vigiar_principal() -> None:
         os._exit(1)
 
     threading.Thread(target=vigiar, name="vigia-do-principal", daemon=True).start()
+
+
+def laco_padrao() -> Callable:
+    """O laço que carrega e transcreve nesta plataforma: o mlx-whisper no Mac."""
+    return laco_mlx
 
 
 def laco_mlx(conexao, caminho_modelo: str) -> None:

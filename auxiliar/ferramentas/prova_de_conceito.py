@@ -25,7 +25,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from whispper_motor import audio, configuracao, modelos  # noqa: E402
-from whispper_motor.trabalhador import FalhaDoWhisper, TrabalhadorMlx  # noqa: E402
+from whispper_motor.trabalhador import FalhaDoWhisper, TrabalhadorEmProcesso  # noqa: E402
 
 MIDIA_POR_EXTENSAO = {
     ".ogg": "audio/ogg",
@@ -91,7 +91,7 @@ def executar(pasta: Path, mostrar_texto: bool) -> tuple[list[Medicao], list[str]
     if not arquivos:
         raise SystemExit(f"nenhum áudio em {pasta}")
 
-    trabalhador = TrabalhadorMlx(caminho_modelo)
+    trabalhador = TrabalhadorEmProcesso(caminho_modelo)
     trabalhador.iniciar()
     carregamento = trabalhador.aguardar_carregamento(timeout=600)
     if not carregamento.ok:

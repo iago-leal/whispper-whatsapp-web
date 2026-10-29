@@ -8,7 +8,7 @@ from whispper_motor import protocolo
 from whispper_motor import servidor as modulo_servidor
 from whispper_motor.configuracao import Configuracao
 from whispper_motor.registro import RegistroDeDesempenho
-from whispper_motor.trabalhador import TrabalhadorMlx
+from whispper_motor.trabalhador import TrabalhadorEmProcesso
 
 from .suporte.falsos import (
     Coletor,
@@ -200,7 +200,7 @@ def test_falha_do_whisper_num_audio_nao_recria_o_trabalhador(tmp_path, ffmpeg, c
     criados = []
 
     def fabrica(caminho_modelo):
-        criados.append(TrabalhadorMlx(caminho_modelo, alvo=laco_com_falha))
+        criados.append(TrabalhadorEmProcesso(caminho_modelo, alvo=laco_com_falha))
         return criados[-1]
 
     s = criar_servidor(tmp_path, ffmpeg, fabrica, coletor)

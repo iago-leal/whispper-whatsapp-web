@@ -2,8 +2,9 @@
 
 O ffmpeg é chamado pelo caminho absoluto da configuração, porque o Chrome lança
 o host com PATH mínimo. A entrada vai por pipe; só o MP4, cujo contêiner exige
-leitura com posicionamento, passa por um arquivo temporário anônimo, que nunca
-tem nome no disco.
+leitura com posicionamento, passa por um arquivo temporário que o sistema apaga
+sozinho: no macOS, ele nunca tem nome no disco; no Windows, some quando o último
+processo o fecha.
 
 Os bytes e o tipo de mídia vêm de terceiros. Por isso o ffmpeg só abre os
 demuxers dos formatos aceitos e só o protocolo da própria entrada: sem isso, um
@@ -16,7 +17,6 @@ from __future__ import annotations
 
 import math
 import os
-import selectors
 import subprocess
 import tempfile
 import threading
@@ -25,6 +25,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
+
+from . import plataforma
 
 TAXA = 16_000
 LIMIAR_SILENCIO_DBFS = -45.0
@@ -112,7 +114,7 @@ def decodificar(
     if tipo_base(midia) in MIDIAS_MP4:
         bruto = _decodificar_por_arquivo(dados, ffmpeg, Path(pasta_temporaria), cancelador)
     else:
-        bruto = _executar(ffmpeg, "pipe:0", "pipe", dados, cancelador)
+        bruto = _executar(ffmpeg, ["-protocol_whitelist", "pipe", "-i", "pipe:0"], {"stdin": subprocess.PIPE}, dados, cancelador)
 
     amostras = np.frombuffer(bruto, dtype=np.int16).astype(np.float32) / 32768.0
     if amostras.size == 0:
@@ -141,40 +143,35 @@ def tem_fala(amostras: np.ndarray) -> bool:
 
 
 def _decodificar_por_arquivo(dados: bytes, ffmpeg, pasta: Path, cancelador: Cancelador | None) -> bytearray:
-    # No macOS, TemporaryFile cria o arquivo com permissão 0600 e o desvincula antes do
-    # primeiro byte: o áudio não ganha nome no disco nem sobrevive a um SIGKILL do host
-    # (RN-02). O ffmpeg o lê por /dev/fd, que admite posicionamento.
+    # TemporaryFile cria o arquivo na pasta privada do host. No macOS, com permissão 0600
+    # e desvinculado antes do primeiro byte: o áudio não ganha nome no disco nem sobrevive
+    # a um SIGKILL do host (RN-02). No Windows, com apagamento no fechamento, que o sistema
+    # cumpre mesmo na morte do host, porque o job leva junto o ffmpeg que o mantém aberto.
     with tempfile.TemporaryFile(dir=pasta) as arquivo:
         arquivo.write(dados)
         arquivo.flush()
         arquivo.seek(0)
-        descritor = arquivo.fileno()
-        return _executar(ffmpeg, f"/dev/fd/{descritor}", "file", None, cancelador, (descritor,))
+        entrada, opcoes = plataforma.entrada_do_mp4(arquivo)
+        return _executar(ffmpeg, entrada, opcoes, None, cancelador)
 
 
 def _executar(
     ffmpeg,
-    entrada: str,
-    protocolo_da_entrada: str,
+    entrada: list[str],
+    opcoes: dict,
     dados: bytes | None,
     cancelador: Cancelador | None,
-    descritores: tuple[int, ...] = (),
 ) -> bytearray:
+    """Roda o ffmpeg com os argumentos de `entrada` e as `opcoes` do Popen, que trazem a entrada padrão."""
     comando = [
         os.fspath(ffmpeg), "-nostdin", "-hide_banner", "-loglevel", "error",
         "-timelimit", str(LIMITE_DE_CPU_S),
-        "-format_whitelist", FORMATOS_ACEITOS, "-protocol_whitelist", protocolo_da_entrada,
-        "-i", entrada, "-vn", "-f", "s16le", "-ac", "1", "-ar", str(TAXA), "pipe:1",
+        "-format_whitelist", FORMATOS_ACEITOS, *entrada,
+        "-vn", "-f", "s16le", "-ac", "1", "-ar", str(TAXA), "pipe:1",
     ]
     try:
         # A saída de erro nunca é lida; guardada, um laço de erros esgotaria a memória do host.
-        processo = subprocess.Popen(
-            comando,
-            stdin=subprocess.DEVNULL if dados is None else subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            pass_fds=descritores,
-        )
+        processo = subprocess.Popen(comando, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, **opcoes)
     except (FileNotFoundError, PermissionError, NotADirectoryError) as erro:
         raise ErroDeAudio(FFMPEG_AUSENTE) from erro
     except OSError as erro:
@@ -220,14 +217,12 @@ def _escrever(entrada, dados: bytes) -> None:
 def _ler_saida(processo: subprocess.Popen, prazo_s: float, limite_de_bytes: int) -> bytearray:
     fim = time.monotonic() + prazo_s
     saida = bytearray()
-    descritor = processo.stdout.fileno()
-    with selectors.DefaultSelector() as seletor:
-        seletor.register(descritor, selectors.EVENT_READ)
+    with plataforma.Leitor(processo.stdout) as leitor:
         while True:
-            restante = fim - time.monotonic()
-            if restante <= 0 or not seletor.select(restante):
-                raise ErroDeAudio("prazo excedido")
-            bloco = os.read(descritor, _BLOCO)
+            try:
+                bloco = leitor.ler(_BLOCO, fim)
+            except plataforma.PrazoEsgotado:
+                raise ErroDeAudio("prazo excedido") from None
             if not bloco:
                 break
             saida += bloco

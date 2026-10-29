@@ -1,7 +1,5 @@
 """O trabalhador como processo: falha isolada, corrida no encerramento, morte do principal e modelo só em inglês."""
 
-import os
-import signal
 import subprocess
 import sys
 import time
@@ -10,8 +8,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from whispper_motor import trabalhador
-from whispper_motor.trabalhador import TrabalhadorCaiu, TrabalhadorMlx
+from whispper_motor import plataforma, trabalhador
+from whispper_motor.trabalhador import TrabalhadorCaiu, TrabalhadorEmProcesso
 
 from .suporte.trabalhador_simulado import laco_com_falha
 
@@ -20,11 +18,14 @@ AMOSTRAS_CURTAS = np.zeros(16, dtype=np.float32)
 
 
 def vivo(pid):
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    return True
+    return plataforma.processo_existe(pid)
+
+
+def matar(pid):
+    if sys.platform == "win32":
+        subprocess.run(["taskkill", "/F", "/PID", str(pid)], capture_output=True)
+    else:
+        plataforma.matar_com_filhos(pid)
 
 
 def esperar(condicao, timeout):
@@ -37,7 +38,7 @@ def esperar(condicao, timeout):
 
 
 def test_receber_com_a_conexao_retirada_por_encerrar_em_outra_linha():
-    t = TrabalhadorMlx(Path("/inexistente"))
+    t = TrabalhadorEmProcesso(Path("/inexistente"))
 
     class ConexaoRetirada:
         def poll(self, timeout):
@@ -54,7 +55,7 @@ def test_receber_com_a_conexao_retirada_por_encerrar_em_outra_linha():
 
 
 def test_falha_do_whisper_num_audio_mantem_o_trabalhador():
-    t = TrabalhadorMlx(Path("/inexistente"), alvo=laco_com_falha)
+    t = TrabalhadorEmProcesso(Path("/inexistente"), alvo=laco_com_falha)
     t.iniciar()
     try:
         assert t.aguardar_carregamento(timeout=10).ok
@@ -78,7 +79,7 @@ def test_trabalhador_ocupado_morre_com_o_principal(tmp_path):
         pid = int(principal.stdout.readline())
         assert esperar(marcador.exists, 10), "o trabalhador não recebeu a transcrição"
 
-        principal.send_signal(signal.SIGKILL)
+        principal.kill()
         principal.wait()
 
         assert esperar(lambda: not vivo(pid), 5), "o trabalhador ocupado sobreviveu ao principal"
@@ -88,7 +89,7 @@ def test_trabalhador_ocupado_morre_com_o_principal(tmp_path):
             principal.wait()
         principal.stdout.close()
         if pid is not None and vivo(pid):
-            os.kill(pid, signal.SIGKILL)
+            matar(pid)
 
 
 def test_modelo_so_em_ingles_dispensa_a_deteccao_de_idioma():
@@ -106,7 +107,7 @@ def test_modelo_so_em_ingles_carrega_e_transcreve(tmp_path):
     from .suporte.modelo_sintetico import N_VOCAB_SO_EM_INGLES, criar_modelo_minimo
 
     modelo = criar_modelo_minimo(tmp_path / "whisper-minimo.en", N_VOCAB_SO_EM_INGLES)
-    t = TrabalhadorMlx(modelo)
+    t = TrabalhadorEmProcesso(modelo)
     t.iniciar()
     try:
         carregamento = t.aguardar_carregamento(timeout=120)

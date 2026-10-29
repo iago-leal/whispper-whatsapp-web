@@ -14,7 +14,8 @@ import sys
 import tempfile
 from pathlib import Path
 
-PASTA_PADRAO = "~/Library/Application Support/whispper-motor"
+from . import plataforma
+
 # Na pasta do aplicativo, um arquivo por host em execução, com o PID por nome (RF-16).
 PASTA_DE_HOSTS = "hosts"
 ORIGEM_RECUSADA = 2
@@ -26,8 +27,9 @@ _PASTA_TEMPORARIA_DE_HOST = re.compile(re.escape(PREFIXO_TEMPORARIO) + r"(\d+)-[
 
 
 def principal(argv: list[str] | None = None, fabrica_trabalhador=None) -> int:
+    plataforma.preparar_entrada_e_saida_binarias()
     saida = _proteger_saida_padrao()
-    pasta = Path(os.environ.get("WHISPPER_MOTOR_PASTA") or PASTA_PADRAO).expanduser()
+    pasta = Path(os.environ.get("WHISPPER_MOTOR_PASTA") or plataforma.pasta_padrao_do_app()).expanduser()
     _desviar_saida_de_erro(pasta / "diagnostico.log")
 
     # Importados só depois da troca de descritores: nem uma biblioteca, ao carregar,
@@ -35,7 +37,7 @@ def principal(argv: list[str] | None = None, fabrica_trabalhador=None) -> int:
     from . import VERSAO_APP, configuracao, protocolo
     from .registro import RegistroDeDesempenho, diagnostico
     from .servidor import Servidor
-    from .trabalhador import TrabalhadorMlx
+    from .trabalhador import TrabalhadorEmProcesso
 
     argv = sys.argv[1:] if argv is None else argv
     erro_inicial = None
@@ -54,12 +56,15 @@ def principal(argv: list[str] | None = None, fabrica_trabalhador=None) -> int:
     os.environ.setdefault("HF_HUB_OFFLINE", "1")
     os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")
     signal.signal(signal.SIGTERM, _ao_receber_sigterm)
+    # Antes de criar qualquer filho: o trabalhador e o ffmpeg herdam a garantia.
+    if not plataforma.prender_filhos_ao_host():
+        diagnostico("filhos não presos ao host; a vigia do trabalhador segue valendo", "aviso")
 
     temporarios = criar_pasta_temporaria()
     registro_do_host = _registrar_host(pasta)
     servidor = Servidor(
         config,
-        fabrica_trabalhador or TrabalhadorMlx,
+        fabrica_trabalhador or TrabalhadorEmProcesso,
         lambda mensagem: protocolo.escrever_mensagem(saida, mensagem),
         RegistroDeDesempenho(pasta / "desempenho.tsv"),
         temporarios,
@@ -111,27 +116,16 @@ def varrer_temporarios_orfaos(base: Path) -> list[Path]:
         return removidas
     for entrada in entradas:
         casamento = _PASTA_TEMPORARIA_DE_HOST.fullmatch(entrada.name)
-        if casamento is None or _processo_existe(int(casamento[1])):
+        if casamento is None or plataforma.processo_existe(int(casamento[1])):
             continue
         try:
-            if not entrada.is_dir(follow_symlinks=False) or entrada.stat(follow_symlinks=False).st_uid != os.getuid():
+            if not entrada.is_dir(follow_symlinks=False) or not plataforma.pasta_e_do_usuario(entrada):
                 continue
         except OSError:
             continue
         shutil.rmtree(entrada.path, ignore_errors=True)
         removidas.append(Path(entrada.path))
     return removidas
-
-
-def _processo_existe(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    except (OSError, OverflowError):
-        # Sem permissão, o processo existe; fora do intervalo, o nome não é de um host.
-        return True
-    return True
 
 
 def _registrar_host(pasta: Path) -> Path | None:
@@ -146,7 +140,7 @@ def _registrar_host(pasta: Path) -> Path | None:
     try:
         registros.mkdir(exist_ok=True)
         for antigo in registros.iterdir():
-            if antigo.name.isdigit() and not _processo_existe(int(antigo.name)):
+            if antigo.name.isdigit() and not plataforma.processo_existe(int(antigo.name)):
                 antigo.unlink(missing_ok=True)
         registro = registros / str(os.getpid())
         registro.touch()

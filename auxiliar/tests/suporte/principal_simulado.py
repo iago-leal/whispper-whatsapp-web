@@ -12,10 +12,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import numpy as np  # noqa: E402
 
 from tests.suporte.trabalhador_simulado import laco_travado  # noqa: E402
-from whispper_motor.trabalhador import TrabalhadorMlx  # noqa: E402
+from whispper_motor.trabalhador import TrabalhadorEmProcesso  # noqa: E402
 
 if __name__ == "__main__":
-    trabalhador = TrabalhadorMlx(Path(sys.argv[1]), alvo=laco_travado)
+    trabalhador = TrabalhadorEmProcesso(Path(sys.argv[1]), alvo=laco_travado)
     trabalhador.iniciar()
     trabalhador.aguardar_carregamento(timeout=30)
     print(trabalhador.pid, flush=True)

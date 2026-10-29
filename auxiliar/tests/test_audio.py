@@ -1,4 +1,3 @@
-import os
 import shutil
 import subprocess
 import threading
@@ -7,8 +6,10 @@ import time
 import numpy as np
 import pytest
 
-from whispper_motor import audio
+from whispper_motor import audio, plataforma
 from whispper_motor.audio import ErroDeAudio
+
+from .suporte import executavel_falso
 
 DURACAO_FALA_PT = 12.92
 
@@ -43,12 +44,15 @@ def mpd_estatico(base_url):
 """.encode()
 
 
+# Corpos do ffmpeg falso: um que não produz nada e um que produz sem fim.
+DORMIR = "import time\ntime.sleep(30)"
+ZEROS = "import sys\nsaida = sys.stdout.buffer\nwhile True:\n    saida.write(bytes(1 << 16))"
+
+
 def ffmpeg_falso(pasta, corpo):
-    """Executável no lugar do ffmpeg, que grava o próprio PID e roda `corpo` no shell."""
-    caminho = pasta / "ffmpeg-falso"
-    caminho.write_text(f'#!/bin/sh\necho $$ > "{pasta / "pid"}"\n{corpo}\n')
-    caminho.chmod(0o755)
-    return caminho
+    """Executável no lugar do ffmpeg, que grava o próprio PID e roda `corpo`, em Python."""
+    gravar_pid = f"import os\nopen({str(pasta / 'pid')!r}, 'w').write(str(os.getpid()))\n"
+    return executavel_falso.criar(pasta / "ffmpeg-falso", gravar_pid + corpo)
 
 
 def processo_encerrado(pasta):
@@ -56,10 +60,14 @@ def processo_encerrado(pasta):
     if not arquivo_pid.exists():
         return True
     try:
-        os.kill(int(arquivo_pid.read_text().strip()), 0)
-    except (ProcessLookupError, ValueError):
+        pid = int(arquivo_pid.read_text().strip())
+    except ValueError:
         return True
-    return False
+    # O falso pode levar um instante para sair depois do pai, no Windows.
+    limite = time.monotonic() + 5
+    while plataforma.processo_existe(pid) and time.monotonic() < limite:
+        time.sleep(0.05)
+    return not plataforma.processo_existe(pid)
 
 
 @pytest.mark.parametrize(
@@ -190,7 +198,7 @@ def test_mp4_nao_ganha_nome_no_disco(amostras, ffmpeg, tmp_path, monkeypatch):
 
 def test_ffmpeg_sem_saida_e_encerrado_pelo_prazo(amostras, tmp_path, monkeypatch):
     monkeypatch.setattr(audio, "PRAZO_DE_DECODIFICACAO_S", 0.5)
-    falso = ffmpeg_falso(tmp_path, "exec sleep 30")
+    falso = ffmpeg_falso(tmp_path, DORMIR)
     inicio = time.monotonic()
 
     with pytest.raises(ErroDeAudio) as erro:
@@ -203,7 +211,7 @@ def test_ffmpeg_sem_saida_e_encerrado_pelo_prazo(amostras, tmp_path, monkeypatch
 
 def test_saida_acima_do_teto_e_interrompida(amostras, tmp_path, monkeypatch):
     monkeypatch.setattr(audio, "DURACAO_MAXIMA_S", 1)
-    falso = ffmpeg_falso(tmp_path, "exec cat /dev/zero")
+    falso = ffmpeg_falso(tmp_path, ZEROS)
 
     with pytest.raises(ErroDeAudio) as erro:
         audio.decodificar((amostras / "fala-pt.ogg").read_bytes(), "audio/ogg", falso, tmp_path)
@@ -213,7 +221,7 @@ def test_saida_acima_do_teto_e_interrompida(amostras, tmp_path, monkeypatch):
 
 
 def test_cancelador_interrompe_o_ffmpeg_em_curso(amostras, tmp_path):
-    falso = ffmpeg_falso(tmp_path, "exec sleep 30")
+    falso = ffmpeg_falso(tmp_path, DORMIR)
     cancelador = audio.Cancelador()
     erros = []
 

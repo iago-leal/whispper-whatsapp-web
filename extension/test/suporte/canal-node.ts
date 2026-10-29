@@ -283,7 +283,7 @@ function textoDaConfiguracao(opcoes: OpcoesDoCanalNode): string {
 }
 
 // Fora do PATH, as pastas do Homebrew no Mac e o atalho do winget no Windows, como em configuracao.py.
-function candidatosDoFfmpeg(): string[] {
+function candidatosDoFfmpeg(): [string, ...string[]] {
   if (!WINDOWS) return ["/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg"];
   const local = process.env.LOCALAPPDATA ?? join(homedir(), "AppData", "Local");
   return [join(local, "Microsoft", "WinGet", "Links", "ffmpeg.exe")];

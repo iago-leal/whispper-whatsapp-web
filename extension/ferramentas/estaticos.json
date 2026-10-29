@@ -1,0 +1,9 @@
+[
+  ["../amostras/sinteticas/fala-pt.ogg", "dist/diagnostico"],
+  ["src/content/estilos.css", "dist/content"],
+  ["src/content/janela-flutuante.css", "dist/content"],
+  ["popup/index.html", "dist/popup"],
+  ["popup/popup.css", "dist/popup"],
+  ["onboarding/index.html", "dist/onboarding"],
+  ["onboarding/onboarding.css", "dist/onboarding"]
+]

@@ -2,8 +2,8 @@
 //
 // O manifesto declarava popup/index.html, a página-fonte, cujo ./popup.js só existe ao lado da
 // cópia que o build põe em dist/popup/. O teste dispensa o build: sob dist/, um .js vem do
-// src/**/*.ts de mesmo caminho e os demais arquivos vêm das cópias do script "build"; fora de
-// dist/, o arquivo é servido como está no repositório.
+// src/**/*.ts de mesmo caminho e os demais arquivos vêm das cópias de ferramentas/estaticos.json,
+// que o build faz; fora de dist/, o arquivo é servido como está no repositório.
 
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
@@ -11,15 +11,17 @@ import { posix } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
+import estaticos from "../ferramentas/estaticos.json" with { type: "json" };
+
 const RAIZ = fileURLToPath(new URL("..", import.meta.url));
 const lerDaRaiz = (caminho: string) => readFileSync(RAIZ + caminho, "utf8");
 const manifesto = JSON.parse(lerDaRaiz("manifest.json"));
 const build: string = JSON.parse(lerDaRaiz("package.json")).scripts.build;
 
-// "cp popup/index.html dist/popup/" serve popup/index.html em dist/popup/index.html.
+// ["popup/index.html", "dist/popup"] serve popup/index.html em dist/popup/index.html.
 const copias = new Map<string, string>();
-for (const [, origem, destino] of build.matchAll(/cp (\S+) (dist\/\S*?)\/?(?= |$)/g)) {
-  copias.set(posix.join(destino!, posix.basename(origem!)), origem!);
+for (const [origem, pasta] of estaticos) {
+  copias.set(posix.join(pasta!, posix.basename(origem!)), origem!);
 }
 
 /** O arquivo do repositório que a extensão serve no caminho dado, ou null se nada o produz. */
@@ -47,6 +49,7 @@ test("o popup declarado no manifesto carrega um script que a extensão contém (
 });
 
 test("todo arquivo do manifesto e toda página aberta pela extensão existem no pacote", () => {
+  assert.match(build, /(?:^| )node ferramentas\/copiar-estaticos\.mjs(?= |$)/, "o build não copia os estáticos");
   const declarados: string[] = [
     manifesto.background.service_worker,
     ...manifesto.content_scripts.flatMap((c: { js?: string[]; css?: string[] }) => [...(c.js ?? []), ...(c.css ?? [])]),

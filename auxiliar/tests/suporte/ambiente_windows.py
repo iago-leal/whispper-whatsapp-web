@@ -8,7 +8,7 @@ ignora o teste, com o motivo.
 import sys
 import uuid
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import pytest
@@ -57,6 +57,25 @@ def ambiente_windows(tmp_path, monkeypatch) -> Iterator[AmbienteWindows]:
         yield AmbienteWindows(perfil, pasta_local, cache, ffmpeg, raiz)
     finally:
         apagar_chave(raiz)
+
+
+def ambiente_de_instalacao(ambiente: AmbienteWindows, **alteracoes):
+    """O `Ambiente` da instalação no perfil de teste, com o Python destes testes e sem placa."""
+    from whispper_motor.instalacao import Ambiente
+
+    base = Ambiente(
+        home=ambiente.perfil,
+        python=Path(sys.executable),
+        versao_python=(sys.version_info.major, sys.version_info.minor),
+        sistema="Windows",
+        arquitetura="AMD64",
+        ffmpeg=ambiente.ffmpeg,
+        mlx_whisper=False,
+        pasta_de_modelos=ambiente.pasta_de_modelos,
+        faster_whisper=True,
+        raiz_do_registro=ambiente.raiz_do_registro,
+    )
+    return replace(base, **alteracoes)
 
 
 def ler_valor_padrao(caminho: str) -> str | None:

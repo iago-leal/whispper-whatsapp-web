@@ -36,6 +36,13 @@ def laco_com_falha(conexao, caminho_modelo):
             conexao.send(("falha", "falha do Whisper"))
 
 
+def laco_com_dispositivo(conexao, caminho_modelo):
+    """Carrega como o laço do Windows quando cai no processador: o principal registra a linha."""
+    conexao.send(("carregado", 1, ("modelo carregado no processador: sem placa NVIDIA", "aviso")))
+    while conexao.recv()[0] != "parar":
+        conexao.send(("ok", "texto simulado", "pt", False))
+
+
 def laco_travado(conexao, caminho_modelo):
     """Trava na primeira transcrição; antes, cria o arquivo `caminho_modelo` para avisar que a recebeu."""
     conexao.send(("carregado", 1))

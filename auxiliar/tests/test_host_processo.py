@@ -1,96 +1,30 @@
-"""O host como processo, lançado com ambiente vazio (`env -i`), como faz o Chrome."""
+"""O host como processo, lançado com ambiente mínimo, como faz o Chrome (RF-09, D-08)."""
 
 import base64
 import json
 import os
-import select
-import struct
 import subprocess
 import sys
-import time
-from pathlib import Path
 
 import pytest
 
-from whispper_motor import configuracao
-from whispper_motor.configuracao import Configuracao
+from whispper_motor import VERSAO_APP, protocolo
 
-AUXILIAR = Path(__file__).resolve().parents[1]
-HOST = AUXILIAR / "tests" / "suporte" / "host_simulado.py"
-AMOSTRAS = AUXILIAR.parent / "amostras" / "sinteticas"
-ID = "femjlfnijaboogbcdionddnjcjpfmieg"
-ORIGEM = f"chrome-extension://{ID}/"
+from .suporte.host_em_processo import (  # noqa: F401 - fechar_leitores é fixture
+    AMOSTRAS,
+    enviar,
+    esperar_pronto,
+    fechar_leitores,
+    lancar,
+    ler,
+    ler_moldura,
+    preparar_ambiente,
+)
 
 
 @pytest.fixture
 def ambiente(tmp_path, ffmpeg):
-    pasta = tmp_path / "app"
-    pasta.mkdir()
-    modelo = tmp_path / "modelo"
-    modelo.mkdir()
-    (modelo / "config.json").write_text("{}")
-    (modelo / "weights.safetensors").write_text("")
-    configuracao.gravar(
-        Configuracao(modelo=str(modelo), pasta_de_modelos=tmp_path, ffmpeg=Path(ffmpeg), extensao_id=ID),
-        pasta / "config.toml",
-    )
-    temporarios = tmp_path / "t"
-    temporarios.mkdir()
-    return pasta, temporarios
-
-
-def lancar(pasta, temporarios, origem=ORIGEM):
-    return subprocess.Popen(
-        [
-            "/usr/bin/env",
-            "-i",
-            f"PYTHONPATH={AUXILIAR}",
-            f"WHISPPER_MOTOR_PASTA={pasta}",
-            f"TMPDIR={temporarios}",
-            sys.executable,
-            str(HOST),
-            origem,
-        ],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-
-
-def enviar(proc, mensagem):
-    corpo = json.dumps(mensagem).encode()
-    proc.stdin.write(struct.pack("=I", len(corpo)) + corpo)
-    proc.stdin.flush()
-
-
-def ler_exato(proc, n, timeout):
-    dados = b""
-    limite = time.monotonic() + timeout
-    while len(dados) < n:
-        restante = limite - time.monotonic()
-        if restante <= 0 or not select.select([proc.stdout], [], [], restante)[0]:
-            raise AssertionError("o host não respondeu no prazo")
-        pedaco = os.read(proc.stdout.fileno(), n - len(dados))
-        if not pedaco:
-            raise AssertionError("o host fechou a saída")
-        dados += pedaco
-    return dados
-
-
-def ler(proc, timeout=10):
-    (tamanho,) = struct.unpack("=I", ler_exato(proc, 4, timeout))
-    assert tamanho < 1_000_000, "enquadramento corrompido por escrita estranha na saída padrão"
-    return json.loads(ler_exato(proc, tamanho, timeout))
-
-
-def esperar_pronto(proc):
-    limite = time.monotonic() + 15
-    while time.monotonic() < limite:
-        enviar(proc, {"tipo": "verificar", "protocolo": 1})
-        if ler(proc)["estado"] == "pronto":
-            return
-        time.sleep(0.1)
-    raise AssertionError("o host não ficou pronto")
+    return preparar_ambiente(tmp_path, ffmpeg)
 
 
 def test_protocolo_integro_apesar_de_escritas_na_saida_padrao(ambiente):
@@ -116,6 +50,49 @@ def test_protocolo_integro_apesar_de_escritas_na_saida_padrao(ambiente):
     assert "texto simulado" not in diagnostico
 
 
+def protocolo_que_responde_com(tamanho):
+    """Um `protocolo` incompatível cuja recusa, que o ecoa, tem `tamanho` módulo 256 bytes."""
+    for digitos in range(2, 600):
+        pedido = int("9" * digitos)
+        resposta = protocolo.resposta_erro(
+            "p-1",
+            protocolo.VERSAO_INCOMPATIVEL,
+            "versão de protocolo incompatível",
+            protocoloApp=protocolo.PROTOCOLO,
+            protocoloPedido=pedido,
+        )
+        if len(protocolo.serializar(resposta)) % 256 == tamanho:
+            return pedido
+    raise AssertionError("nenhum tamanho de resposta serve")
+
+
+def test_molduras_com_0x0a_e_0x1a_no_cabecalho_atravessam_intactas(ambiente):
+    # 266 e 282 bytes dão cabeçalhos 0a 01 00 00 e 1a 01 00 00: no modo texto do Windows,
+    # o 0x0A da saída viraria 0d 0a, e o 0x1A da entrada seria lido como fim de arquivo.
+    pasta, temporarios = ambiente
+    proc = lancar(pasta, temporarios)
+    try:
+        for tamanho in (266, 282):
+            enviar(proc, {"tipo": "verificar", "protocolo": 1}, tamanho=tamanho)
+            assert ler(proc)["tipo"] == "estado"
+        pedido = protocolo_que_responde_com(0x0A)
+        enviar(proc, {"tipo": "transcrever", "protocolo": pedido, "idPedido": "p-1"})
+
+        cabecalho, corpo = ler_moldura(proc)
+
+        assert cabecalho[0] == 0x0A
+        resposta = json.loads(corpo)
+        assert (resposta["codigo"], resposta["protocoloPedido"]) == (protocolo.VERSAO_INCOMPATIVEL, pedido)
+        assert resposta == json.loads(protocolo.serializar(resposta))
+        enviar(proc, {"tipo": "verificar", "protocolo": 1})
+        assert ler(proc)["versaoApp"] == VERSAO_APP
+    finally:
+        proc.stdin.close()
+        codigo = proc.wait(timeout=10)
+
+    assert codigo == 0
+
+
 def test_origem_diferente_encerra_sem_responder(ambiente):
     pasta, temporarios = ambiente
     proc = lancar(pasta, temporarios, origem="chrome-extension://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/")
@@ -139,7 +116,7 @@ def test_fim_da_entrada_encerra_e_apaga_temporarios(ambiente):
 
 
 def pid_encerrado():
-    processo = subprocess.Popen(["/usr/bin/true"])
+    processo = subprocess.Popen([sys.executable, "-c", "pass"])
     processo.wait()
     return processo.pid
 

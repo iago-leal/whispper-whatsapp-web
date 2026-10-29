@@ -1,9 +1,11 @@
 import json
 import os
-import shutil
 from pathlib import Path
 
 import pytest
+
+# Fixture compartilhada pelos testes de instalação, desinstalação e diagnóstico do Windows.
+from .suporte.ambiente_windows import ambiente_windows  # noqa: F401
 
 RAIZ = Path(__file__).resolve().parents[2]
 AMOSTRAS = RAIZ / "amostras" / "sinteticas"
@@ -31,7 +33,10 @@ def protocolo_1() -> dict:
 
 @pytest.fixture(scope="session")
 def ffmpeg() -> str:
-    caminho = shutil.which("ffmpeg") or "/opt/homebrew/bin/ffmpeg"
-    if not Path(caminho).exists():
+    # Os mesmos candidatos que o host procura nesta plataforma (RF-15).
+    from whispper_motor import configuracao
+
+    caminho = configuracao.ffmpeg_detectado()
+    if not caminho.is_file():
         pytest.skip("ffmpeg não encontrado")
-    return caminho
+    return str(caminho)

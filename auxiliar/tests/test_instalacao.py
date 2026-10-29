@@ -19,6 +19,11 @@ RAIZ = Path(__file__).resolve().parents[2]
 CODIGO = RAIZ / "auxiliar" / "whispper_motor"
 ID = "femjlfnijaboogbcdionddnjcjpfmieg"
 MODELO = "mlx-community/whisper-large-v3-turbo"
+# Instalar, desinstalar e diagnosticar tocam ~/Library, o lançador sh e o select do macOS;
+# no Windows, os equivalentes estão em test_instalacao_windows.py e vizinhos.
+so_no_macos = pytest.mark.skipif(
+    sys.platform != "darwin", reason="exige o macOS: ~/Library, lançador sh e select em pipe"
+)
 
 
 @pytest.fixture
@@ -76,6 +81,7 @@ def test_modelo_ausente_mostra_como_baixar(ambiente):
     assert str(ambiente.python) in faltas[0]
 
 
+@so_no_macos
 def test_instalar_grava_codigo_configuracao_lancador_e_manifesto(ambiente):
     instalacao.instalar(ambiente, ID, CODIGO)
 
@@ -104,6 +110,7 @@ def test_instalar_grava_codigo_configuracao_lancador_e_manifesto(ambiente):
     }
 
 
+@so_no_macos
 def test_instalar_recusa_sem_escrever_nada(ambiente):
     with pytest.raises(PrerequisitosAusentes) as erro:
         instalacao.instalar(replace(ambiente, ffmpeg=None), ID, CODIGO)
@@ -113,6 +120,7 @@ def test_instalar_recusa_sem_escrever_nada(ambiente):
     assert not instalacao.caminho_manifesto_host(ambiente.home).exists()
 
 
+@so_no_macos
 def test_reinstalar_preserva_o_modelo_escolhido(ambiente):
     criar_snapshot(ambiente.pasta_de_modelos, "mlx-community/whisper-medium-mlx")
     instalacao.instalar(ambiente, ID, CODIGO)
@@ -125,6 +133,7 @@ def test_reinstalar_preserva_o_modelo_escolhido(ambiente):
     assert (config.modelo, config.ocioso_min) == ("mlx-community/whisper-medium-mlx", 10)
 
 
+@so_no_macos
 def test_desinstalar_remove_tudo_e_preserva_o_cache(ambiente):
     instalacao.instalar(ambiente, ID, CODIGO)
 
@@ -137,6 +146,7 @@ def test_desinstalar_remove_tudo_e_preserva_o_cache(ambiente):
     assert instalacao.desinstalar(ambiente.home) == []
 
 
+@so_no_macos
 def test_diagnostico_confere_manifesto_e_origem(ambiente):
     instalacao.instalar(ambiente, ID, CODIGO)
 
@@ -147,12 +157,14 @@ def test_diagnostico_confere_manifesto_e_origem(ambiente):
     assert [nome for nome, ok, _ in errado if not ok] == ["allowed_origins"]
 
 
+@so_no_macos
 def test_diagnostico_sem_instalacao(ambiente):
     resultado = dict((nome, ok) for nome, ok, _ in instalacao.diagnosticar(ambiente.home, ID))
 
     assert resultado["manifesto do host"] is False
 
 
+@so_no_macos
 def test_desinstalar_encerra_o_host_em_execucao(ambiente, tmp_path):
     ambiente = replace(ambiente, python=Path(sys.executable))
     instalacao.instalar(ambiente, ID, CODIGO)

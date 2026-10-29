@@ -19,6 +19,14 @@ def test_aceita_pesos_em_npz(tmp_path):
     assert modelos.resolver("org/modelo", tmp_path) == esperado
 
 
+def test_aceita_pesos_do_ctranslate2(tmp_path):
+    # O formato do faster-whisper, no Windows: pesos em model.bin (data-delta.md#2).
+    arquivos = ("config.json", "model.bin", "tokenizer.json", "vocabulary.json")
+    esperado = criar_snapshot(tmp_path, "mobiuslabsgmbh/faster-whisper-large-v3-turbo", arquivos=arquivos)
+
+    assert modelos.resolver("mobiuslabsgmbh/faster-whisper-large-v3-turbo", tmp_path) == esperado
+
+
 def test_aceita_caminho_absoluto(tmp_path):
     pasta = tmp_path / "meu-modelo"
     pasta.mkdir()
@@ -33,9 +41,10 @@ def test_aceita_caminho_absoluto(tmp_path):
     [
         lambda cache: None,
         lambda cache: criar_snapshot(cache, "org/modelo", arquivos=("config.json",)),
+        lambda cache: criar_snapshot(cache, "org/modelo", arquivos=("config.json", "tokenizer.json")),
         lambda cache: (criar_snapshot(cache, "org/modelo"), (cache / "models--org--modelo" / "refs" / "main").write_text("inexistente")),
     ],
-    ids=["repositorio-ausente", "sem-pesos", "refs-para-snapshot-ausente"],
+    ids=["repositorio-ausente", "sem-pesos", "so-o-tokenizador", "refs-para-snapshot-ausente"],
 )
 def test_modelo_nao_encontrado(tmp_path, preparar):
     preparar(tmp_path)

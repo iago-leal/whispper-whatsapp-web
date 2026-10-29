@@ -102,6 +102,7 @@ def test_modelo_so_em_ingles_dispensa_a_deteccao_de_idioma():
     assert trabalhador.detectar_idioma(ModeloSoEmIngles(), None, AMOSTRAS_CURTAS) == "en"
 
 
+@pytest.mark.skipif(sys.platform != "darwin", reason="exige o macOS: o mlx-whisper só roda em Apple Silicon")
 def test_modelo_so_em_ingles_carrega_e_transcreve(tmp_path):
     pytest.importorskip("mlx_whisper")
     from .suporte.modelo_sintetico import N_VOCAB_SO_EM_INGLES, criar_modelo_minimo

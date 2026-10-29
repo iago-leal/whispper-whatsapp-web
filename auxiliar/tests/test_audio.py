@@ -1,5 +1,6 @@
 import shutil
 import subprocess
+import sys
 import threading
 import time
 
@@ -181,6 +182,9 @@ def test_mp4_nao_le_arquivo_indicado_na_mensagem(amostras, ffmpeg, tmp_path, mid
     assert list(temporarios.iterdir()) == []
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="exige o macOS: no Windows, o arquivo temporário tem nome até ser fechado"
+)
 def test_mp4_nao_ganha_nome_no_disco(amostras, ffmpeg, tmp_path, monkeypatch):
     vistos = []
     popen = subprocess.Popen
@@ -194,6 +198,60 @@ def test_mp4_nao_ganha_nome_no_disco(amostras, ffmpeg, tmp_path, monkeypatch):
     audio.decodificar((amostras / "fala-pt.m4a").read_bytes(), "audio/mp4", ffmpeg, tmp_path)
 
     assert vistos == [[]]
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="exige o Windows: MP4 pela entrada padrão, com -fd 0")
+def test_mp4_no_windows_so_existe_na_pasta_do_host(amostras, ffmpeg, tmp_path, monkeypatch):
+    vistos = []
+    popen = subprocess.Popen
+
+    def espiao(argumentos, **opcoes):
+        vistos.append((list(tmp_path.iterdir()), argumentos, opcoes.get("stdin")))
+        return popen(argumentos, **opcoes)
+
+    monkeypatch.setattr(subprocess, "Popen", espiao)
+
+    resultado = audio.decodificar((amostras / "fala-pt.m4a").read_bytes(), "audio/mp4", ffmpeg, tmp_path)
+
+    assert resultado.duracao_seg == pytest.approx(DURACAO_FALA_PT, abs=0.1)
+    [(durante, argumentos, entrada)] = vistos
+    # Um arquivo só, na pasta temporária do host, entregue como entrada padrão do FFmpeg.
+    assert len(durante) == 1
+    assert ["-protocol_whitelist", "fd", "-fd", "0", "-i", "fd:"] == argumentos[argumentos.index("-protocol_whitelist") :][:6]
+    assert hasattr(entrada, "fileno")
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_mp4_cancelado_nao_deixa_temporario(amostras, tmp_path):
+    falso = ffmpeg_falso(tmp_path, DORMIR)
+    temporarios = tmp_path / "tmp"
+    temporarios.mkdir()
+    cancelador = audio.Cancelador()
+    erros = []
+
+    def decodificar():
+        try:
+            audio.decodificar(
+                (amostras / "fala-pt.m4a").read_bytes(), "audio/mp4", falso, temporarios, cancelador=cancelador
+            )
+        except ErroDeAudio as erro:
+            erros.append(erro.motivo)
+
+    linha = threading.Thread(target=decodificar)
+    linha.start()
+    while not (tmp_path / "pid").exists():
+        time.sleep(0.01)
+    cancelador.cancelar()
+    linha.join(5)
+
+    assert not linha.is_alive()
+    assert erros == ["áudio ilegível"]
+    assert processo_encerrado(tmp_path)
+    # No Windows, o sistema apaga o arquivo quando o último processo que o mantém aberto sai.
+    limite = time.monotonic() + 5
+    while list(temporarios.iterdir()) and time.monotonic() < limite:
+        time.sleep(0.05)
+    assert list(temporarios.iterdir()) == []
 
 
 def test_ffmpeg_sem_saida_e_encerrado_pelo_prazo(amostras, tmp_path, monkeypatch):

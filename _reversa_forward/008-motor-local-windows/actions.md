@@ -84,7 +84,7 @@ Ordem de execução: a fase 1 move para `plataforma.py` o comportamento atual do
 | T049 | No desktop, reserva no processador: renomear `site-packages\nvidia`, conferir pelo diagnóstico a transcrição e a linha `modelo carregado no processador: bibliotecas da placa ausentes`, desfazer a mudança e conferir a volta à placa; registrar (RF-20). | T048 | - | `_reversa_forward/008-motor-local-windows/verificacao-manual.md` | 🟡 | `[X]` |
 | T050 | **Portão.** Conduzir com o usuário, no Brave do desktop, as seções 3, 6, 7 e 8 do `onboarding.md`: carregamento da extensão, console do service worker, mensagem de voz real, extensão intrusa recusada, registros sem conteúdo e nenhuma conexão de rede durante a transcrição; registrar cada passo (RF-06, RF-09, RF-14, RF-18). | T049 | - | `_reversa_forward/008-motor-local-windows/verificacao-manual.md` | 🟢 | `[ ]` |
 | T051 | No desktop, com o host em execução pelo Brave, `motor.cmd desinstalar`: PID informado, entradas e pasta removidas, cache preservado; reinstalar e repetir o diagnóstico; registrar (RF-12). | T050 | - | `_reversa_forward/008-motor-local-windows/verificacao-manual.md` | 🟡 | `[ ]` |
-| T052 | No Mac, `auxiliar/motor.sh instalar` e `diagnosticar`, com todos os itens `ok` e a versão 1.1.0; registrar (RF-16). | T045 | - | `~/Library/Application Support/whispper-motor/` | 🟡 | `[ ]` |
+| T052 | No Mac, `auxiliar/motor.sh instalar` e `diagnosticar`, com todos os itens `ok` e a versão 1.1.0; registrar (RF-16). | T045 | - | `~/Library/Application Support/whispper-motor/` | 🟡 | `[X]` |
 
 ## Fase 5, Polimento
 

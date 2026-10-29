@@ -113,3 +113,38 @@ O host passou a comprometer 20 MB, em vez de 502 MB, e o trabalhador, cerca de 4
 ### Ocorrência durante a medição: prazo estourado no processador
 
 Na primeira medição depois da correção, no processador, o carregamento levou 28,1 s, e o pedido de 129,4 s foi interrompido pelo prazo de 64,7 s (o maior entre 60 s e 30 s por minuto de áudio): o `diagnostico.log` registrou `aviso trabalhador encerrado por prazo`, o `desempenho.tsv` registrou `FALHA_NA_TRANSCRICAO` aos 66 163 ms, e o host seguinte carregou normalmente. Logo depois, o contador do processador marcava entre 96% e 99% de uso, e alguns segundos mais tarde estava ocioso, o que indica carga passageira de outro programa. Repetida com o desktop entre 10% e 14% de carga, a medição terminou em 39 285 ms, como antes da correção. O episódio confirma, de passagem, o comportamento do RF-05 diante do prazo, mas mostra também que, no processador, a folga do prazo é de cerca de 1,6 vez o tempo de transcrição com a máquina livre. O requisito não fixa meta de tempo para o modo de reserva, e o prazo é comum ao Mac; fica como observação para o relatório final.
+
+## T052. Atualização no Mac (2026-10-29)
+
+No Mac do usuário (Apple Silicon, Python 3.14 do python.org, mlx-whisper), a instalação anterior era a 1.0.0, de 2026-10-01, sem host em execução. `auxiliar/motor.sh instalar` terminou com código 0, todos os pré-requisitos `ok` (Darwin arm64, Python 3.14, FFmpeg do Homebrew, mlx-whisper, modelo `mlx-community/whisper-large-v3-turbo`), e regravou a pasta do aplicativo e o manifesto do Chrome. `auxiliar/motor.sh diagnosticar` terminou com código 0:
+
+```text
+  ok     manifesto do host: /Users/iagoleal/Library/Application Support/Google/Chrome/NativeMessagingHosts/whispper_whatsapp_web.motor.json
+  ok     lançador: /Users/iagoleal/Library/Application Support/whispper-motor/whispper-motor
+  ok     allowed_origins: chrome-extension://femjlfnijaboogbcdionddnjcjpfmieg/
+  ok     configuração: /Users/iagoleal/Library/Application Support/whispper-motor/config.toml, modelo mlx-community/whisper-large-v3-turbo
+  ok     host: respondeu carregando, depois pronto em 5.3 s (versão 1.1.0, modelo mlx-community/whisper-large-v3-turbo)
+```
+
+O lançador do Mac continua com as mesmas variáveis de antes, sem o `OPENBLAS_NUM_THREADS`, porque o numpy do macOS usa o Accelerate. O `diagnostico.log` registrou `host iniciado, versão 1.1.0` e `host encerrado`, e a pasta `hosts/` ficou vazia. No Mac, o diagnóstico não traz a linha do dispositivo, que é própria do trabalhador do Windows (D-18).
+
+## T050. Portão no Brave (2026-10-29)
+
+O Brave do desktop não está conectado à extensão Claude in Chrome (a única conectada é o Chrome do Mac), e um Brave lançado pelo SSH abriria na sessão 0, fora da área de trabalho do usuário. Por isso, as etapas de navegador ficam com o usuário, pela sessão de área de trabalho remota, e as conferências de processo, rede, arquivos e registros foram feitas pelo SSH, com o host instalado lançado como o navegador o lança.
+
+### Sem rede durante a transcrição (RF-06), pelo SSH
+
+O `rede_t050.ps1` lançou o `medir_t048.py` com a amostra longa de 129,4 s e, enquanto ele durou, consultou a cada meio segundo `Get-NetTCPConnection` e `Get-NetUDPEndpoint` de todos os processos `python` e `ffmpeg`. Antes, não havia nenhum desses processos. Em 17 amostras, foram vistos cinco processos Python (o script de medição e o lançador dele, o lançador do ambiente do host, o host e o trabalhador), com zero conexões TCP e zero portas UDP. A transcrição terminou em 13 010 ms, com código de saída 0. O FFmpeg não chegou a ser amostrado, porque a decodificação durou menos que o intervalo.
+
+### Sem retenção e sem filhos órfãos (RF-07, RF-08), pelo SSH
+
+Com uma amostra MP4 sintética longa (`fala-pt.m4a` repetida 400 vezes, 86 min 27 s, 42,1 MB, 56,2 MB em base64), o `queda_t050.py` esperou o FFmpeg aparecer entre os descendentes do host e derrubou o host com `taskkill /F`, o equivalente do `Stop-Process -Force` do `onboarding.md`:
+
+| Momento | Processos do host | FFmpeg no sistema | Arquivos em `%TEMP%\whispper-motor-*` |
+|---------|-------------------|-------------------|---------------------------------------|
+| Durante a decodificação | lançador do ambiente (29684), host (31940), trabalhador (11928), FFmpeg (6956) | 6956 | `whispper-motor-31940-67a6fb4f\tmpj593fmg_`, o MP4 com nome enquanto aberto |
+| 5 s depois da queda | nenhum | nenhum | nenhum |
+
+Restaram só a pasta vazia `whispper-motor-31940-67a6fb4f` e o registro `hosts\31940`, como previsto para um host morto à força. O `diagnosticar` seguinte, que lança outro host, varreu os dois. O host derrubado não deixou linha de pedido no `desempenho.tsv` nem de encerramento no `diagnostico.log`.
+
+Uma primeira tentativa, com a amostra repetida 470 vezes (49,5 MB, mais de 64 MiB em base64), foi recusada pelo host com `erro enquadramento inválido na entrada`, e ele terminou normalmente, apagando a própria pasta temporária: é o limite de entrada do protocolo, o mesmo que o Chrome impõe às mensagens da extensão.
